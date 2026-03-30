@@ -582,13 +582,14 @@ function runArbiter(top, second, delta) {
 
   clog(`   sim=${sim.toFixed(3)} dissonance=${dissonance.toFixed(3)}`, 'log-arbiter');
 
-  if (dissonance > DISSONANCE_CUT) {
+/*  if (dissonance > DISSONANCE_CUT) {
     clog(`   ⚠ OPPOSED SPECIALTIES — Grief Protocol`, 'log-grief');
     top.node.grieve(); second.node.grieve();
     clog(`   💔 ${top.node.name} res→${top.node.resonance.toFixed(3)}`, 'log-grief');
     clog(`   💔 ${second.node.name} res→${second.node.resonance.toFixed(3)}`, 'log-grief');
     return null;
   }
+*/
   clog(`   ✅ Compatible — ${top.node.name} confirmed`, 'log-arbiter');
   return top.node;
 }
