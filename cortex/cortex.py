@@ -70,8 +70,8 @@ WHITELIST: dict[str, list[str]] = {
         # macOS: ["/usr/bin/open", "-a", "TextEdit"],
         # Linux: "/usr/bin/gedit",
     ],
-    "spotify": [
-        r"C:\Users\%USERNAME%\AppData\Roaming\Spotify\Spotify.exe",
+    "spotify":  [
+        str(Path.home() / "AppData" / "Roaming" / "Spotify" / "Spotify.exe"),
         # macOS: "/Applications/Spotify.app/Contents/MacOS/Spotify",
     ],
 }
