@@ -1,58 +1,19 @@
-# --- NZT-DEV B.O.S.S. KERNEL IGNORE LIST ---
-
-# Python Environment & Dependencies
-venv/
-env/
-ENV/
-bin/
-lib/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Python Bytecode & Cache
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
-.mypy_cache/
-
-# B.O.S.S. Local State & Private Memory
-# (Prevents your personal kernel saves from being public)
-BOSS_KERNEL.json
-BOSS_VAULT.json
-*.log
-URGENT_ACTION.txt
-
-# Environment / Secrets
+venv/
 .env
-.venv
-pip-log.txt
-pip-delete-this-directory.txt
 
-# Operating System Files
+# Model weights (sentence-transformers / HuggingFace cache)
+# all-MiniLM-L6-v2 and similar models are ~80MB+ — never commit
+models/
+.ipynb_checkpoints/
+
+# OS/IDE
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Editor Specific
 .vscode/
 .idea/
-*.swp
-*.swo
+
+# B.O.S.S. Persistence
+BOSS_KERNEL_BACKUP.json
