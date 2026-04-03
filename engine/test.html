@@ -86,6 +86,17 @@ import Engine, { deliberate, scorePool, buildDefaultPool,
                  loadPool, savePool, semanticSim,
                  DISSONANCE_AGREE, DISSONANCE_WARN } from './engine.js';
 
+// Application-layer persistence.
+// engine.js is storage-agnostic — it returns/accepts JSON strings.
+// This test harness handles the localStorage side.
+const POOL_KEY = 'BOSS_ENGINE_POOL';
+function savePoolLocal(pool) {
+  try { localStorage.setItem(POOL_KEY, savePool(pool)); } catch(_) {}
+}
+function loadPoolLocal(keys) {
+  try { return loadPool(localStorage.getItem(POOL_KEY), keys); } catch(_) { return null; }
+}
+
 let pool = null;
 const chain = [];
 
@@ -97,7 +108,7 @@ window.initPool = function() {
   };
 
   // Try to restore warmth/resonance/bonds from a prior session
-  const restored = loadPool(keys);
+  const restored = loadPoolLocal(keys);
   pool = restored || buildDefaultPool(keys);
 
   // Re-inject keys in case they've changed since last save
@@ -225,7 +236,7 @@ async function runDeliberate(intent) {
     if (chain.length > 10) chain.shift();
   }
 
-  savePool(pool);
+  savePoolLocal(pool);
   updatePoolState();
 }
 
