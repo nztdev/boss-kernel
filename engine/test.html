@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engine test harness</title>
+<style>
+body { font-family: monospace; background: #050a06; color: #00ffcc; padding: 20px; }
+h2   { font-size: 14px; color: #335544; letter-spacing: .12em; text-transform: uppercase; margin: 20px 0 8px; }
+.row { display: flex; gap: 12px; margin-bottom: 8px; align-items: flex-start; }
+input, select {
+  background: #000; border: 1px solid #00ffcc33; color: #00ffcc;
+  font-family: monospace; font-size: 12px; padding: 6px 10px;
+  outline: none; border-radius: 3px;
+}
+input:focus, select:focus { border-color: #00ffcc88; }
+input[type=text]  { flex: 1; }
+input[type=password] { width: 260px; }
+button {
+  background: #003322; border: 1px solid #00ffcc44; color: #00ffcc;
+  font-family: monospace; font-size: 12px; padding: 7px 16px;
+  cursor: pointer; border-radius: 3px; white-space: nowrap;
+}
+button:hover { background: #004433; }
+button.danger { border-color: #ff444444; color: #ff6666; background: #1a0000; }
+#log {
+  background: #000; border: 1px solid #0f2a20; border-radius: 4px;
+  padding: 12px; height: 340px; overflow-y: auto;
+  font-size: 11px; line-height: 1.7; margin-top: 8px;
+}
+#log::-webkit-scrollbar { width: 4px; }
+#log::-webkit-scrollbar-thumb { background: #0f2a20; border-radius: 2px; }
+.l-sys     { color: #335544; }
+.l-score   { color: #ffcc00; }
+.l-call    { color: #66aaff; }
+.l-agree   { color: #00ffcc; }
+.l-warn    { color: #ff9944; }
+.l-err     { color: #ff4444; }
+.l-result  { color: #66ffcc; font-weight: bold; }
+.l-grief   { color: #ff4444; }
+.sep { border: none; border-top: 1px solid #0f2a20; margin: 12px 0; }
+#pool-state { font-size: 10px; color: #335544; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<h2>API keys</h2>
+<div class="row">
+  <input type="password" id="key-groq"    placeholder="Groq API key  (sk-...)">
+  <input type="password" id="key-gemini"  placeholder="Google AI Studio key  (AIza...)">
+  <input type="password" id="key-hf"      placeholder="HuggingFace token  (hf_...)">
+  <button onclick="initPool()">Init pool</button>
+</div>
+
+<h2>Intent</h2>
+<div class="row">
+  <input type="text" id="intent-input" placeholder="Type an intent and run deliberate()…" value="Explain how black holes form">
+  <button onclick="runTest()">Deliberate ⚡</button>
+  <button onclick="runScoreOnly()">Score only</button>
+  <button class="danger" onclick="clearLog()">Clear log</button>
+</div>
+
+<h2>Test suite</h2>
+<div class="row">
+  <select id="test-select" style="width:320px">
+    <option value="">— pick a preset test —</option>
+    <option value="Explain how black holes form">Explain how black holes form</option>
+    <option value="Write a short poem about time">Write a short poem about time</option>
+    <option value="What is the capital of France">What is the capital of France (simple fact)</option>
+    <option value="Debug this Python function: def add(a,b): return a-b">Debug Python: def add(a,b): return a-b (code)</option>
+    <option value="Summarise the French Revolution in 3 sentences">Summarise the French Revolution (summarise)</option>
+    <option value="What are the ethical implications of AGI">What are the ethical implications of AGI (reasoning)</option>
+    <option value="Translate 'hello world' to Spanish, French and German">Translate hello world to 3 languages</option>
+    <option value="zorp the frambulator">zorp the frambulator (birth signal test)</option>
+  </select>
+  <button onclick="runPreset()">Run preset</button>
+  <button onclick="runAllPresets()">Run all presets</button>
+</div>
+
+<div id="pool-state">Pool not initialised.</div>
+<hr class="sep">
+<div id="log">&gt; Engine test harness loaded.<br>&gt; Init pool with API keys, then run deliberate().</div>
+
+<script type="module">
+import Engine, { deliberate, scorePool, buildDefaultPool,
+                 loadPool, savePool, semanticSim,
+                 DISSONANCE_AGREE, DISSONANCE_WARN } from './engine.js';
+
+let pool = null;
+const chain = [];
+
+window.initPool = function() {
+  const keys = {
+    groq:        document.getElementById('key-groq').value.trim(),
+    gemini:      document.getElementById('key-gemini').value.trim(),
+    huggingface: document.getElementById('key-hf').value.trim(),
+  };
+
+  // Try to restore warmth/resonance/bonds from a prior session
+  const restored = loadPool(keys);
+  pool = restored || buildDefaultPool(keys);
+
+  // Re-inject keys in case they've changed since last save
+  pool.forEach(n => {
+    if (n.provider === 'groq')    n.apiKey = keys.groq;
+    if (n.provider === 'gemini')  n.apiKey = keys.gemini;
+    if (n.provider === 'mistral') n.apiKey = keys.huggingface;
+  });
+
+  const active = pool.filter(n => n.apiKey).length;
+  log(`Pool initialised: ${pool.length} nodes, ${active} with API keys.`, 'l-sys');
+  pool.forEach(n => {
+    const status = n.apiKey ? 'key ✓' : 'no key';
+    log(`  [T${n.tier}] ${n.name} — ${status} — rel=${n.reliability.toFixed(2)}`, 'l-sys');
+  });
+  updatePoolState();
+};
+
+window.runTest = async function() {
+  const intent = document.getElementById('intent-input').value.trim();
+  if (!intent) return;
+  if (!pool) { log('Init pool first.', 'l-err'); return; }
+  await runDeliberate(intent);
+};
+
+window.runScoreOnly = function() {
+  const intent = document.getElementById('intent-input').value.trim();
+  if (!intent || !pool) return;
+  const scored = scorePool(intent, pool, chain);
+  log(`\nScoring: "${intent}"`, 'l-score');
+  scored.forEach((s, i) => {
+    log(`  ${i+1}. ${s.node.name} [T${s.node.tier}]`
+      + ` total=${s.total.toFixed(3)} match=${s.match.toFixed(3)}`
+      + ` thermal=${s.thermal.toFixed(3)} res=${s.standingWave.toFixed(3)}`
+      + ` rel=${s.node.reliability.toFixed(2)}`, 'l-score');
+  });
+};
+
+window.runPreset = function() {
+  const val = document.getElementById('test-select').value;
+  if (val) {
+    document.getElementById('intent-input').value = val;
+    runDeliberate(val);
+  }
+};
+
+window.runAllPresets = async function() {
+  const opts = document.getElementById('test-select').options;
+  for (let i = 1; i < opts.length; i++) {
+    await runDeliberate(opts[i].value);
+    await new Promise(r => setTimeout(r, 800)); // space out calls
+  }
+};
+
+async function runDeliberate(intent) {
+  if (!pool) { log('Init pool first.', 'l-err'); return; }
+
+  log(`\n──────────────────────────────────────────`, 'l-sys');
+  log(`PULSE: "${intent}"`, 'l-call');
+
+  const t0 = Date.now();
+
+  const result = await deliberate(intent, pool, {
+    chain,
+    onProgress: ({ stage, ...data }) => {
+      switch(stage) {
+        case 'scoring':
+          log('  [1] Scoring pool…', 'l-sys'); break;
+        case 'routing':
+          log(`  [2] Routing → T1A: ${data.topA} | T1B: ${data.topB}`, 'l-sys'); break;
+        case 'calling_t1':
+          log('  [3] Calling Tier 1 in parallel…', 'l-call'); break;
+        case 'measuring_dissonance':
+          log('  [4] Measuring output dissonance…', 'l-sys'); break;
+        case 'dissonance_result':
+          const d = data.dissonance.toFixed(3);
+          const thresh = data.threshold.toFixed(2);
+          const verdict = data.dissonance <= DISSONANCE_AGREE
+            ? 'AGREE → early exit'
+            : data.dissonance <= DISSONANCE_WARN
+            ? 'WARN → low confidence'
+            : 'CONFLICT → escalating';
+          log(`  [4] Dissonance: ${d} (agree<${thresh}) → ${verdict}`,
+            data.dissonance <= DISSONANCE_AGREE ? 'l-agree' : 'l-warn');
+          break;
+        case 'escalating_t2':
+          log(`  [5] Escalating to Tier 2 (dissonance=${data.dissonance.toFixed(3)})`, 'l-warn'); break;
+        case 'calling_t2':
+          log(`  [5] Calling ${data.model}…`, 'l-call'); break;
+        case 't2_resolution':
+          log(`  [5] T2 resolution: dissonance(A,T2)=${data.dissonanceAT2.toFixed(3)} dissonance(B,T2)=${data.dissonanceBT2.toFixed(3)}`, 'l-sys'); break;
+      }
+    },
+  });
+
+  const elapsed = Date.now() - t0;
+
+  if (result.error) {
+    log(`  ERROR: ${result.error}`, 'l-err');
+    return;
+  }
+
+  log(`\n  Winner: ${result.winner?.name}`, 'l-result');
+  log(`  Confidence: ${(result.confidence * 100).toFixed(0)}%  |  Dissonance: ${result.dissonance?.toFixed(3) ?? 'n/a'}  |  Escalated: ${result.escalated}  |  ${elapsed}ms`, 'l-sys');
+
+  if (result.warning)      log(`  Warning: ${result.warning}`, 'l-warn');
+  if (result.contradiction) log(`  CONTRADICTION: models strongly disagreed`, 'l-grief');
+
+  log(`\n  Contributions:`, 'l-sys');
+  result.contributions.forEach(c => {
+    const status = c.error ? `ERROR: ${c.error}` : `${c.latency}ms`;
+    const preview = c.text ? c.text.slice(0, 80).replace(/\n/g, ' ') + (c.text.length > 80 ? '…' : '') : 'null';
+    log(`    [${c.node.tier === 1 ? 'T1' : 'T2'}] ${c.node.name} (${status}): ${preview}`, c.error ? 'l-err' : 'l-sys');
+  });
+
+  log(`\n  Output preview:`, 'l-result');
+  const outputPreview = result.output
+    ? result.output.slice(0, 200).replace(/\n/g, ' ↵ ') + (result.output.length > 200 ? '…' : '')
+    : 'null';
+  log(`  ${outputPreview}`, 'l-agree');
+
+  // Update chain for bond formation
+  if (result.winner) {
+    chain.push(result.winner.id);
+    if (chain.length > 10) chain.shift();
+  }
+
+  savePool(pool);
+  updatePoolState();
+}
+
+function updatePoolState() {
+  if (!pool) return;
+  document.getElementById('pool-state').textContent =
+    'Pool: ' + pool.map(n =>
+      `${n.name} [warmth=${n.warmth.toFixed(2)} rel=${n.reliability.toFixed(2)}]`
+    ).join(' | ');
+}
+
+function log(msg, cls = 'l-sys') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+window.clearLog = function() {
+  document.getElementById('log').innerHTML = '&gt; Log cleared.\n';
+};
+
+// Quick semanticSim test on load
+log('semanticSim spot-checks:', 'l-sys');
+log(`  "health check" vs "health battery power status" = ${semanticSim('health check','health battery power status').toFixed(3)}  (expect >0.5)`, 'l-score');
+log(`  "write a poem" vs "code generation technical"   = ${semanticSim('write a poem','code generation technical').toFixed(3)}  (expect <0.3)`, 'l-score');
+log(`  "explain black holes" vs "reasoning analysis"   = ${semanticSim('explain black holes','reasoning analysis nuanced understanding').toFixed(3)}  (expect >0.3)`, 'l-score');
+log('', 'l-sys');
+log('Init pool with API keys to begin deliberation tests.', 'l-sys');
+</script>
+
+</body>
+</html>
