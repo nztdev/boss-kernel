@@ -1,7 +1,7 @@
 /**
  * BOSS Deliberation Engine — engine.js
  * =====================================
- * github.com/Dosage2AG/boss-kernel
+ * github.com/nztdev/boss-kernel
  *
  * The shared core of two products:
  *   1. BOSS Kernel — imported by the deliberation layer to resolve
@@ -712,33 +712,45 @@ export function buildDefaultPool(keys = {}) {
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
 /**
- * Save pool state (warmth, resonance, reliability, bonds) to localStorage.
- * API keys are intentionally NOT persisted here — they are managed by
- * the application layer and injected at runtime.
+ * Serialise pool state (warmth, resonance, reliability, bonds) to a plain
+ * JSON string. The application layer is responsible for storing this string
+ * wherever is appropriate for its environment (localStorage, a file, a DB).
+ * API keys are intentionally NOT included — they are injected at runtime.
+ *
+ * Usage (browser application layer):
+ *   localStorage.setItem('BOSS_ENGINE_POOL', savePool(pool));
+ *
+ * Usage (Node.js application layer):
+ *   fs.writeFileSync('pool.json', savePool(pool));
  */
-export function savePool(pool, storageKey = 'BOSS_ENGINE_POOL') {
-  const state = pool.map(n => n.toJSON());
-  try {
-    localStorage.setItem(storageKey, JSON.stringify({ nodes: state, saved: Date.now() }));
-  } catch(_) { /* localStorage unavailable (private browsing, etc.) */ }
+export function savePool(pool) {
+  return JSON.stringify({ nodes: pool.map(n => n.toJSON()), saved: Date.now() });
 }
 
 /**
- * Restore pool state from localStorage.
- * Re-injects API keys from the keys map since they are not persisted.
+ * Deserialise pool state from a JSON string produced by savePool().
+ * The application layer is responsible for reading the string from
+ * wherever it was stored. Re-injects API keys from the keys map.
+ *
+ * Usage (browser application layer):
+ *   const pool = loadPool(localStorage.getItem('BOSS_ENGINE_POOL'), keys);
+ *
+ * Usage (Node.js application layer):
+ *   const pool = loadPool(fs.readFileSync('pool.json', 'utf8'), keys);
+ *
+ * Returns null if the input is null, undefined, or unparseable.
  */
-export function loadPool(keys = {}, storageKey = 'BOSS_ENGINE_POOL') {
+export function loadPool(serialised, keys = {}) {
+  if (!serialised) return null;
   try {
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return null;
-    const { nodes } = JSON.parse(raw);
+    const { nodes } = JSON.parse(serialised);
     return nodes.map(d => LLMNode.fromJSON(d, keys[d.provider] || '', d.baseUrl || ''));
   } catch(_) { return null; }
 }
 
 // ── Public API summary ────────────────────────────────────────────────────────
 export default {
-  version:         ENGINE_VERSION,
+  version:          ENGINE_VERSION,
   semanticSim,
   LLMNode,
   scorePool,
@@ -746,8 +758,8 @@ export default {
   measureDissonance,
   deliberate,
   buildDefaultPool,
-  savePool,
-  loadPool,
+  savePool,         // returns JSON string — caller handles storage
+  loadPool,         // accepts JSON string — caller handles retrieval
   DISSONANCE_AGREE,
   DISSONANCE_WARN,
 };
