@@ -239,8 +239,8 @@ boss-kernel/
 Full detail in `docs/ROADMAP.md`. Current position: **Phase 0**.
 
 ```
-Phase 0  — Foundation audit and lock          ← CURRENT
-Phase 1  — Engine module validation
+Phase 0  — Foundation audit and lock          
+Phase 1  — Engine module validation           ← CURRENT
 Phase 2  — Deliberation Layer PWA
 Phase 3  — Heart extraction
 Phase 4  — Semantic seed iteration (Soma)
@@ -253,69 +253,41 @@ Phase 9  — v1.0 stabilisation and release
 
 ---
 
-## Phase 0 session task (current)
+## Phase 1 session task (current)
 
-**Objective:** Audit the repository against the Phase 0.1 checklist.
-Do not modify any files. Report only.
+**Objective:** Validate engine.js specialty string routing. Confirm the
+correct model wins on each intent type. Calibrate dissonance thresholds.
 
 **Instructions:**
-Clone `https://github.com/nztdev/boss-kernel` and inspect the files.
-For each item below report: **PASS**, **FAIL**, or **NOT FOUND**.
-If FAIL: quote the exact failing line(s) and state what the correct
-value should be, referencing this context document.
+Serve the engine/ directory locally (python3 -m http.server 8080) and
+open engine/test.html. Run the following test suite and record for each:
+winner model, dissonance value, whether T2 was escalated (Y/N), total
+latency. API keys required: Groq, Google AI Studio (Gemini), HuggingFace.
 
-**Checklist:**
+**Test suite:**
 
-```
-CORE/INDEX.HTML
- 1. GRIEF_PENALTY = 0.4 (not 0.1 or any other value)
- 2. score() uses warmth * match (multiplication, not addition or any other operator)
- 3. Decay uses Math.exp(-rate * dt) where dt is elapsed seconds (not per-frame multiply)
- 4. Arbiter has two-stage gate: Stage 1 delta check AND Stage 2 dissonance check
- 5. ACTIVE_NODES set is defined and contains MEDIA, SOMA, CHRONOS
- 6. Active-First tier-breaker is present in runArbiter()
- 7. Cortex URL is read from localStorage.getItem('BOSS_CORTEX_URL') — not hardcoded
- 8. Hexagonal seed has exactly 6 nodes: CORE, SOMA, CORTEX, MEMORY, MEDIA, CHRONOS
- 9. CHRONOS has an entry in ACTION_MAP with a callback function
-10. MEDIA has an entry in ACTION_MAP with a callback function
-11. SOMA has an entry in ACTION_MAP with a callback function
-12. Birth signal threshold check is present (maxMatch < BIRTH_THRESHOLD)
-13. Three-tier threshold logic is present (limp / dialogue / ignite paths)
+| # | Intent | Expected winner | Acceptable |
+|---|--------|----------------|------------|
+| 1 | Explain how black holes form | Gemini Flash | Either T1 |
+| 2 | What is the capital of France | Groq Llama | Either T1 |
+| 3 | Debug this Python: def add(a,b): return a-b | Groq or Mistral | Not Gemini-first |
+| 4 | Write a short poem about time | Gemini Flash | Either T1 |
+| 5 | Summarise the French Revolution in 3 sentences | Groq Llama | Either T1 |
+| 6 | What are ethical implications of AGI | Gemini Flash | Either T1 |
+| 7 | Translate hello world to Spanish, French, German | Either T1 | Any |
+| 8 | zorp the frambulator | Birth signal logged | No confident winner |
+| 9 | Explain quantum entanglement simply | Gemini Flash | Either T1 |
+| 10 | What is 2 + 2 | Groq Llama | Either T1 (simple fact) |
 
-CORE/SW.JS
-14. Network-first (not cached) for requests containing ':5000'
-15. Cache-first for shell assets (index.html, manifest.json, sw.js)
+**After each test, record:** winner, dissonance score, escalated Y/N, latency ms.
 
-CORTEX/CORTEX.PY
-16. 'import os' is present at top level
-17. WHITELIST uses absolute paths (not bare exe names like 'chrome.exe')
-18. No shell=True in any subprocess call anywhere in the file
-19. /resonate endpoint performs mean-subtraction on cosine scores
-20. SSE /stream endpoint sends keepalive comment every 15 seconds
+**Calibration targets:**
+- If >50% of tests escalate to T2: DISSONANCE_AGREE is too low — raise to 0.45
+- If <10% escalate on ambiguous queries: DISSONANCE_AGREE too high — lower to 0.28
+- If wrong model wins consistently on a category: adjust specialty strings
+- Bring full results table back to Claude for interpretation and string adjustments
 
-ENGINE/ENGINE.JS
-21. File exists at engine/engine.js
-22. No document, window, or localStorage references inside engine.js
-23. deliberate() function is exported
-24. buildDefaultPool() function is exported
-
-DOCS/
-25. docs/ROADMAP.md exists
-
-.GITIGNORE
-26. __pycache__/ is excluded
-27. *.pyc is excluded
-28. venv/ is excluded
-29. .env is excluded
-30. models/ is excluded
-
-LICENCE
-31. LICENSE file is MIT
-```
-
-**After reporting:** Do not fix anything. Bring the filled checklist
-back to Claude (claude.ai conversation) for review and fix generation.
-```
+**Do not modify engine.js during testing. Report results only.**
 
 ---
 
