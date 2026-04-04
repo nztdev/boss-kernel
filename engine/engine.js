@@ -250,7 +250,9 @@ async function callGroq(node, intent, systemPrompt) {
 }
 
 async function callGemini(node, intent, systemPrompt) {
-  const model  = node.model || 'gemini-1.5-flash-latest';
+  // Model: 'gemini-1.5-flash' is reliable on AI Studio free tier.
+  // If you see 404s, the '-latest' alias may not resolve — use explicit version.
+  const model  = node.model || 'gemini-1.5-flash';
   const url    = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${node.apiKey}`;
   const body   = {
     system_instruction: { parts: [{ text: systemPrompt || defaultSystemPrompt(node) }] },
@@ -262,14 +264,26 @@ async function callGemini(node, intent, systemPrompt) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(15000),  // extended: AI Studio free-tier cold-start can exceed 8s
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
-      throw new Error(`Gemini ${r.status}: ${err?.error?.message || r.statusText}`);
+      // Surface the full error — most common:
+      //   400 → wrong model string or malformed body
+      //   403 → wrong key type (Vertex key used instead of AI Studio key)
+      //   404 → model string doesn't exist for this API version
+      //   429 → free tier quota exceeded
+      throw new Error(`Gemini ${r.status} (${err?.error?.status || 'unknown'}): ${err?.error?.message || r.statusText}`);
     }
     const d = await r.json();
-    return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
+    // Check for content blocked by safety filters
+    const blockReason = d.candidates?.[0]?.finishReason;
+    if (blockReason && blockReason !== 'STOP' && blockReason !== 'MAX_TOKENS') {
+      return { error: `Gemini blocked: finishReason=${blockReason}` };
+    }
+    const text = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (!text) return { error: 'Gemini returned empty content' };
+    return text;
   } catch(e) {
     return { error: e.message };
   }
@@ -690,7 +704,7 @@ export function buildDefaultPool(keys = {}) {
     new LLMNode({
       name:      'Gemini Flash',
       provider:  'gemini',
-      model:     'gemini-1.5-flash-latest',
+      model:     'gemini-2.5-flash-latest',
       specialty: 'reasoning analysis multimodal context synthesis creative writing nuanced understanding',
       tier:      1,
       apiKey:    keys.gemini || '',
