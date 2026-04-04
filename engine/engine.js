@@ -252,7 +252,7 @@ async function callGroq(node, intent, systemPrompt) {
 async function callGemini(node, intent, systemPrompt) {
   // Model: 'gemini-1.5-flash' is reliable on AI Studio free tier.
   // If you see 404s, the '-latest' alias may not resolve — use explicit version.
-  const model  = node.model || 'gemini-1.5-flash';
+  const model  = node.model || 'gemini-2.5-flash';
   const url    = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${node.apiKey}`;
   const body   = {
     system_instruction: { parts: [{ text: systemPrompt || defaultSystemPrompt(node) }] },
@@ -704,7 +704,7 @@ export function buildDefaultPool(keys = {}) {
     new LLMNode({
       name:      'Gemini Flash',
       provider:  'gemini',
-      model:     'gemini-2.5-flash-latest',
+      model:     'gemini-2.5-flash',
       specialty: 'reasoning analysis multimodal context synthesis creative writing nuanced understanding',
       tier:      1,
       apiKey:    keys.gemini || '',
