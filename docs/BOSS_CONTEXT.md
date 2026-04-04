@@ -1,7 +1,7 @@
 # B.O.S.S. — Agent Session Brief (BOSS_CONTEXT.md)
 **Repo:** https://github.com/nztdev/boss-kernel
-**Current phase:** Phase 0 — Foundation audit and lock
-**Current task:** See session brief below
+**Current phase:** Phase 1 — Engine module validation
+**Current task:** Specialty string testing via engine/test.html
 
 > This file travels with every Antigravity session.
 > Read it before touching any code. Update the phase
