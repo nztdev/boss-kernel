@@ -50,6 +50,7 @@ button.danger { border-color: #ff444444; color: #ff6666; background: #1a0000; }
   <input type="password" id="key-gemini"  placeholder="Google AI Studio key  (AIza...)">
   <input type="password" id="key-hf"      placeholder="HuggingFace token  (hf_...)">
   <button onclick="initPool()">Init pool</button>
+  <button onclick="testGeminiDirect()" style="border-color:#6699ff;color:#6699ff">Test Gemini direct</button>
 </div>
 
 <h2>Intent</h2>
@@ -216,6 +217,16 @@ async function runDeliberate(intent) {
 
   if (result.warning)      log(`  Warning: ${result.warning}`, 'l-warn');
   if (result.contradiction) log(`  CONTRADICTION: models strongly disagreed`, 'l-grief');
+
+  // Surface any model errors prominently — this is how you catch silent failures
+  const failedModels = result.contributions.filter(c => c.error);
+  if (failedModels.length > 0) {
+    log(`\n  ⚠ Model failures (${failedModels.length}):`, 'l-warn');
+    failedModels.forEach(c => log(`    ${c.node.name}: ${c.error}`, 'l-err'));
+    if (failedModels.length === result.contributions.filter(c => c.node.tier === 1).length) {
+      log('  ALL T1 MODELS FAILED — dissonance pipeline never ran. Fix API errors above.', 'l-err');
+    }
+  }
 
   log(`\n  Contributions:`, 'l-sys');
   result.contributions.forEach(c => {
