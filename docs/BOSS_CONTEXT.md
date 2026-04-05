@@ -255,37 +255,26 @@ Phase 9  — v1.0 stabilisation and release
 
 ## Phase 1 session task (current)
 
-**Objective:** Validate engine.js specialty string routing. Confirm the
-correct model wins on each intent type. Calibrate dissonance thresholds.
+**Run:** Phase 1 validation v4 — testing match-gated standing wave fix.
 
-**Instructions:**
-Serve the engine/ directory locally (python3 -m http.server 8080) and
-open engine/test.html. Run the following test suite and record for each:
-winner model, dissonance value, whether T2 was escalated (Y/N), total
-latency. API keys required: Groq, Google AI Studio (Gemini), HuggingFace.
+Serve engine/ locally and run test.html with these 6 intents.
+Record: actual winner, Groq total score, Groq match, Gemini total score,
+Gemini match, dissonance, escalated Y/N.
+The scoring breakdown per model is REQUIRED output — it is the
+primary diagnostic. Do not summarise, record verbatim from console.
 
-**Test suite:**
+| # | Intent | Expected winner |
+|---|--------|----------------|
+| 1 | Explain black hole formation | Gemini Flash |
+| 2 | What is the capital of France | Groq Llama 3.1 |
+| 3 | Debug Python: def add(a,b): return a-b | Groq Llama 3.1 |
+| 4 | Write a short poem about time | Gemini Flash |
+| 5 | Summarise the French Revolution in 3 sentences | Groq Llama 3.1 |
+| 6 | What are the ethical implications of AGI | Gemini Flash |
 
-| # | Intent | Expected winner | Acceptable |
-|---|--------|----------------|------------|
-| 1 | Explain how black holes form | Gemini Flash | Either T1 |
-| 2 | What is the capital of France | Groq Llama | Either T1 |
-| 3 | Debug this Python: def add(a,b): return a-b | Groq or Mistral | Not Gemini-first |
-| 4 | Write a short poem about time | Gemini Flash | Either T1 |
-| 5 | Summarise the French Revolution in 3 sentences | Groq Llama | Either T1 |
-| 6 | What are ethical implications of AGI | Gemini Flash | Either T1 |
-| 7 | Translate hello world to Spanish, French, German | Either T1 | Any |
-| 8 | zorp the frambulator | Birth signal logged | No confident winner |
-| 9 | Explain quantum entanglement simply | Gemini Flash | Either T1 |
-| 10 | What is 2 + 2 | Groq Llama | Either T1 (simple fact) |
-
-**After each test, record:** winner, dissonance score, escalated Y/N, latency ms.
-
-**Calibration targets:**
-- If >50% of tests escalate to T2: DISSONANCE_AGREE is too low — raise to 0.45
-- If <10% escalate on ambiguous queries: DISSONANCE_AGREE too high — lower to 0.28
-- If wrong model wins consistently on a category: adjust specialty strings
-- Bring full results table back to Claude for interpretation and string adjustments
+Phase 1 exit criterion: 5 of 6 tests route to the expected model.
+If criterion met, note it. Do not proceed to Phase 2 independently.
+Bring results to Claude for review before any next steps.
 
 **Do not modify engine.js during testing. Report results only.**
 
