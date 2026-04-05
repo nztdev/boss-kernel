@@ -128,19 +128,31 @@ export class LLMNode {
 
   /**
    * Frequency score for this node against a given intent.
-   * Same formula as BOSS kernel Node.score() — physics are identical.
    *
-   * freq = (warmth × match)              thermal, intent-gated
-   *       + resonance × (1 + 0.3·sin)   standing wave
-   *       + bondSignal × 2               synaptic gradient
-   *       + vectorBoost × 2              optional cortex signal
-   *       × reliability                  long-term penalty multiplier
+   * freq = (warmth × match)                           thermal, intent-gated
+   *       + resonance × matchGate × (1 + 0.3·sin)    standing wave, match-gated
+   *       + bondSignal × 2                            synaptic gradient
+   *       + vectorBoost × 2                           optional cortex signal
+   *       × reliability                               long-term penalty multiplier
+   *
+   * NOTE: The standing wave in this engine differs from the BOSS kernel.
+   * In the kernel, resonance represents accumulated node trust and fires
+   * at full strength regardless of match — this is intentional for routing.
+   * In the engine, LLM nodes all start with equal resonance (1.2), so an
+   * unmodified standing wave makes pool construction order the tiebreaker
+   * on low-match intents. matchGate scales the standing wave with semantic
+   * relevance, making specialty strings decisive rather than pool position.
+   * Floor at 0.15 ensures resonance is never fully suppressed — a model
+   * with weak match still contributes, it just doesn't dominate.
    */
   score(intent, chain = [], allNodes = [], vectorBoost = 0) {
     const match        = semanticSim(intent, this.specialty);
     const thermal      = this.warmth * match;
     const phase        = Math.sin(2 * Math.PI * this.resonance);
-    const standingWave = this.resonance * (1 + 0.3 * phase);
+    // matchGate: scales standing wave by semantic relevance.
+    // Prevents pool construction order from breaking ties on low-match intents.
+    const matchGate    = Math.max(match, 0.15);
+    const standingWave = this.resonance * matchGate * (1 + 0.3 * phase);
 
     let bondSignal = 0;
     chain.slice(-BOND_LOOKBACK).reverse().forEach((nid, i) => {
