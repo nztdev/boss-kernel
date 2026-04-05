@@ -172,7 +172,7 @@ layer and the standalone PWA. No DOM dependencies.
 
 **Three-model default pool (zero budget):**
 - Tier 1A: Groq (llama-3.1-8b-instant) — fastest, free
-- Tier 1B: Gemini Flash (gemini-1.5-flash-latest) — free, capable
+- Tier 1B: Gemini Flash (gemini-2.5-flash) — free, capable
 - Tier 2: Mistral via HuggingFace (Mistral-7B-Instruct-v0.3) — free, tiebreaker
 
 **Pipeline:** score pool → call T1A + T1B in parallel → measure output
