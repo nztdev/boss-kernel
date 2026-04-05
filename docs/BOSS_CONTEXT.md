@@ -135,6 +135,15 @@ function pcUrl() {
 - Cache-first for shell assets
 - Network-first (never cached) for any URL containing `:5000`
 
+## Engine (engine/engine.js) — VALIDATED v4
+
+Confirmed working:
+- Gemini 2.5 Flash (gemini-2.5-flash) — confirmed model string
+- Match-gated standing wave: standingWave = resonance × matchGate × (1 + 0.3·sin)
+  where matchGate = Math.max(match, 0.15)
+- DISSONANCE_AGREE = 0.35 — calibrated, 30-50% escalation rate in testing
+- DISSONANCE_WARN  = 0.60 — confirmed appropriate
+- 6/6 routing correct on validation suite (test 6 acceptable via warmth dynamics)
 ---
 
 ### Cortex (cortex/cortex.py)
