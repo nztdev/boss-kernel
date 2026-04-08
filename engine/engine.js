@@ -2,6 +2,7 @@
  * BOSS Deliberation Engine — engine.js
  * =====================================
  * github.com/nztdev/boss-kernel
+ * github.com/nztdev/boss-deliberate
  *
  * The shared core of two products:
  *   1. BOSS Kernel — imported by the deliberation layer to resolve
@@ -33,8 +34,8 @@
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ENGINE_VERSION   = '0.1.0';
-const DISSONANCE_AGREE = 0.35;  // below this → models agree → early exit
-const DISSONANCE_WARN  = 0.60;  // above this → genuine contradiction
+export const DISSONANCE_AGREE = 0.35;  // below this → models agree → early exit
+export const DISSONANCE_WARN  = 0.60;  // above this → genuine contradiction
 const BOND_DECAY_K     = 0.6;
 const BOND_LOOKBACK    = 4;
 const BASE_DECAY       = 0.05;
@@ -302,10 +303,13 @@ async function callGemini(node, intent, systemPrompt) {
 }
 
 async function callMistralHF(node, intent, systemPrompt) {
-  // HuggingFace Inference API — free tier, no billing required
-  const model = node.model || 'mistralai/Mistral-7B-Instruct-v0.3';
-  const url   = `https://api-inference.huggingface.co/models/${model}`;
-  const prompt = `<s>[INST] ${systemPrompt || defaultSystemPrompt(node)}\n\n${intent} [/INST]`;
+  // HuggingFace Inference Router — free tier, no billing required.
+  // Endpoint: router.huggingface.co/v1 (updated 2026 — old api-inference endpoint deprecated)
+  // Model appended with provider suffix e.g. ':together' or ':nebius'
+  // Qwen2.5-7B-Instruct is the recommended free-tier model — warm, fast, capable tiebreaker.
+  const model    = node.model || 'Qwen/Qwen2.5-7B-Instruct';
+  const provider = node.hfProvider || 'together';  // 'together', 'nebius', 'auto'
+  const url      = 'https://router.huggingface.co/v1/chat/completions';
   try {
     const r = await fetch(url, {
       method: 'POST',
@@ -314,18 +318,28 @@ async function callMistralHF(node, intent, systemPrompt) {
         'Authorization': `Bearer ${node.apiKey}`,
       },
       body: JSON.stringify({
-        inputs: prompt,
-        parameters: { max_new_tokens: 512, temperature: 0.4, return_full_text: false },
+        model:       `${model}:${provider}`,
+        messages: [
+          { role: 'system', content: systemPrompt || defaultSystemPrompt(node) },
+          { role: 'user',   content: intent },
+        ],
+        max_tokens:  512,
+        temperature: 0.4,
+        stream:      false,
       }),
-      signal: AbortSignal.timeout(30000),  // HF cold-start can be slow
+      signal: AbortSignal.timeout(30000),
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
-      throw new Error(`HuggingFace ${r.status}: ${err?.error || r.statusText}`);
+      // Common causes:
+      //   401 → invalid or missing HF token
+      //   403 → model requires Pro subscription or provider not available on free tier
+      //   404 → model:provider combination doesn't exist — try ':nebius' or ':auto'
+      //   503 → provider overloaded — retry or switch provider suffix
+      throw new Error(`HuggingFace ${r.status}: ${err?.error?.message || err?.error || r.statusText}`);
     }
     const d = await r.json();
-    const text = Array.isArray(d) ? d[0]?.generated_text : d?.generated_text;
-    return text?.trim() || null;
+    return d.choices?.[0]?.message?.content?.trim() || null;
   } catch(e) {
     return { error: e.message };
   }
@@ -724,10 +738,10 @@ export function buildDefaultPool(keys = {}) {
       resonance: 1.2,
     }),
     new LLMNode({
-      name:      'Mistral 7B',
+      name:      'Qwen 2.5 7B',
       provider:  'mistral',
-      model:     'mistralai/Mistral-7B-Instruct-v0.3',
-      specialty: 'code generation technical explanation structured output logical reasoning european languages',
+      model:     'Qwen/Qwen2.5-7B-Instruct',
+      specialty: 'code generation technical explanation structured output logical reasoning multilingual analysis',
       tier:      2,
       apiKey:    keys.huggingface || '',
       warmth:    0.4,
