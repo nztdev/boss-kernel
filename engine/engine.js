@@ -414,7 +414,24 @@ export async function callModel(node, intent, systemPrompt = null) {
  */
 export function measureDissonance(textA, textB) {
   if (!textA || !textB) return 0;
-  return 1 - semanticSim(textA, textB);
+
+  const a = textA.trim();
+  const b = textB.trim();
+
+  // Short-response subsumption check.
+  // If one response is short (≤ 60 chars) and is contained within the other,
+  // the models are saying the same thing with different verbosity.
+  // e.g. "Paris." vs "The capital of France is Paris." → agreement.
+  const shorter = a.length <= b.length ? a : b;
+  const longer  = a.length <= b.length ? b : a;
+  if (shorter.length <= 60) {
+    const core = shorter.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    if (core.length >= 2 && longer.toLowerCase().includes(core)) {
+      return 0;  // subsumption → treat as full agreement
+    }
+  }
+
+  return 1 - semanticSim(a, b);
 }
 
 // ── Synaptic bond update ──────────────────────────────────────────────────────
