@@ -308,7 +308,7 @@ async function callMistralHF(node, intent, systemPrompt) {
   // Model appended with provider suffix e.g. ':together' or ':nebius'
   // Qwen2.5-7B-Instruct is the recommended free-tier model — warm, fast, capable tiebreaker.
   const model    = node.model || 'Qwen/Qwen2.5-7B-Instruct';
-  const provider = node.hfProvider || 'together';  // 'together', 'nebius', 'auto'
+  const provider = node.hfProvider || 'nebius';   // 'nebius', 'together', 'auto'
   const url      = 'https://router.huggingface.co/v1/chat/completions';
   try {
     const r = await fetch(url, {
