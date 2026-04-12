@@ -307,8 +307,8 @@ async function callMistralHF(node, intent, systemPrompt) {
   // Endpoint: router.huggingface.co/v1 (updated 2026 — old api-inference endpoint deprecated)
   // Model appended with provider suffix e.g. ':together' or ':nebius'
   // Qwen2.5-7B-Instruct is the recommended free-tier model — warm, fast, capable tiebreaker.
-  const model    = node.model || 'Qwen/Qwen2.5-7B-Instruct';
-  const provider = node.hfProvider || 'nebius';   // 'nebius', 'together', 'auto'
+  const model    = node.model || 'mistralai/Mixtral-8x7B-Instruct-v0.1';
+  const provider = node.hfProvider || 'together'; // 'together', 'nebius', 'auto'
   const url      = 'https://router.huggingface.co/v1/chat/completions';
   try {
     const r = await fetch(url, {
@@ -755,10 +755,10 @@ export function buildDefaultPool(keys = {}) {
       resonance: 1.2,
     }),
     new LLMNode({
-      name:      'Qwen 2.5 7B',
+      name:      'Mixtral 8x7B',
       provider:  'mistral',
-      model:     'Qwen/Qwen2.5-7B-Instruct',
-      specialty: 'code generation technical explanation structured output logical reasoning multilingual analysis',
+      model:     'mistralai/Mixtral-8x7B-Instruct-v0.1',
+      specialty: 'code generation technical explanation structured output logical reasoning ethical analysis multilingual',
       tier:      2,
       apiKey:    keys.huggingface || '',
       warmth:    0.4,
