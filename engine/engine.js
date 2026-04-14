@@ -303,12 +303,13 @@ async function callGemini(node, intent, systemPrompt) {
 }
 
 async function callMistralHF(node, intent, systemPrompt) {
-  // HuggingFace Inference Router — free tier, no billing required.
-  // Endpoint: router.huggingface.co/v1 (updated 2026 — old api-inference endpoint deprecated)
-  // Model appended with provider suffix e.g. ':together' or ':nebius'
-  // Qwen2.5-7B-Instruct is the recommended free-tier model — warm, fast, capable tiebreaker.
+  // HuggingFace Inference Router — free tier with HF token.
+  // Provider is passed as a separate body field, not as a model string suffix.
+  // DeepSeek R1 is available on multiple providers — 'sambanova' and 'fireworks'
+  // are accessible on the free tier with just a HuggingFace token.
+  // Do NOT append ':provider' to the model string — use the provider field instead.
   const model    = node.model || 'deepseek-ai/DeepSeek-R1';
-  const provider = node.hfProvider || 'auto';     // 'auto' lets HF pick available provider
+  const provider = node.hfProvider || 'sambanova';  // sambanova: free tier, fast, unrestricted
   const url      = 'https://router.huggingface.co/v1/chat/completions';
   try {
     const r = await fetch(url, {
@@ -316,9 +317,10 @@ async function callMistralHF(node, intent, systemPrompt) {
       headers: {
         'Content-Type':  'application/json',
         'Authorization': `Bearer ${node.apiKey}`,
+        'X-HF-Provider':  provider,  // provider header used by HF router REST API
       },
       body: JSON.stringify({
-        model:       `${model}:${provider}`,
+        model,
         messages: [
           { role: 'system', content: systemPrompt || defaultSystemPrompt(node) },
           { role: 'user',   content: intent },
@@ -332,10 +334,10 @@ async function callMistralHF(node, intent, systemPrompt) {
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       // Common causes:
-      //   401 → invalid or missing HF token
-      //   403 → model requires Pro subscription or provider not available on free tier
-      //   404 → model:provider combination doesn't exist — try ':nebius' or ':auto'
-      //   503 → provider overloaded — retry or switch provider suffix
+      //   401 → invalid or missing HF token (needs Inference API access)
+      //   403 → provider not available on free tier — try provider='fireworks'
+      //   404 → model not available on this provider
+      //   503 → provider overloaded — retry later
       throw new Error(`HuggingFace ${r.status}: ${err?.error?.message || err?.error || r.statusText}`);
     }
     const d = await r.json();
