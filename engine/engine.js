@@ -238,7 +238,7 @@ async function callGroq(node, intent, systemPrompt) {
       { role: 'system', content: systemPrompt || defaultSystemPrompt(node) },
       { role: 'user',   content: intent },
     ],
-    max_tokens: 512,
+    max_tokens: 1024,
     temperature: 0.4,
   };
   try {
@@ -270,7 +270,7 @@ async function callGemini(node, intent, systemPrompt) {
   const body   = {
     system_instruction: { parts: [{ text: systemPrompt || defaultSystemPrompt(node) }] },
     contents: [{ role: 'user', parts: [{ text: intent }] }],
-    generationConfig: { maxOutputTokens: 512, temperature: 0.4 },
+    generationConfig: { maxOutputTokens: 1024, temperature: 0.4 },
   };
   try {
     const r = await fetch(url, {
@@ -323,7 +323,7 @@ async function callMistralHF(node, intent, systemPrompt) {
           { role: 'system', content: systemPrompt || defaultSystemPrompt(node) },
           { role: 'user',   content: intent },
         ],
-        max_tokens:  512,
+        max_tokens:  1024,
         temperature: 0.4,
         stream:      false,
       }),
