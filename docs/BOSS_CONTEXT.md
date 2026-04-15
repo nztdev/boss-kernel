@@ -1,301 +1,267 @@
 # B.O.S.S. — Agent Session Brief (BOSS_CONTEXT.md)
 **Repo:** https://github.com/nztdev/boss-kernel
-**Current phase:** Phase 1 — Engine module validation
-**Current task:** Specialty string testing via engine/test.html
+**Current phase:** Phase 3 — Heart extraction
+**Current task:** Extract scattered metabolic functions into heart/heart.js and heart/heart.py
 
-> This file travels with every Antigravity session.
-> Read it before touching any code. Update the phase
-> and task sections at the start of each new session.
+> Read this file fully before touching any code.
+> This is a REFACTOR — behaviour must stay identical, only code location changes.
+> If any logic changes during extraction, that is a regression. Stop and report it.
+> Produce all output files. Do not commit anything. Report results to Claude for review.
 
 ---
 
 ## What B.O.S.S. is
 
 B.O.S.S. (Biological Operating System) is a resonant routing kernel.
-Instead of calling AI models directly, users send an **intent pulse**
-into a field of autonomous nodes. The node with the highest resonance
-frequency fires. The system is model-agnostic, self-organising, and
-metabolic — nodes decay when unused and learn from co-activation.
+Users send intent pulses into a field of autonomous nodes. The node with
+the highest resonance frequency fires. The system is metabolic — nodes
+decay when unused and learn from co-activation patterns.
 
-The system has three primary components and one shared engine module:
+Components:
 
-| Component | Location | Role |
-|-----------|----------|------|
-| Soma | `core/index.html` | Browser interface, canvas, field physics, PWA |
-| Cortex | `cortex/cortex.py` | Python server, embeddings, SSE, system actions |
-| Engine | `engine/engine.js` | Shared LLM deliberation module, model-agnostic |
-| Heart | not yet extracted | Metabolic loop (Phase 3 work item) |
-
-There is also a standalone product in a separate repo (`boss-deliberation`)
-built on the engine module — not present in this repo.
+| Component | Location | Status |
+|-----------|----------|--------|
+| Soma | `core/index.html` | Active — browser interface, canvas, field physics |
+| Cortex | `cortex/cortex.py` | Active — Python server, embeddings, SSE |
+| Engine | `engine/engine.js` | Active — shared LLM deliberation module |
+| Heart | `heart/heart.js` + `heart/heart.py` | Phase 3 — being extracted NOW |
 
 ---
 
-## Architectural locks
-**These must never be modified without explicit approval.
-Any PR or generated code that violates these is a regression.**
+## Architectural locks — NEVER modify these
 
 ```
 1. score(): warmth × match — MULTIPLICATION, not addition
    thermal = this.warmth * match   ← correct
-   thermal = this.warmth + match   ← WRONG, regression
+   thermal = this.warmth + match   ← WRONG
 
 2. Decay: elapsed-time exponential, display-rate independent
    this.warmth *= Math.exp(-decayRate * dt)   ← correct
-   this.warmth *= 0.995                        ← WRONG, frame-rate dependent
+   dt = (now - this.lastT) / 1000             ← dt must be in seconds
+   this.warmth *= 0.995 per frame             ← WRONG, frame-rate dependent
 
-3. vectorBoost: mean-subtracted RELATIVE score, not raw cosine
-   boosts = [s - mean for s in raw_scores]   ← correct (Python)
-   boosts = raw_scores                        ← WRONG, inflates all nodes equally
+3. Decay rate uses systemVitals.decayRate, not a hardcoded constant
+   systemVitals.decayRate is set by initBiometrics() based on battery level
 
-4. Arbiter: TWO-STAGE gate
-   Stage 1: delta < confThreshold (proximity check)
-   Stage 2: 1 - sim(top.specialty, second.specialty) > DISSONANCE_CUT
-   Both stages required. One stage alone is a regression.
+4. vectorBoost: mean-subtracted RELATIVE score (Python cortex only)
+   boosts = [s - mean for s in raw_scores]   ← correct
 
-5. Active-First tier-breaker in runArbiter():
-   If one node is in ACTIVE_NODES and the other is not,
-   and delta < 0.2, the Active node wins without dissonance check.
+5. Arbiter: TWO-STAGE gate (delta check + dissonance check)
+   Both stages must remain in runArbiter() — do not simplify
 
-6. GRIEF_PENALTY = 0.4 (not 0.1)
-   0.1 was a temporary testing value. Production value is 0.4.
+6. GRIEF_PENALTY = 0.4 — do not change
 
-7. Cortex URL: configurable at runtime, never hardcoded
-   localStorage.getItem('BOSS_CORTEX_URL')   ← correct
-   const CORTEX_ENDPOINT = "https://..."     ← WRONG, breaks all forks
+7. ACTIVE_NODES = new Set(['MEDIA', 'SOMA', 'CHRONOS']) — do not change
 
-8. engine.js: no DOM dependencies
-   Must import and run in any JS environment.
-   No document, window, or localStorage references inside engine.js.
+8. Cortex URL: localStorage.getItem('BOSS_CORTEX_URL') — never hardcoded
 
-9. Subprocess: no shell=True, absolute paths only
-   subprocess.Popen(WHITELIST[name])         ← correct
-   subprocess.Popen(["chrome.exe"], shell=True) ← WRONG, security risk
+9. Save interval: 30000ms (30 seconds) — do not change
+
+10. Heart must be capable of running without Soma open (background-capable)
+    No DOM references allowed in heart.js except the minimum needed for
+    the autosave call (which writes to localStorage, not the DOM)
 ```
 
 ---
 
-## Component details
+## Phase 3 task — Heart extraction
 
-### Soma (core/index.html)
+### What the Heart is
 
-**Six hexagonal nodes** (v0.6 seed):
+The Heart is the metabolic rhythm of BOSS — the always-on process that
+keeps the field alive between user interactions. Currently its functions
+are scattered across index.html and cortex.py. This extraction consolidates
+them into two dedicated modules without changing any behaviour.
 
-| Node | Color | Specialty (pruned — each keyword belongs to ONE node only) | Has action |
-|------|-------|-------------------------------------------------------------|-----------|
-| CORE | #00ffcc | health battery power hardware reboot uptime diagnostics integrity status system | No |
-| SOMA | #ff66aa | identity self who appearance theme interface color look feel ui somatic body | Yes |
-| CORTEX | #cc00ff | logic reason analyse evaluate intelligence decide process think infer meaning | No |
-| MEMORY | #66aaff | recall retrieve store archive records data vault note save find past logs | No |
-| MEDIA | #00F0FF | audio music play sound frequency volume track song speaker playback listen | Yes |
-| CHRONOS | #ffaa00 | time schedule clock calendar timer alarm duration routine when last history | Yes |
+### What gets extracted from core/index.html → heart/heart.js
 
-**Active node tier** (for Active-First tie-breaker):
+Identify and extract these specific functions and calls:
+
+**1. `initBiometrics()`**
+The battery monitoring function. Sets `systemVitals.battery`,
+`systemVitals.isLowPower`, and `systemVitals.decayRate`.
+Currently called once at boot. Move to heart.js.
+
+**2. `saveKernel()`**
+Serialises nodes, chain, and timestamp to localStorage under 'BOSS_KERNEL'.
+Currently called from firePulse(), recover(), drag handlers, and setInterval.
+Move to heart.js.
+
+**3. `loadKernel()`**
+Deserialises kernel state from localStorage.
+Currently called once at boot before seed().
+Move to heart.js.
+
+**4. The autosave setInterval**
+Currently at the bottom of the script:
+`setInterval(() => { if (nodes.length) saveKernel(); }, 30000);`
+Move to heart.js as `Heart.start()`.
+
+**What stays in index.html:**
+- The `nodes`, `chain`, `limpMode` state variables (Heart receives these by reference)
+- The `Node` class and its `update()` method including the decay formula
+  (decay is part of the Field physics, not the Heart)
+- The rendering loop
+- `firePulse()`, `runArbiter()`, all UI logic
+- `systemVitals` object declaration (Heart updates it, Soma reads it)
+
+**The interface after extraction:**
+index.html imports heart.js and calls:
 ```javascript
-const ACTIVE_NODES = new Set(['MEDIA', 'SOMA', 'CHRONOS']);
+import { Heart } from './heart/heart.js';
+// At boot:
+Heart.init(nodes, chain, systemVitals);  // pass state by reference
+await Heart.initBiometrics();
+const restored = Heart.loadKernel();     // returns { nodes, chain } or null
+Heart.start();                           // begins the 30s autosave interval
+// In firePulse() and other places that currently call saveKernel():
+Heart.save();                            // replaces saveKernel()
 ```
 
-**Three-tier threshold** (in firePulse(), after scoring):
-- `maxMatch < 0.15` → birth signal logged (unknown intent)
-- `maxMatch < 0.50` → limp mode (no ignition, kernel dims)
-- `maxMatch < 0.80` → dialogue mode (Arbiter gates)
-- `maxMatch >= 0.80` → ignite directly (skip Arbiter)
+### What gets extracted from cortex/cortex.py → heart/heart.py
 
-**Scoring formula:**
-```
-freq = (warmth × semanticMatch)           thermal, intent-gated
-     + resonance × (1 + 0.3·sin(2πr))    standing wave
-     + bondSignal × 2                     synaptic gradient (4-hop lookback, 0.6 decay)
-     + vectorBoost × 2.0                  relative cortex signal (0 when offline)
-```
+Identify and extract:
 
-**Key constants:**
-```javascript
-const BASE_DECAY     = 0.05;
-const BOND_DECAY_K   = 0.6;
-const BOND_LOOKBACK  = 4;
-const GRIEF_PENALTY  = 0.4;    // NOT 0.1
-const DISSONANCE_CUT = 0.55;
-const VECTOR_WEIGHT  = 2.0;
-const BIRTH_THRESHOLD = 0.15;
-let   confThreshold  = 1.5;
-```
+**1. `heartbeat_thread` function**
+The background thread that monitors for URGENT_ACTION.txt and
+pushes SSE events via `_event_queue`.
 
-**Cortex URL (must be runtime-configurable):**
-```javascript
-function pcUrl() {
-  const stored = localStorage.getItem('BOSS_CORTEX_URL') || '';
-  if (!stored) return null;
-  if (/^\d{1,3}\.\d{1,3}/.test(stored)) return `http://${stored}:5000`;
-  return stored.replace(/\/$/, '');
-}
-```
+**2. The `threading.Thread` launch call**
+Currently starts heartbeat_thread as a daemon thread at startup.
 
-**Service worker** (`core/sw.js`):
-- Cache-first for shell assets
-- Network-first (never cached) for any URL containing `:5000`
+**What stays in cortex.py:**
+- All Flask routes (/handshake, /resonate, /pulse, /remember, /stream)
+- The `_event_queue` queue object (Heart pushes to it, /stream reads from it)
+- The sentence-transformers model loading
+- The WHITELIST and subprocess execution logic
 
-## Engine (engine/engine.js) — VALIDATED v4
-
-Confirmed working:
-- Gemini 2.5 Flash (gemini-2.5-flash) — confirmed model string
-- Match-gated standing wave: standingWave = resonance × matchGate × (1 + 0.3·sin)
-  where matchGate = Math.max(match, 0.15)
-- DISSONANCE_AGREE = 0.35 — calibrated, 30-50% escalation rate in testing
-- DISSONANCE_WARN  = 0.60 — confirmed appropriate
-- 6/6 routing correct on validation suite (test 6 acceptable via warmth dynamics)
----
-
-### Cortex (cortex/cortex.py)
-
-**Endpoints:**
-- `GET /handshake` — health check, returns identity and model name
-- `POST /resonate` — returns mean-subtracted relative vector boosts
-- `POST /pulse` — intent routing, memory search, secure execute
-- `POST /remember` — ingest text into server-side memory pool
-- `GET /stream` — SSE proactive events, keepalive every 15s
-
-**Subprocess whitelist** — absolute paths only, no shell=True:
+**The interface after extraction:**
+cortex.py imports heart.py and calls:
 ```python
-WHITELIST: dict[str, list[str]] = {
-    "chrome": [r"C:\Program Files\Google\Chrome\Application\chrome.exe"],
-    "notepad": [r"C:\Windows\System32\notepad.exe"],
-}
+from heart.heart import Heart
+Heart.start(_event_queue)   # Heart pushes events to the shared queue
 ```
 
-**Required imports at top level:**
-```python
-import os        # was missing in an earlier version — must be present
-import time
-import queue
-import threading
-from pathlib import Path
-```
+heart.py receives the queue and starts its own daemon thread internally.
 
 ---
 
-### Engine (engine/engine.js)
+## Output specification
 
-Shared deliberation module. Imported by both the BOSS integration
-layer and the standalone PWA. No DOM dependencies.
+Produce these four files. Do not modify any other files.
 
-**Three-model default pool (zero budget):**
-- Tier 1A: Groq (llama-3.1-8b-instant) — fastest, free
-- Tier 1B: Gemini Flash (gemini-2.5-flash) — free, capable
-- Tier 2: Mistral via HuggingFace (Mistral-7B-Instruct-v0.3) — free, tiebreaker
+### 1. heart/heart.js (new file — overwrite the stub)
 
-**Pipeline:** score pool → call T1A + T1B in parallel → measure output
-dissonance → early exit if agree (< 0.35) → escalate to T2 if conflict
-(> 0.60) → T2 tiebreaks → synthesise → return DelibeResult.
-
-**LLM specialty strings (subject to iteration in Phase 1):**
+```javascript
+/**
+ * B.O.S.S. Heart — heart/heart.js
+ * Metabolic rhythm module. Manages persistence, biometrics, and autosave.
+ * Extracted from core/index.html during Phase 3.
+ *
+ * Interface:
+ *   Heart.init(nodes, chain, systemVitals)  — call once at boot
+ *   Heart.initBiometrics()                  — async, sets battery state
+ *   Heart.loadKernel()                      — returns saved state or null
+ *   Heart.save()                            — serialise current state
+ *   Heart.start()                           — begin 30s autosave interval
+ *   Heart.stop()                            — clear interval (for testing)
+ */
 ```
-Groq:    fast factual retrieval summarisation clear explanation general knowledge question answer
-Gemini:  reasoning analysis multimodal context synthesis creative writing nuanced understanding
-Mistral: code generation technical explanation structured output logical reasoning european languages
+
+Then the extracted functions, adapted to use the references passed via init().
+The save interval must be exactly 30000ms.
+localStorage key for kernel state must remain 'BOSS_KERNEL'.
+No DOM references except localStorage.
+
+### 2. heart/heart.py (new file — overwrite the stub)
+
+```python
+"""
+B.O.S.S. Heart — heart/heart.py
+Server-side metabolic loop. Background monitoring and SSE event push.
+Extracted from cortex/cortex.py during Phase 3.
+
+Interface:
+    Heart.start(event_queue)   — start background daemon thread
+    Heart.stop()               — stop thread (for testing)
+"""
 ```
+
+Then the extracted heartbeat_thread logic.
+The URGENT_ACTION.txt path must remain identical to the original.
+The polling interval must remain identical to the original.
+The event format pushed to the queue must remain identical.
+
+### 3. core/index.html (modified)
+
+The four items listed above are removed from the script block.
+Replaced with an import of Heart and the interface calls listed above.
+Everything else in index.html is byte-for-byte identical.
+All architectural locks must still pass.
+
+### 4. cortex/cortex.py (modified)
+
+The heartbeat_thread function and its Thread launch are removed.
+Replaced with the import and Heart.start() call listed above.
+Everything else in cortex.py is byte-for-byte identical.
+
+---
+
+## Verification checklist
+
+After producing all four files, verify each item:
+
+```
+heart.js:
+[ ] initBiometrics() present and identical to original
+[ ] saveKernel() logic identical — same localStorage key 'BOSS_KERNEL'
+[ ] loadKernel() logic identical
+[ ] setInterval uses exactly 30000ms
+[ ] No DOM references (no document.getElementById, no window.*, no canvas)
+[ ] localStorage access is present (this is NOT a DOM dependency)
+[ ] Exported as named exports (export const Heart = {...})
+
+heart.py:
+[ ] heartbeat_thread logic identical to original
+[ ] Queue push format identical
+[ ] URGENT_ACTION.txt path identical
+[ ] Polling interval identical
+[ ] Starts as daemon thread
+
+index.html:
+[ ] initBiometrics() call replaced with Heart.initBiometrics()
+[ ] saveKernel() call replaced with Heart.save() in all locations
+[ ] loadKernel() call replaced with Heart.loadKernel()
+[ ] setInterval at bottom replaced with Heart.start()
+[ ] Heart imported at top of script block
+[ ] systemVitals object still declared in index.html
+[ ] Node.update() decay formula unchanged
+[ ] All architectural locks still present
+
+cortex.py:
+[ ] heartbeat_thread function removed
+[ ] threading.Thread launch removed
+[ ] Heart import added
+[ ] Heart.start(_event_queue) called
+[ ] _event_queue still declared in cortex.py
+[ ] All Flask routes unchanged
+```
+
+Report the verification results alongside the four files.
+If any item fails verification, note it explicitly.
+Do not commit. Bring all four files and the verification report to Claude.
 
 ---
 
 ## Regression patterns to watch for
 
-These are the specific mistakes that have occurred in past sessions.
-Flag immediately if any generated code contains these patterns:
-
-| Pattern | Why it's wrong |
-|---------|---------------|
-| `thermal = warmth + match` | Additive — intent no longer gates energy |
-| `warmth *= 0.995` or `warmth *= (1 - DECAY)` per frame | Frame-rate dependent cooling |
-| `const CORTEX_ENDPOINT = "https://..."` hardcoded | Breaks all forks, expires on Codespaces |
-| `GRIEF_PENALTY = 0.1` | Testing value, not production |
-| Single-stage Arbiter (delta only, no dissonance check) | False grief on close-but-compatible nodes |
-| `subprocess.Popen([name], shell=True)` | Command injection risk |
-| `boosts = raw_scores` (not mean-subtracted) | Inflates all nodes uniformly |
-| `shell=True` anywhere in cortex.py | Security regression |
-| DOM references in engine.js | Breaks non-browser import |
-
----
-
-## Repository structure (current)
-
-```
-boss-kernel/
-├── core/
-│   ├── index.html      ← Soma (v0.6 hexagonal kernel)
-│   ├── sw.js           ← Service worker
-│   └── manifest.json   ← PWA manifest
-├── cortex/
-│   ├── cortex.py       ← Python cortex server
-│   └── requirements.txt
-├── engine/
-│   ├── engine.js       ← Shared deliberation engine
-│   └── test.html       ← Engine test harness
-├── docs/
-│   ├── BOSS_CONTEXT.md ← This file
-│   ├── ROADMAP.md      ← Full development roadmap
-│   ├── ARCHITECTURE.md ← Technical deep-dive (needs v0.6 update)
-│   └── PHILOSOPHY.md   ← Conceptual lineage
-├── .gitignore
-├── LICENSE             ← MIT
-├── philosophy.md       ← (legacy, to be merged into docs/)
-└── readme.md           ← (needs v0.6 update)
-```
-
----
-
-## Development roadmap (summary)
-
-Full detail in `docs/ROADMAP.md`. Current position: **Phase 0**.
-
-```
-Phase 0  — Foundation audit and lock          
-Phase 1  — Engine module validation           ← CURRENT
-Phase 2  — Deliberation Layer PWA
-Phase 3  — Heart extraction
-Phase 4  — Semantic seed iteration (Soma)
-Phase 5  — Cortex hardening
-Phase 6  — BOSS integration
-Phase 7  — PWA → native wrap
-Phase 8  — Future components (design + stub)
-Phase 9  — v1.0 stabilisation and release
-```
-
----
-
-## Phase 1 session task (current)
-
-**Run:** Phase 1 validation v4 — testing match-gated standing wave fix.
-
-Serve engine/ locally and run test.html with these 6 intents.
-Record: actual winner, Groq total score, Groq match, Gemini total score,
-Gemini match, dissonance, escalated Y/N.
-The scoring breakdown per model is REQUIRED output — it is the
-primary diagnostic. Do not summarise, record verbatim from console.
-
-| # | Intent | Expected winner |
-|---|--------|----------------|
-| 1 | Explain black hole formation | Gemini Flash |
-| 2 | What is the capital of France | Groq Llama 3.1 |
-| 3 | Debug Python: def add(a,b): return a-b | Groq Llama 3.1 |
-| 4 | Write a short poem about time | Gemini Flash |
-| 5 | Summarise the French Revolution in 3 sentences | Groq Llama 3.1 |
-| 6 | What are the ethical implications of AGI | Gemini Flash |
-
-Phase 1 exit criterion: 5 of 6 tests route to the expected model.
-If criterion met, note it. Do not proceed to Phase 2 independently.
-Bring results to Claude for review before any next steps.
-
-**Do not modify engine.js during testing. Report results only.**
-
----
-
-## How to update this file
-
-At the start of each new phase, update:
-1. **Current phase** and **current task** at the top
-2. The **Phase X session task** section at the bottom
-3. Any component details that changed during the previous phase
-
-Commit the updated file before starting the Antigravity session.
-The file should always reflect the *current* state of the project,
-not the target state.
+| Pattern | Why wrong |
+|---------|-----------|
+| Decay formula changed | Must stay Math.exp(-decayRate * dt) with dt in seconds |
+| Save interval changed from 30000 | Fixed metabolic rhythm |
+| localStorage key changed from 'BOSS_KERNEL' | Breaks existing saved state |
+| heartbeat_thread logic changed | SSE events would break |
+| heart.js references document or window | Breaks background/non-browser use |
+| Node.update() moved to heart.js | Decay is Field physics, not Heart |
+| systemVitals moved to heart.js | Soma reads it directly, must stay in index.html |
+| Any Flask route modified | Out of scope for this phase |
