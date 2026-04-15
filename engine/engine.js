@@ -341,7 +341,12 @@ async function callMistralHF(node, intent, systemPrompt) {
       throw new Error(`HuggingFace ${r.status}: ${err?.error?.message || err?.error || r.statusText}`);
     }
     const d = await r.json();
-    return d.choices?.[0]?.message?.content?.trim() || null;
+    let text = d.choices?.[0]?.message?.content?.trim() || null;
+    // Strip <think>...</think> reasoning block from DeepSeek R1 output.
+    // The thinking process is visible in the transparency preview but
+    // should not appear in the synthesised answer shown to the user.
+    if (text) text = text.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+    return text || null;
   } catch(e) {
     return { error: e.message };
   }
