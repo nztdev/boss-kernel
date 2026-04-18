@@ -383,10 +383,22 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<script>
+<script type="module">
+import { Heart } from '../heart/heart.js';
+
+// Attach UI handlers to window for HTML onclick compatibility
+window.firePulse = firePulse;
+window.recover = recover;
+window.openCortexModal = openCortexModal;
+window.closeCortexModal = closeCortexModal;
+window.saveCortexUrl = saveCortexUrl;
+window.testCortex = testCortex;
+window.clarify = clarify;
+window.dismissToast = dismissToast;
+
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
-   github.com/Dosage2AG/boss-kernel
+   github.com/nztdev/boss-kernel
 
    ARCHITECTURAL LOCKS:
    1. warmth × match — multiplication, not addition. Intent gates thermal.
@@ -411,28 +423,9 @@ const BIRTH_THRESHOLD = 0.15;
 let   confThreshold  = 1.5;
 const ACTIVE_NODES   = new Set(['MEDIA', 'SOMA', 'CHRONOS']);
 // ── Biometrics ────────────────────────────────────────────────────────────────
-let systemVitals = { battery: 1.0, isLowPower: false, decayRate: BASE_DECAY };
+let systemVitals = { battery: 1.0, isLowPower: false, decayRate: BASE_DECAY, baseDecay: BASE_DECAY };
 
-async function initBiometrics() {
-  if (!navigator.getBattery) return;
-  try {
-    const b = await navigator.getBattery();
-    const upd = () => {
-      systemVitals.battery    = b.level;
-      systemVitals.isLowPower = b.level < 0.2 && !b.charging;
-      systemVitals.decayRate  = systemVitals.isLowPower
-        ? BASE_DECAY * 0.4
-        : BASE_DECAY * (0.6 + b.level * 0.4);
-      const fill = document.getElementById('batt-fill');
-      fill.style.width      = (b.level * 100) + '%';
-      fill.style.background = b.level < 0.2 ? '#ff4444' : b.level < 0.5 ? '#ffcc00' : '#00ffcc';
-      document.getElementById('batt-pct').textContent = Math.round(b.level * 100) + '%';
-    };
-    upd();
-    b.addEventListener('levelchange',    upd);
-    b.addEventListener('chargingchange', upd);
-  } catch(_) {}
-}
+// Biometrics extracted to heart.js
 
 // ── Semantic similarity ───────────────────────────────────────────────────────
 const SYNONYMS = {
@@ -949,7 +942,7 @@ async function firePulse() {
     vaultRemember(resp.slice(0, 80));
   }
 
-  saveKernel();
+  Heart.save();
 }
 
 // ── Recovery ──────────────────────────────────────────────────────────────────
@@ -958,15 +951,11 @@ function recover() {
   limpMode = false;
   document.getElementById('grief-overlay').classList.remove('show');
   clog('💚 Recovered — resonance floors restored', 'log-sys');
-  saveKernel();
+  Heart.save();
 }
 
 // ── Persistence ───────────────────────────────────────────────────────────────
-function saveKernel() {
-  localStorage.setItem('BOSS_KERNEL', JSON.stringify({
-    nodes: nodes.map(n => n.toJSON()), chain: chain.slice(-50), saved: Date.now()
-  }));
-}
+// Persistence extracted to heart.js
 
 // Note: actions are not serialised. On reload, seed() re-attaches them.
 // Only geometry and resonance state persists — the action callbacks are code.
@@ -998,23 +987,7 @@ const ACTION_MAP = {
   },
 };
 
-function loadKernel() {
-  const raw = localStorage.getItem('BOSS_KERNEL');
-  if (!raw) return false;
-  try {
-    const s = JSON.parse(raw);
-    nodes = s.nodes.map(d => {
-      const n = new Node(
-        d.name, d.specialty, d.x, d.y, d.color, d.resonance, d.isStatic,
-        ACTION_MAP[d.name] || null  // re-attach action if this node has one
-      );
-      n.id = d.id; n.bonds = d.bonds || {}; return n;
-    });
-    chain = s.chain || [];
-    clog(`📀 Restored ${nodes.length} nodes`, 'log-sys');
-    return true;
-  } catch(_) { return false; }
-}
+// loadKernel moved to heart.js - see boot sequence for instantiation logic
 
 // ── Canvas ────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
@@ -1084,7 +1057,7 @@ canvas.addEventListener('touchmove', e => {
   touching.x = t.clientX - tox; touching.y = t.clientY - toy;
   touching.vx = 0; touching.vy = 0;
 }, { passive: false });
-canvas.addEventListener('touchend', () => { if (touching) { saveKernel(); touching = null; } });
+canvas.addEventListener('touchend', () => { if (touching) { Heart.save(); touching = null; } });
 
 // Mouse
 let dragging = null, dox = 0, doy = 0;
@@ -1097,7 +1070,7 @@ canvas.addEventListener('mousemove', e => {
   dragging.x = e.clientX - dox; dragging.y = e.clientY - doy;
   dragging.vx = 0; dragging.vy = 0;
 });
-canvas.addEventListener('mouseup', () => { if (dragging) { saveKernel(); dragging = null; } });
+canvas.addEventListener('mouseup', () => { if (dragging) { Heart.save(); dragging = null; } });
 
 // Tooltip
 const tip = document.getElementById('tip');
@@ -1165,7 +1138,7 @@ function seed() {
     },
     {
       name:'CHRONOS', res:1.3, color:'#ffaa00',
-      spec:'time schedule clock calendar timer alarm duration routine when last history'
+      spec:'time schedule clock calendar timer alarm duration routine when last history',
       action: ACTION_MAP['CHRONOS'],
     },
     
@@ -1183,10 +1156,25 @@ function seed() {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-if (!loadKernel()) seed();
-initBiometrics();
+await Heart.initBiometrics();
+const restored = Heart.loadKernel();
+if (restored) {
+  nodes = restored.nodes.map(d => {
+    const n = new Node(
+      d.name, d.specialty, d.x, d.y, d.color, d.resonance, d.isStatic,
+      ACTION_MAP[d.name] || null
+    );
+    n.id = d.id; n.bonds = d.bonds || {}; return n;
+  });
+  chain = restored.chain || [];
+  clog(`📀 Restored ${nodes.length} nodes`, 'log-sys');
+} else {
+  seed();
+}
+// Heart.init after nodes/chain finalised — references must be correct
+Heart.init(nodes, chain, systemVitals);
+Heart.start();
 requestAnimationFrame(loop);
-setInterval(() => { if (nodes.length) saveKernel(); }, 30000);
 </script>
 </body>
 </html>
