@@ -523,7 +523,11 @@ class Node {
     const match        = semanticSim(intent, this.specialty);
     const thermal      = this.warmth * match;
     const phase        = Math.sin(2 * Math.PI * this.resonance);
-    const standingWave = this.resonance * (1 + 0.3 * phase);
+    // matchGate: prevents high-resonance nodes from dominating low-match intents.
+    // Mirrors the engine.js fix — without this, CORE's standing wave wins on
+    // unrelated intents purely due to its resonance of 2.0.
+    const matchGate    = Math.max(match, 0.15);
+    const standingWave = this.resonance * matchGate * (1 + 0.3 * phase);
     let bondSignal = 0;
     chain.slice(-BOND_LOOKBACK).reverse().forEach((pid, i) => {
       const prev = allNodes.find(n => n.id === pid);
@@ -1120,7 +1124,7 @@ function seed() {
     },
     {
       name:'SOMA', res:1.8, color:'#ff66aa',
-      spec:'identity self id interface look feel appearance theme color ui somatic',
+      spec:'identity self who id interface look feel appearance theme color ui somatic',
       action: ACTION_MAP['SOMA']
     },
     {
@@ -1133,12 +1137,12 @@ function seed() {
     },
     {
       name:'MEDIA', res:1.4, color:'#00F0FF',
-      spec:'music sound audio playback play volume frequency track song speaker sensory',
+      spec:'music sound audio playback play volume track song speaker listen headphones',
       action: ACTION_MAP['MEDIA']
     },
     {
       name:'CHRONOS', res:1.3, color:'#ffaa00',
-      spec:'time schedule clock calendar timer alarm duration routine when last history',
+      spec:'time schedule clock calendar timer alarm duration elapsed countdown remind when',
       action: ACTION_MAP['CHRONOS'],
     },
     
