@@ -670,12 +670,17 @@ function runArbiter(top, second, delta) {
     return top.node;
   }
 
-  // True conflict — determine path based on whether actions are involved
-  const hasAction = !!(top.node.action || second.node.action);
+  // True conflict — determine path based on whether actions are involved.
+  // Hard grief (kernel suspend) requires BOTH nodes to have actions.
+  // Rationale: if only one node has a side effect and the passive node wins,
+  // nothing irreversible happens. Suspending on one-action conflicts is too
+  // aggressive — it suspends the kernel on legitimate cross-domain intents.
+  const bothActive = !!(top.node.action && second.node.action);
+  const eitherActive = !!(top.node.action || second.node.action);
 
-  if (hasAction) {
-    // Hard stop — irreversible action node involved
-    clog(`   ⚠ OPPOSED + ACTION NODE — Grief Protocol (hard stop)`, 'log-grief');
+  if (bothActive) {
+    // Hard stop — both nodes have irreversible actions, genuine conflict
+    clog(`   ⚠ OPPOSED + BOTH ACTION NODES — Grief Protocol (hard stop)`, 'log-grief');
     top.node.grieve(); second.node.grieve();
     clog(`   💔 ${top.node.name} res→${top.node.resonance.toFixed(3)}`, 'log-grief');
     clog(`   💔 ${second.node.name} res→${second.node.resonance.toFixed(3)}`, 'log-grief');
@@ -1124,7 +1129,7 @@ function seed() {
     },
     {
       name:'SOMA', res:1.8, color:'#ff66aa',
-      spec:'identity self who id interface look feel appearance theme color ui somatic',
+      spec:'identity self who soma appearance theme ui somatic personality profile customise',
       action: ACTION_MAP['SOMA']
     },
     {
