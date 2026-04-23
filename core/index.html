@@ -433,8 +433,8 @@ const SYNONYMS = {
   identity: ['self','id','soma','look','feel','interface','appearance','who','name','describe','about','you'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai'],
   data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory'],
-  media:    ['music','sound','audio','playback','play','volume','frequency','track','song','speaker','sensory'],
-  time:     ['schedule','routine','history','clock','calendar','when','last','sequence','duration','chronos'],
+  media:    ['music','sound','audio','playback','play','volume','track','song','speaker','listen','headphones'],
+  time:     ['schedule','routine','history','clock','calendar','when','last','long','sequence','duration','chronos'],
 };
 
 function ngramSim(a, b, n = 3) {
@@ -1147,7 +1147,7 @@ function seed() {
     },
     {
       name:'CHRONOS', res:1.3, color:'#ffaa00',
-      spec:'time schedule clock calendar timer alarm duration elapsed countdown remind when',
+      spec:'time schedule clock calendar timer alarm duration elapsed long countdown remind when',
       action: ACTION_MAP['CHRONOS'],
     },
     
