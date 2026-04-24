@@ -305,6 +305,7 @@ canvas {
       <div class="dot" id="cx-dot"></div><span id="cx-label">cortex off</span>
     </div>
     <div class="pill"><div class="dot" id="sse-dot"></div><span id="sse-label">sse off</span></div>
+    <div class="pill" id="engine-pill"><div class="dot"></div><span style="color:#335544">engine off</span></div>
   </div>
   <div class="status-right">
     <div class="stat"><span class="stat-l">nodes</span><span class="stat-v" id="h-nodes">0</span></div>
@@ -334,6 +335,19 @@ canvas {
     </div>
     <button class="modal-btn" onclick="saveCortexUrl()">Save &amp; Connect</button>
     <button class="modal-btn" onclick="testCortex()">Test Handshake</button>
+    <div style="border-top:1px solid #0f2a20;margin:14px 0 10px"></div>
+    <div class="modal-title" style="font-size:9px;margin-bottom:10px;color:#335544">ENGINE KEYS (optional)</div>
+    <label class="modal-label">Groq API key</label>
+    <input class="modal-input" id="engine-key-groq" type="password" placeholder="gsk_…">
+    <label class="modal-label">Gemini API key</label>
+    <input class="modal-input" id="engine-key-gemini" type="password" placeholder="AIza…">
+    <label class="modal-label">HuggingFace token (T2 tiebreaker)</label>
+    <input class="modal-input" id="engine-key-hf" type="password" placeholder="hf_…">
+    <div class="modal-label" style="color:#1a3a20;line-height:1.6;margin-bottom:10px">
+      Engine keys enable AI-powered Arbiter resolution.<br>
+      Without keys the kernel still routes — the Arbiter falls back to clarification.
+    </div>
+    <button class="modal-btn" onclick="saveEngineKeys()">Save Engine Keys</button>
     <button class="modal-btn dim" onclick="closeCortexModal()">Cancel</button>
   </div>
 </div>
@@ -385,6 +399,8 @@ if ('serviceWorker' in navigator) {
 
 <script type="module">
 import { Heart } from '../heart/heart.js';
+import { deliberate, buildDefaultPool, loadPool, savePool,
+         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN } from '../engine/engine.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse = firePulse;
@@ -424,6 +440,35 @@ let   confThreshold  = 1.5;
 const ACTIVE_NODES   = new Set(['MEDIA', 'SOMA', 'CHRONOS']);
 // ── Biometrics ────────────────────────────────────────────────────────────────
 let systemVitals = { battery: 1.0, isLowPower: false, decayRate: BASE_DECAY, baseDecay: BASE_DECAY };
+
+// ── Engine pool (deliberation layer) ─────────────────────────────────────────
+// Keys stored in localStorage under BOSS_ENGINE_KEYS.
+// Pool state (warmth, resonance, bonds) stored under BOSS_ENGINE_POOL.
+// Engine is called by the Arbiter when semantic routing cannot resolve conflict.
+const ENGINE_KEYS_KEY = 'BOSS_ENGINE_KEYS';
+const ENGINE_POOL_KEY = 'BOSS_ENGINE_POOL';
+let enginePool = null;  // initialised at boot
+
+function getEngineKeys() {
+  try { return JSON.parse(localStorage.getItem(ENGINE_KEYS_KEY) || '{}'); } catch(_) { return {}; }
+}
+
+function buildEnginePool() {
+  const k = getEngineKeys();
+  const keyMap = {
+    groq:        k.groq   || '',
+    gemini:      k.gemini || '',
+    mistral:     k.hf     || '',
+    huggingface: k.hf     || '',
+  };
+  const serialised = localStorage.getItem(ENGINE_POOL_KEY);
+  return loadPool(serialised, keyMap) || buildDefaultPool(keyMap);
+}
+
+function engineConfigured() {
+  const k = getEngineKeys();
+  return !!(k.groq || k.gemini);
+}
 
 // Biometrics extracted to heart.js
 
@@ -628,20 +673,26 @@ let arbCount   = 0;
 let sseSource  = null;
 let pendingClarification = null; // { top, second } waiting for user response
 
-// ── Arbiter — two-stage dissonance gate with soft/hard paths ──────────────────
+// ── Arbiter — three-stage dissonance gate ────────────────────────────────────
 /**
- * Hard path (action nodes involved):
+ * Stage 1 — Compatible (dissonance ≤ DISSONANCE_CUT):
+ *   Top node wins immediately. No escalation needed.
+ *
+ * Stage 2 — Hard grief (both nodes have actions):
  *   Side effects are irreversible. Suspend kernel, show grief overlay.
  *   User must manually recover.
  *
- * Soft path (passive nodes only):
- *   Outputs are informational. Proceed but surface the ambiguity.
- *   Show clarification toast. Top node fires provisionally.
- *   User can correct by tapping the alternative.
+ * Stage 3 — Engine escalation (new in Phase 6):
+ *   The deliberation engine is called with the intent.
+ *   It consults multiple LLMs and returns a consensus answer.
+ *   The answer is compared to both node specialties — closer node wins.
+ *   The engine's response is shown to the user as the console output.
+ *   If engine is unconfigured or fails → fall back to clarification toast.
  *
- * This distinction makes the Arbiter useful rather than just a roadblock.
+ * Stage 4 — Clarification toast (fallback):
+ *   Engine unavailable or failed. Surface ambiguity to user.
  */
-function runArbiter(top, second, delta) {
+async function runArbiter(top, second, delta, intent) {
   arbCount++;
   document.getElementById('h-arb').textContent = arbCount;
   clog(`🔺 ARBITER Δ=${delta.toFixed(3)} | ${top.node.name} vs ${second.node.name}`, 'log-arbiter');
@@ -687,10 +738,42 @@ function runArbiter(top, second, delta) {
     return null; // caller enters limp mode
   }
 
-  // Soft stop — passive nodes, show clarification toast
-  clog(`   ⚠ OPPOSED PASSIVE — Clarification requested`, 'log-arbiter');
+  // Stage 3 — Engine escalation
+  if (engineConfigured() && enginePool) {
+    clog(`   🧬 ENGINE ESCALATION — consulting deliberation layer…`, 'log-arbiter');
+    try {
+      const result = await deliberate(intent, enginePool, {
+        systemPrompt: `You are resolving an ambiguous intent for a routing kernel.
+The intent is: "${intent}"
+Two nodes are competing: ${top.node.name} (${top.node.specialty.slice(0,60)}) 
+and ${second.node.name} (${second.node.specialty.slice(0,60)}).
+Answer the intent directly and concisely. Do not mention nodes or routing.`,
+      });
+
+      if (result.output && !result.error) {
+        // Save engine pool metabolic state
+        localStorage.setItem(ENGINE_POOL_KEY, savePool(enginePool));
+
+        // Compare engine output to each node's specialty
+        const simA = semanticSim(result.output, top.node.specialty);
+        const simB = semanticSim(result.output, second.node.specialty);
+        const winner = simA >= simB ? top.node : second.node;
+        const conf   = Math.round((result.confidence || 0) * 100);
+
+        clog(`   🧬 Engine → ${winner.name} (conf=${conf}% sim_a=${simA.toFixed(2)} sim_b=${simB.toFixed(2)})`, 'log-arbiter');
+
+        // Store engine response so firePulse can display it
+        winner._engineResponse = result.output;
+        return winner;
+      }
+    } catch(e) {
+      clog(`   ⚠ Engine escalation failed: ${e.message}`, 'log-err');
+    }
+  }
+
+  // Stage 4 — Clarification toast (fallback when engine unavailable or failed)
+  clog(`   ⚠ OPPOSED — Clarification requested`, 'log-arbiter');
   showClarificationToast(top.node, second.node);
-  // Return top node as provisional winner — toast lets user correct
   return top.node;
 }
 
@@ -731,9 +814,36 @@ function pcUrl() {
   return stored.replace(/\/$/, '');
 }
 
+window.saveEngineKeys = function() {
+  const keys = {
+    groq:   document.getElementById('engine-key-groq').value.trim(),
+    gemini: document.getElementById('engine-key-gemini').value.trim(),
+    hf:     document.getElementById('engine-key-hf').value.trim(),
+  };
+  localStorage.setItem(ENGINE_KEYS_KEY, JSON.stringify(keys));
+  enginePool = buildEnginePool();
+  updateEngineStatus();
+  clog('🧬 Engine keys saved', 'log-sys');
+  closeCortexModal();
+};
+
+function updateEngineStatus() {
+  const configured = engineConfigured();
+  // Reuse SSE pill styling for engine status
+  const pill = document.getElementById('engine-pill');
+  if (!pill) return;
+  pill.querySelector('.dot').className = 'dot' + (configured ? ' online' : '');
+  pill.querySelector('span').textContent = configured ? 'engine' : 'engine off';
+  pill.querySelector('span').style.color = configured ? '#00ffcc' : '#335544';
+}
+
 function openCortexModal() {
   const current = localStorage.getItem('BOSS_CORTEX_URL') || '';
   document.getElementById('cortex-url-input').value = current;
+  const ek = getEngineKeys();
+  document.getElementById('engine-key-groq').value   = ek.groq   || '';
+  document.getElementById('engine-key-gemini').value = ek.gemini || '';
+  document.getElementById('engine-key-hf').value     = ek.hf     || '';
   document.getElementById('cortex-modal').classList.add('show');
 }
 
@@ -919,9 +1029,9 @@ async function firePulse() {
 
   let winner = top.node;
 
-  // Two-stage Arbiter (soft/hard path)
+  // Three-stage Arbiter (soft/hard/engine path)
   if (second && delta < confThreshold) {
-    const result = runArbiter(top, second, delta);
+    const result = await runArbiter(top, second, delta, intent);
     if (result === null) {
       limpMode = true;
       document.getElementById('grief-overlay').classList.add('show');
@@ -943,12 +1053,23 @@ async function firePulse() {
   winner.ignite();
   clog(`📡 ${winner.name} | freq=${top.total.toFixed(3)} Δ=${delta===Infinity?'∞':delta.toFixed(3)}`, 'log-win');
 
-  const resp = await queryPulse(intent, winner.name);
-  if (resp) {
-    const t = resp.length > 90 ? resp.slice(0, 90) + '…' : resp;
-    clog(`🧬 [cortex→${winner.name}] ${t}`, 'log-win');
-    winner.lastOutput = resp;
-    vaultRemember(resp.slice(0, 80));
+  // Engine response takes priority over cortex response when available
+  if (winner._engineResponse) {
+    const t = winner._engineResponse.length > 120
+      ? winner._engineResponse.slice(0, 120) + '…'
+      : winner._engineResponse;
+    clog(`🧬 [engine→${winner.name}] ${t}`, 'log-win');
+    winner.lastOutput = winner._engineResponse;
+    vaultRemember(winner._engineResponse.slice(0, 80));
+    delete winner._engineResponse;
+  } else {
+    const resp = await queryPulse(intent, winner.name);
+    if (resp) {
+      const t = resp.length > 90 ? resp.slice(0, 90) + '…' : resp;
+      clog(`🧬 [cortex→${winner.name}] ${t}`, 'log-win');
+      winner.lastOutput = resp;
+      vaultRemember(resp.slice(0, 80));
+    }
   }
 
   Heart.save();
@@ -1183,6 +1304,18 @@ if (restored) {
 // Heart.init after nodes/chain finalised — references must be correct
 Heart.init(nodes, chain, systemVitals);
 Heart.start();
+
+// Initialise engine pool
+enginePool = buildEnginePool();
+updateEngineStatus();
+clog(`🧬 Engine: ${engineConfigured() ? 'ready' : 'unconfigured — tap cortex pill → Engine Keys'}`, 'log-sys');
+
+// Register engine pool save callback with Heart
+// Heart calls this on every beat — keeps engine metabolic state persistent
+Heart.registerEngineSave(() => {
+  if (enginePool) localStorage.setItem(ENGINE_POOL_KEY, savePool(enginePool));
+});
+
 requestAnimationFrame(loop);
 </script>
 </body>
