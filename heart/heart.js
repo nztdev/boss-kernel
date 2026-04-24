@@ -77,6 +77,17 @@ export const Heart = {
       chain: this.chain ? this.chain.slice(-50) : [],
       saved: Date.now()
     }));
+    // Engine pool state persisted separately if the Soma has set it
+    // Heart does not own the engine pool — it only persists it if provided
+    if (this._enginePoolSave) {
+      try { this._enginePoolSave(); } catch(_) {}
+    }
+  },
+
+  // Called by Soma to register the engine pool save callback.
+  // Keeps Heart storage-agnostic — Heart does not import engine.js.
+  registerEngineSave(fn) {
+    this._enginePoolSave = fn;
   },
 
   /**
