@@ -451,9 +451,7 @@ window.saveCortexUrl = saveCortexUrl;
 window.testCortex = testCortex;
 window.clarify = clarify;
 window.dismissToast = dismissToast;
-window.dismissBirth = dismissBirth;
-window.confirmBirth = confirmBirth;
-window.selectBirthColor = selectBirthColor;
+// Birth Protocol functions defined directly on window — see checkBirthProtocol section
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -1417,15 +1415,21 @@ function seed() {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
+// ── Boot order: Registry and Nervous first, then everything that depends on them
+// Registry must be initialised before seed() or loadKernel() runs,
+// because both read from Registry for node definitions.
+Registry.init();
+ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
+Immune.init(Registry, Nervous);
+clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models`, 'log-sys');
+
 await Heart.initBiometrics();
 const restored = Heart.loadKernel();
 if (restored) {
   nodes = restored.nodes.map(d => {
     // Cross-reference Registry for definition updates made since last save.
-    // Saved state carries geometry and metabolic values (x, y, resonance, bonds).
-    // Registry carries the current canonical specialty, color, and capabilities.
     // Registry wins on definition fields — saved state wins on metabolic fields.
-    const regDef = Registry.getNode(d.name);
+    const regDef    = Registry.getNode(d.name);
     const specialty = regDef ? regDef.specialty : d.specialty;
     const color     = regDef ? regDef.color     : d.color;
     const n = new Node(
@@ -1438,8 +1442,7 @@ if (restored) {
   chain = restored.chain || [];
   clog(`📀 Restored ${nodes.length} nodes (definitions from Registry)`, 'log-sys');
 
-  // Add any nodes present in Registry but missing from saved state.
-  // This handles new nodes added via Birth Protocol since last save.
+  // Add any nodes in Registry but missing from saved state (Birth Protocol nodes)
   const savedNames = new Set(nodes.map(n => n.name));
   Registry.getAllNodes().forEach((d, i) => {
     if (!savedNames.has(d.name)) {
@@ -1458,14 +1461,10 @@ if (restored) {
 } else {
   seed();
 }
+
 // Heart.init after nodes/chain finalised — references must be correct
 Heart.init(nodes, chain, systemVitals);
 Heart.start();
-
-// Initialise Registry, Nervous System, Immune System
-Registry.init();
-ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
-Immune.init(Registry, Nervous);
 clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models`, 'log-sys');
 
 // Initialise engine pool
