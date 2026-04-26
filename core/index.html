@@ -441,6 +441,7 @@ import { deliberate, buildDefaultPool, loadPool, savePool,
 import { Registry }                                      from '../registry/registry.js';
 import { Nervous, EVENT }                                from '../nervous/nervous.js';
 import { Immune }                                        from '../immune/immune.js';
+import { ChronosAction }                                 from '../actions/chronos.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse = firePulse;
@@ -642,16 +643,16 @@ class Node {
     return { total, match, thermal, standingWave, bondSignal, vectorBoost };
   }
 
-  ignite() {
+  ignite(intent = '') {
     this.warmth     = Math.min(this.warmth + 2.5, 10);
     this.resonance += 0.01;
     this.flashT     = performance.now();
     if (this.action) {
-      try { this.action(); }
+      try { this.action(intent); }
       catch(e) { clog(`⚠ Action error on ${this.name}: ${e.message}`, 'log-err'); }
     }
     Nervous.emit(EVENT.NODE_FIRED, { source: 'SOMA', node: this.name,
-      payload: { warmth: this.warmth, resonance: this.resonance } });
+      payload: { warmth: this.warmth, resonance: this.resonance, intent } });
   }
 
   grieve() {
@@ -842,13 +843,13 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
 
   // Stage 4 — Clarification toast (fallback when engine unavailable or failed)
   clog(`   ⚠ OPPOSED — Clarification requested`, 'log-arbiter');
-  showClarificationToast(top.node, second.node);
+  showClarificationToast(top.node, second.node, intent);
   return top.node;
 }
 
 // ── Clarification toast ───────────────────────────────────────────────────────
-function showClarificationToast(topNode, secondNode) {
-  pendingClarification = { top: topNode, second: secondNode };
+function showClarificationToast(topNode, secondNode, intent = '') {
+  pendingClarification = { top: topNode, second: secondNode, _intent: intent };
   const toast = document.getElementById('clarification-toast');
   document.getElementById('toast-question').textContent =
     `Conflict: "${topNode.name}" vs "${secondNode.name}" — which did you mean?`;
@@ -863,7 +864,7 @@ function showClarificationToast(topNode, secondNode) {
 function clarify(nodeId) {
   const node = nodes.find(n => n.id === nodeId);
   if (!node) return;
-  node.ignite();
+  node.ignite(pendingClarification?._intent || '');
   clog(`💬 Clarified: ${node.name} confirmed by user`, 'log-arbiter');
   dismissToast();
 }
@@ -1012,7 +1013,7 @@ function connectSSE() {
       clog(`🚨 PROACTIVE [${nodeName}]: ${msg}`, 'log-sse');
       const t = nodes.find(n => n.name === nodeName.toUpperCase());
       if (t) {
-        t.ignite();
+        t.ignite('');  // SSE-triggered — no user intent available
         const f = document.createElement('div'); f.className = 'sse-flash';
         document.body.appendChild(f); setTimeout(() => f.remove(), 800);
       }
@@ -1204,7 +1205,7 @@ async function firePulse() {
   }
 
   chain.push(winner.id);
-  winner.ignite();
+  winner.ignite(intent);
   clog(`📡 ${winner.name} | freq=${top.total.toFixed(3)} Δ=${delta===Infinity?'∞':delta.toFixed(3)}`, 'log-win');
 
   // Engine response takes priority over cortex response when available
@@ -1246,8 +1247,12 @@ function recover() {
 
 // Note: actions are not serialised. On reload, seed() re-attaches them.
 // Only geometry and resonance state persists — the action callbacks are code.
+// ── Action callbacks — one module per active node ───────────────────────────
+// Each callback receives the user's intent string so it can parse what to do.
+// New action modules: import at top of file, register here.
 const ACTION_MAP = {
-  'MEDIA': function() {
+  'MEDIA': function(intent) {
+    // Placeholder — MEDIA real actions in actions/media.js (Phase 7)
     clog('📀 MEDIA ignited — sensory output', 'log-action');
     const f = document.createElement('div');
     f.className = 'action-flash';
@@ -1255,7 +1260,8 @@ const ACTION_MAP = {
     document.body.appendChild(f);
     setTimeout(() => f.remove(), 600);
   },
-  'SOMA': function() {
+  'SOMA': function(intent) {
+    // Placeholder — SOMA real actions in actions/soma.js (Phase 7)
     clog('🎨 SOMA ignited — interface response', 'log-action');
     const f = document.createElement('div');
     f.className = 'action-flash';
@@ -1263,14 +1269,9 @@ const ACTION_MAP = {
     document.body.appendChild(f);
     setTimeout(() => f.remove(), 600);
   },
-  'CHRONOS': function() {
-    clog('⏱ CHRONOS ignited — temporal event', 'log-action');
-    const f = document.createElement('div');
-    f.className = 'action-flash';
-    f.style.background = 'rgba(255,170,0,0.07)';
-    document.body.appendChild(f);
-    setTimeout(() => f.remove(), 600);
-    // v1.0: trigger countdown ring, alarm, haptic pulse
+  'CHRONOS': function(intent) {
+    // Real temporal actions via ChronosAction module
+    ChronosAction.handle(intent, clog, Nervous, EVENT);
   },
 };
 
