@@ -90,6 +90,12 @@ export const Heart = {
     this._enginePoolSave = fn;
   },
 
+  // Called by Soma to register a callback fired on every beat.
+  // Used by the Nervous System to receive HEART_BEAT events.
+  registerBeatCallback(fn) {
+    this._beatCallback = fn;
+  },
+
   /**
    * Bond normalisation — runs every beat.
    *
@@ -173,6 +179,10 @@ export const Heart = {
       this.normaliseBonds();
       this.maintainVault();
       this.save();
+      // Notify Nervous System of beat — Immune System listens for health checks
+      if (this._beatCallback) {
+        try { this._beatCallback(); } catch(_) {}
+      }
     }, 30000);
   },
 
