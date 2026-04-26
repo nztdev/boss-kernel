@@ -453,6 +453,12 @@ window.clarify = clarify;
 window.dismissToast = dismissToast;
 // Birth Protocol functions defined directly on window — see checkBirthProtocol section
 
+// Expose debug interfaces globally — accessible from DevTools console
+// Nervous.history(n), Immune.report(), Registry.export()
+window.Nervous  = Nervous;
+window.Immune   = Immune;
+window.Registry = Registry;
+
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
    github.com/nztdev/boss-kernel
