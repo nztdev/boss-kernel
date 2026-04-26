@@ -317,6 +317,33 @@ def remember():
         return err(f"Remember failed: {str(e)}", "remember_error", 500)
 
 
+@app.route("/registry", methods=["GET", "POST"])
+def registry():
+    """Registry sync endpoint — GET returns snapshot, POST merges incoming nodes."""
+    import json
+    registry_path = Path("boss_registry.json")
+
+    if request.method == "GET":
+        try:
+            if registry_path.exists():
+                return jsonify(json.loads(registry_path.read_text()))
+            return jsonify({"nodes": {}, "models": {}})
+        except Exception as e:
+            return err(f"Registry read failed: {str(e)}", "registry_read_error", 500)
+
+    try:
+        incoming = request.json or {}
+        existing = {}
+        if registry_path.exists():
+            existing = json.loads(registry_path.read_text())
+        merged = {**existing, "nodes": {**existing.get("nodes", {}), **incoming.get("nodes", {})},
+                  "lastSynced": time.time()}
+        registry_path.write_text(json.dumps(merged, indent=2))
+        return jsonify({"status": "synced", "nodeCount": len(merged["nodes"])})
+    except Exception as e:
+        return err(f"Registry write failed: {str(e)}", "registry_write_error", 500)
+
+
 @app.route("/stream")
 def stream():
     """SSE — pushes proactive events to the Soma. Browser reconnects automatically."""
