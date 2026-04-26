@@ -380,6 +380,43 @@ canvas {
   </div>
 </div>
 
+<!-- BIRTH PROTOCOL MODAL — fires when no node matches intent -->
+<div id="birth-modal" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.75); z-index:60;
+  align-items:center; justify-content:center;
+  backdrop-filter:blur(4px);">
+  <div class="modal-box" style="max-width:320px">
+    <div class="modal-title" style="color:#34d399">🌱 BIRTH SIGNAL</div>
+    <div style="font-size:9px;color:#335544;margin-bottom:10px;line-height:1.7">
+      No existing node matches this intent.<br>
+      Create a new node for it?
+    </div>
+    <div style="font-size:10px;color:#00ffcc;margin-bottom:14px;font-family:'Share Tech Mono',monospace"
+         id="birth-intent-display"></div>
+    <label class="modal-label">Node name (max 10 chars)</label>
+    <input class="modal-input" id="birth-node-name" placeholder="e.g. NETWORK"
+      onkeydown="if(event.key==='Enter')confirmBirth()"
+      maxlength="10" style="text-transform:uppercase">
+    <label class="modal-label">Specialty (what this node is good at)</label>
+    <input class="modal-input" id="birth-node-specialty" placeholder="e.g. wifi connection internet network ping"
+      onkeydown="if(event.key==='Enter')confirmBirth()">
+    <label class="modal-label">Color</label>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap" id="birth-color-picker">
+      <div onclick="selectBirthColor(this,'#00ffcc')" style="width:20px;height:20px;border-radius:50%;background:#00ffcc;cursor:pointer;border:2px solid transparent"></div>
+      <div onclick="selectBirthColor(this,'#ff66aa')" style="width:20px;height:20px;border-radius:50%;background:#ff66aa;cursor:pointer;border:2px solid transparent"></div>
+      <div onclick="selectBirthColor(this,'#cc00ff')" style="width:20px;height:20px;border-radius:50%;background:#cc00ff;cursor:pointer;border:2px solid transparent"></div>
+      <div onclick="selectBirthColor(this,'#66aaff')" style="width:20px;height:20px;border-radius:50%;background:#66aaff;cursor:pointer;border:2px solid transparent"></div>
+      <div onclick="selectBirthColor(this,'#00F0FF')" style="width:20px;height:20px;border-radius:50%;background:#00F0FF;cursor:pointer;border:2px solid transparent"></div>
+      <div onclick="selectBirthColor(this,'#ffaa00')" style="width:20px;height:20px;border-radius:50%;background:#ffaa00;cursor:pointer;border:2px solid transparent"></div>
+      <div onclick="selectBirthColor(this,'#ff6666')" style="width:20px;height:20px;border-radius:50%;background:#ff6666;cursor:pointer;border:2px solid transparent"></div>
+      <div onclick="selectBirthColor(this,'#88ff44')" style="width:20px;height:20px;border-radius:50%;background:#88ff44;cursor:pointer;border:2px solid transparent"></div>
+    </div>
+    <button class="modal-btn" onclick="confirmBirth()">Create Node</button>
+    <button class="modal-btn dim" onclick="dismissBirth()">Dismiss</button>
+  </div>
+</div>
+
 <!-- CLARIFICATION TOAST (soft stop — passive nodes) -->
 <div id="clarification-toast">
   <div class="toast-q" id="toast-question">Which did you mean?</div>
@@ -414,6 +451,9 @@ window.saveCortexUrl = saveCortexUrl;
 window.testCortex = testCortex;
 window.clarify = clarify;
 window.dismissToast = dismissToast;
+window.dismissBirth = dismissBirth;
+window.confirmBirth = confirmBirth;
+window.selectBirthColor = selectBirthColor;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -468,7 +508,13 @@ function buildEnginePool() {
     huggingface: k.hf     || '',
   };
   const serialised = localStorage.getItem(ENGINE_POOL_KEY);
-  return loadPool(serialised, keyMap) || buildDefaultPool(keyMap);
+  const pool = loadPool(serialised, keyMap) || buildDefaultPool(keyMap);
+  // Filter out models suspended by the Immune System
+  // Registry.getModel() carries the suspension flag set by Immune.
+  return pool.filter(node => {
+    const reg = Registry.getModel(node.id);
+    return !reg || !reg.metrics.suspended;
+  });
 }
 
 function engineConfigured() {
@@ -992,25 +1038,98 @@ function updateResPanel(scored, boosts) {
   }).join('');
 }
 
-// ── Birth Protocol — stub for v0.7 ────────────────────────────────────────────
+// ── Birth Protocol ───────────────────────────────────────────────────────────
 /**
  * Fires when no existing node is semantically relevant to the intent.
- * Uses match scores (not total scores) — a cold-but-relevant node
- * should NOT trigger Birth Protocol.
- *
- * v0.7 implementation: show a modal asking the user to confirm a new node.
- * Currently logs a signal to the console for observability.
+ * Shows a modal asking the user to confirm and name a new node.
+ * On confirmation, adds the node to the Registry and instantiates it
+ * in the field immediately — no reload required.
  */
+let _birthIntent   = '';
+let _birthColor    = '#00ffcc';
+
 function checkBirthProtocol(scored, intent) {
   const maxMatch = Math.max(...scored.map(s => s.match));
   if (maxMatch < BIRTH_THRESHOLD) {
     clog(`🌱 BIRTH SIGNAL: No node matches "${intent}" (max match=${maxMatch.toFixed(3)})`, 'log-sys');
-    Nervous.emit(EVENT.BIRTH_SIGNAL, { source: 'SOMA',
-      payload: { intent, maxMatch } });
-    clog(`   v0.7: will prompt "Create node for this intent?"`, 'log-sys');
-    // TODO v0.7: showBirthModal(intent);
+    Nervous.emit(EVENT.BIRTH_SIGNAL, { source: 'SOMA', payload: { intent, maxMatch } });
+    showBirthModal(intent);
   }
 }
+
+function showBirthModal(intent) {
+  _birthIntent = intent;
+  _birthColor  = '#00ffcc';
+  document.getElementById('birth-intent-display').textContent = `"${intent}"`;
+  document.getElementById('birth-node-name').value     = '';
+  document.getElementById('birth-node-specialty').value = intent;
+  // Reset color selection
+  document.querySelectorAll('#birth-color-picker div').forEach(d => {
+    d.style.border = '2px solid transparent';
+  });
+  document.querySelector('#birth-color-picker div').style.border = '2px solid white';
+  document.getElementById('birth-modal').style.display = 'flex';
+}
+
+window.selectBirthColor = function(el, color) {
+  _birthColor = color;
+  document.querySelectorAll('#birth-color-picker div').forEach(d => {
+    d.style.border = '2px solid transparent';
+  });
+  el.style.border = '2px solid white';
+};
+
+window.confirmBirth = function() {
+  const name      = document.getElementById('birth-node-name').value.trim().toUpperCase().slice(0, 10);
+  const specialty = document.getElementById('birth-node-specialty').value.trim();
+
+  if (!name || !specialty) {
+    clog('⚠ Node name and specialty are required', 'log-err');
+    return;
+  }
+
+  if (nodes.find(n => n.name === name)) {
+    clog(`⚠ Node ${name} already exists`, 'log-err');
+    return;
+  }
+
+  // Add to Registry — this is the source of truth
+  const added = Registry.addNode({
+    name, specialty, color: _birthColor,
+    resonance:    1.0,
+    tier:         'passive',
+    hasAction:    false,
+    actionType:   null,
+    capabilities: [],
+    description:  `User-created node from intent: "${_birthIntent}"`,
+  });
+
+  if (!added) {
+    clog(`⚠ Registry rejected node ${name}`, 'log-err');
+    return;
+  }
+
+  // Instantiate immediately in the field — no reload required
+  const cx    = canvas.width / 2, cy = canvas.height / 2;
+  const angle = Math.random() * Math.PI * 2;
+  const r     = Math.min(canvas.width, canvas.height) * 0.28;
+  const node  = new Node(name, specialty, cx + r * Math.cos(angle), cy + r * Math.sin(angle),
+                         _birthColor, 1.0, false, null);
+  nodes.push(node);
+  ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
+
+  Nervous.emit(EVENT.REGISTRY_NODE_ADDED, { source: 'BIRTH_PROTOCOL', node: name,
+    payload: { intent: _birthIntent, specialty } });
+
+  clog(`🌱 Node born: ${name} — "${specialty.slice(0, 40)}"`, 'log-sys');
+  Heart.save();
+  dismissBirth();
+};
+
+window.dismissBirth = function() {
+  document.getElementById('birth-modal').style.display = 'none';
+  _birthIntent = '';
+};
 
 // ── FIRE PULSE ────────────────────────────────────────────────────────────────
 async function firePulse() {
@@ -1275,46 +1394,24 @@ function loop(now) {
 
 // ── Hexagonal seed ────────────────────────────────────────────────────────────
 function seed() {
-  const cx = canvas.width / 2, cy = canvas.height / 2;
-  const r  = Math.min(canvas.width, canvas.height) * 0.28;
-  [
-    {
-      name:'CORE', res:2.0, color:'#00ffcc',
-      spec:'health battery power status diagnostics system reboot uptime integrity vitals'
-    },
-    {
-      name:'SOMA', res:1.8, color:'#ff66aa',
-      spec:'identity self who soma appearance theme ui somatic personality profile customise',
-      action: ACTION_MAP['SOMA']
-    },
-    {
-      name:'CORTEX', res:1.6, color:'#cc00ff',
-      spec:'ai logic intelligence think reason analyse evaluate process decide infer'
-    },
-    {
-      name:'MEMORY', res:1.5, color:'#66aaff',
-      spec:'recall retrieve stored information data records vault database archive remember'
-    },
-    {
-      name:'MEDIA', res:1.4, color:'#00F0FF',
-      spec:'music sound audio playback play volume track song speaker listen headphones',
-      action: ACTION_MAP['MEDIA']
-    },
-    {
-      name:'CHRONOS', res:1.3, color:'#ffaa00',
-      spec:'time schedule clock calendar timer alarm duration elapsed long countdown remind when',
-      action: ACTION_MAP['CHRONOS'],
-    },
-    
-  ].forEach((d, i) => {
-    const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+  // Read node definitions from Registry instead of hardcoded array.
+  // Registry is the single source of truth — seeds, colors, capabilities all live there.
+  const cx   = canvas.width / 2, cy = canvas.height / 2;
+  const r    = Math.min(canvas.width, canvas.height) * 0.28;
+  const defs = Registry.getAllNodes();
+
+  defs.forEach((d, i) => {
+    const angle = (i / defs.length) * Math.PI * 2 - Math.PI / 2;
     nodes.push(new Node(
-      d.name, d.spec,
+      d.name, d.specialty,
       cx + r * Math.cos(angle), cy + r * Math.sin(angle),
-      d.color, d.res, false, d.action || null
+      d.color, d.resonance, false,
+      ACTION_MAP[d.name] || null
     ));
   });
-  clog('✦ Hexagonal seed: CORE · SOMA · CORTEX · MEMORY · MEDIA · CHRONOS', 'log-sys');
+
+  const names = defs.map(d => d.name).join(' · ');
+  clog(`✦ Seeded from Registry: ${names}`, 'log-sys');
   clog('💡 Tap cortex pill (top bar) to set endpoint URL', 'log-sys');
   clog('💡 "play music" · "check system" · "who are you" · "remember [text]"', 'log-sys');
 }
@@ -1324,14 +1421,40 @@ await Heart.initBiometrics();
 const restored = Heart.loadKernel();
 if (restored) {
   nodes = restored.nodes.map(d => {
+    // Cross-reference Registry for definition updates made since last save.
+    // Saved state carries geometry and metabolic values (x, y, resonance, bonds).
+    // Registry carries the current canonical specialty, color, and capabilities.
+    // Registry wins on definition fields — saved state wins on metabolic fields.
+    const regDef = Registry.getNode(d.name);
+    const specialty = regDef ? regDef.specialty : d.specialty;
+    const color     = regDef ? regDef.color     : d.color;
     const n = new Node(
-      d.name, d.specialty, d.x, d.y, d.color, d.resonance, d.isStatic,
+      d.name, specialty, d.x, d.y, color, d.resonance, d.isStatic,
       ACTION_MAP[d.name] || null
     );
-    n.id = d.id; n.bonds = d.bonds || {}; return n;
+    n.id = d.id; n.bonds = d.bonds || {};
+    return n;
   });
   chain = restored.chain || [];
-  clog(`📀 Restored ${nodes.length} nodes`, 'log-sys');
+  clog(`📀 Restored ${nodes.length} nodes (definitions from Registry)`, 'log-sys');
+
+  // Add any nodes present in Registry but missing from saved state.
+  // This handles new nodes added via Birth Protocol since last save.
+  const savedNames = new Set(nodes.map(n => n.name));
+  Registry.getAllNodes().forEach((d, i) => {
+    if (!savedNames.has(d.name)) {
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+      const angle = (i / Registry.getAllNodes().length) * Math.PI * 2 - Math.PI / 2;
+      const r = Math.min(canvas.width, canvas.height) * 0.28;
+      nodes.push(new Node(
+        d.name, d.specialty,
+        cx + r * Math.cos(angle), cy + r * Math.sin(angle),
+        d.color, d.resonance, false,
+        ACTION_MAP[d.name] || null
+      ));
+      clog(`🌱 New node from Registry: ${d.name}`, 'log-sys');
+    }
+  });
 } else {
   seed();
 }
