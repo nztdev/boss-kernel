@@ -398,9 +398,12 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <script type="module">
-import { Heart } from '../heart/heart.js';
+import { Heart }                                        from '../heart/heart.js';
 import { deliberate, buildDefaultPool, loadPool, savePool,
-         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN } from '../engine/engine.js';
+         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN }    from '../engine/engine.js';
+import { Registry }                                      from '../registry/registry.js';
+import { Nervous, EVENT }                                from '../nervous/nervous.js';
+import { Immune }                                        from '../immune/immune.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse = firePulse;
@@ -437,7 +440,10 @@ const VECTOR_WEIGHT  = 2.0;
 // Birth Protocol threshold: max(match) below this → no existing node is relevant
 const BIRTH_THRESHOLD = 0.15;
 let   confThreshold  = 1.5;
-const ACTIVE_NODES   = new Set(['MEDIA', 'SOMA', 'CHRONOS']);
+// ACTIVE_NODES is now driven by the Registry.
+// getActiveNodeNames() reads nodes where hasAction=true.
+// Kept as a Set for O(1) lookup — rebuilt from Registry at boot.
+let ACTIVE_NODES = new Set(['MEDIA', 'SOMA', 'CHRONOS']); // overwritten at boot
 // ── Biometrics ────────────────────────────────────────────────────────────────
 let systemVitals = { battery: 1.0, isLowPower: false, decayRate: BASE_DECAY, baseDecay: BASE_DECAY };
 
@@ -522,6 +528,8 @@ function vaultRemember(text) {
   if (vault.length > 200) vault.pop();
   vaultSet(vault);
   clog(`🧠 "${text.slice(0, 50)}"…`, 'log-mem');
+  Nervous.emit(EVENT.VAULT_WRITTEN, { source: 'SOMA',
+    payload: { preview: text.slice(0, 50) } });
 }
 
 function searchVault(intent) {
@@ -592,11 +600,16 @@ class Node {
       try { this.action(); }
       catch(e) { clog(`⚠ Action error on ${this.name}: ${e.message}`, 'log-err'); }
     }
+    Nervous.emit(EVENT.NODE_FIRED, { source: 'SOMA', node: this.name,
+      payload: { warmth: this.warmth, resonance: this.resonance } });
   }
 
   grieve() {
     this.resonance *= (1 - GRIEF_PENALTY);
     this.warmth    *= 0.5;
+    Nervous.emit(EVENT.NODE_GRIEVED, { source: 'SOMA', node: this.name,
+      severity: 'warn',
+      payload: { resonance: this.resonance, warmth: this.warmth } });
   }
 
   toJSON() {
@@ -696,6 +709,8 @@ async function runArbiter(top, second, delta, intent) {
   arbCount++;
   document.getElementById('h-arb').textContent = arbCount;
   clog(`🔺 ARBITER Δ=${delta.toFixed(3)} | ${top.node.name} vs ${second.node.name}`, 'log-arbiter');
+  Nervous.emit(EVENT.ARBITER_CONFLICT, { source: 'ARBITER', node: top.node.name,
+    payload: { delta, secondNode: second.node.name, intent } });
 
   // Active-First tier-breaker
   // If exactly one node is Active (has action callback) and delta is close,
@@ -741,6 +756,8 @@ async function runArbiter(top, second, delta, intent) {
   // Stage 3 — Engine escalation
   if (engineConfigured() && enginePool) {
     clog(`   🧬 ENGINE ESCALATION — consulting deliberation layer…`, 'log-arbiter');
+    Nervous.emit(EVENT.ENGINE_ESCALATED, { source: 'ARBITER',
+      payload: { intent, nodeA: top.node.name, nodeB: second.node.name } });
     try {
       const result = await deliberate(intent, enginePool, {
         systemPrompt: `You are resolving an ambiguous intent for a routing kernel.
@@ -761,6 +778,8 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
         const conf   = Math.round((result.confidence || 0) * 100);
 
         clog(`   🧬 Engine → ${winner.name} (conf=${conf}% sim_a=${simA.toFixed(2)} sim_b=${simB.toFixed(2)})`, 'log-arbiter');
+        Nervous.emit(EVENT.ENGINE_RESOLVED, { source: 'ENGINE', node: winner.name,
+          payload: { confidence: result.confidence, simA, simB, intent } });
 
         // Store engine response so firePulse can display it
         winner._engineResponse = result.output;
@@ -869,6 +888,11 @@ async function testCortex() {
     const d = await r.json();
     setCortexStatus('online');
     clog(`🟢 ${d.identity} | ${d.engine || d.model || 'online'}`, 'log-win');
+    Nervous.emit(EVENT.CORTEX_ONLINE, { source: 'CORTEX', payload: { identity: d.identity } });
+    // Sync Registry with Cortex on successful handshake
+    Registry.sync(pcUrl()).then(() => {
+      ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
+    });
   } catch(e) {
     setCortexStatus('offline');
     clog(`🔴 ${e.message}`, 'log-err');
@@ -897,7 +921,10 @@ async function fetchVectorBoosts(intent) {
     const d = await r.json();
     setCortexStatus('online');
     return d.boosts || [];
-  } catch(_) { return []; }
+  } catch(_) {
+    Nervous.emit(EVENT.CORTEX_OFFLINE, { source: 'CORTEX', severity: 'warn', payload: {} });
+    return [];
+  }
 }
 
 async function queryPulse(intent, winnerName) {
@@ -978,6 +1005,8 @@ function checkBirthProtocol(scored, intent) {
   const maxMatch = Math.max(...scored.map(s => s.match));
   if (maxMatch < BIRTH_THRESHOLD) {
     clog(`🌱 BIRTH SIGNAL: No node matches "${intent}" (max match=${maxMatch.toFixed(3)})`, 'log-sys');
+    Nervous.emit(EVENT.BIRTH_SIGNAL, { source: 'SOMA',
+      payload: { intent, maxMatch } });
     clog(`   v0.7: will prompt "Create node for this intent?"`, 'log-sys');
     // TODO v0.7: showBirthModal(intent);
   }
@@ -1046,6 +1075,8 @@ async function firePulse() {
     if (prev) {
       prev.bonds[winner.id] = (prev.bonds[winner.id] || 0) + 0.1;
       clog(`   🔗 ${prev.name}→${winner.name}: ${prev.bonds[winner.id].toFixed(2)}`, 'log-bond');
+      Nervous.emit(EVENT.BOND_FORMED, { source: 'SOMA', node: winner.name,
+        payload: { from: prev.name, to: winner.name, strength: prev.bonds[winner.id] } });
     }
   }
 
@@ -1077,7 +1108,10 @@ async function firePulse() {
 
 // ── Recovery ──────────────────────────────────────────────────────────────────
 function recover() {
-  nodes.forEach(n => n.resonance = Math.max(n.resonance, 0.5));
+  nodes.forEach(n => {
+    n.resonance = Math.max(n.resonance, 0.5);
+    Immune.reset(n.name);  // reset grief metrics so Immune doesn't over-penalise
+  });
   limpMode = false;
   document.getElementById('grief-overlay').classList.remove('show');
   clog('💚 Recovered — resonance floors restored', 'log-sys');
@@ -1305,6 +1339,12 @@ if (restored) {
 Heart.init(nodes, chain, systemVitals);
 Heart.start();
 
+// Initialise Registry, Nervous System, Immune System
+Registry.init();
+ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
+Immune.init(Registry, Nervous);
+clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models`, 'log-sys');
+
 // Initialise engine pool
 enginePool = buildEnginePool();
 updateEngineStatus();
@@ -1314,6 +1354,12 @@ clog(`🧬 Engine: ${engineConfigured() ? 'ready' : 'unconfigured — tap cortex
 // Heart calls this on every beat — keeps engine metabolic state persistent
 Heart.registerEngineSave(() => {
   if (enginePool) localStorage.setItem(ENGINE_POOL_KEY, savePool(enginePool));
+});
+
+// Register Heart beat callback — Nervous System receives HEART_BEAT events
+Heart.registerBeatCallback(() => {
+  Nervous.emit(EVENT.HEART_BEAT, { source: 'HEART',
+    payload: { timestamp: Date.now() } });
 });
 
 requestAnimationFrame(loop);
