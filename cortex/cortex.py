@@ -1,5 +1,5 @@
 """
-B.O.S.S. CORTEX v0.6 — THE SEMANTIC NERVOUS SYSTEM
+B.O.S.S. CORTEX v0.7 — THE SEMANTIC NERVOUS SYSTEM
 ====================================================
 github.com/nztdev/boss-kernel
 
@@ -190,8 +190,8 @@ URGENT_FLAG = Path("URGENT_ACTION.txt")
 def handshake():
     return jsonify({
         "status":   "online",
-        "identity": "BOSS-CORTEX-0.6",
-        "engine":   "Liquid-V0.6",
+        "identity": "BOSS-CORTEX-0.7",
+        "engine":   "Liquid-V0.7",
         "model":    "all-MiniLM-L6-v2",
         "model_ready": _model_ready,
         "rate_limit": _rate_limit,
