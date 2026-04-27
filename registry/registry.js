@@ -97,7 +97,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'CHRONOS',
-    specialty:    'time schedule clock calendar timer alarm duration elapsed long countdown remind when',
+    specialty:    'time schedule clock calendar timer alarm duration elapsed long countdown remind when set running active',
     color:        '#ffaa00',
     resonance:    1.3,
     tier:         'active',
