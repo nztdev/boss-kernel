@@ -442,6 +442,7 @@ import { Registry }                                      from '../registry/regis
 import { Nervous, EVENT }                                from '../nervous/nervous.js';
 import { Immune }                                        from '../immune/immune.js';
 import { ChronosAction }                                 from '../actions/chronos.js';
+import { MediaAction }                                   from '../actions/media.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse = firePulse;
@@ -456,9 +457,11 @@ window.dismissToast = dismissToast;
 
 // Expose debug interfaces globally — accessible from DevTools console
 // Nervous.history(n), Immune.report(), Registry.export()
-window.Nervous  = Nervous;
-window.Immune   = Immune;
-window.Registry = Registry;
+window.Nervous      = Nervous;
+window.Immune       = Immune;
+window.Registry     = Registry;
+window.MediaAction  = MediaAction;
+window.ChronosAction = ChronosAction;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -535,7 +538,7 @@ const SYNONYMS = {
   identity: ['self','id','soma','look','feel','interface','appearance','who','name','describe','about','you'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai'],
   data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory'],
-  media:    ['music','sound','audio','playback','play','volume','track','song','speaker','listen','headphones'],
+  media:    ['music','sound','audio','playback','play','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery'],
   time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','set','running','sequence','duration','chronos'],
 };
 
@@ -1252,13 +1255,8 @@ function recover() {
 // New action modules: import at top of file, register here.
 const ACTION_MAP = {
   'MEDIA': function(intent) {
-    // Placeholder — MEDIA real actions in actions/media.js (Phase 7)
-    clog('📀 MEDIA ignited — sensory output', 'log-action');
-    const f = document.createElement('div');
-    f.className = 'action-flash';
-    f.style.background = 'rgba(0,240,255,0.08)';
-    document.body.appendChild(f);
-    setTimeout(() => f.remove(), 600);
+    // Real sensory actions via MediaAction module
+    MediaAction.handle(intent, clog, Nervous, EVENT, pcUrl());
   },
   'SOMA': function(intent) {
     // Placeholder — SOMA real actions in actions/soma.js (Phase 7)
