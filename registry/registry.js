@@ -86,14 +86,24 @@ const DEFAULT_NODES = [
   },
   {
     name:         'MEDIA',
-    specialty:    'music sound audio playback play volume track song speaker listen headphones',
+    specialty:    'music sound audio playback play volume track song speaker listen headphones photo image picture video visual show display watch screen gallery wallpaper',
     color:        '#00F0FF',
     resonance:    1.4,
     tier:         'active',
     hasAction:    true,
-    actionType:   'audio',
-    capabilities: ['audio_play', 'audio_pause', 'volume_control', 'track_info'],
-    description:  'Audio playback, music control, and sensory output.',
+    actionType:   'sensory',
+    capabilities: [
+      // Audio
+      'audio_play', 'audio_pause', 'audio_stop', 'volume_control',
+      'track_info', 'audio_search', 'audio_next', 'audio_prev',
+      // Visual
+      'image_display', 'image_search', 'photo_open', 'wallpaper_set',
+      // Video
+      'video_play', 'video_embed', 'video_open',
+      // General
+      'media_status', 'media_cancel',
+    ],
+    description:  'Full sensory output layer — audio, images, and video.',
   },
   {
     name:         'CHRONOS',
