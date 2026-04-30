@@ -1,4 +1,4 @@
-# B.O.S.S. Kernel v0.6 — Biological Operating System Structure
+# B.O.S.S. Kernel v0.7 — Biological Operating System Structure
 
 > *"Data is not a Resource. Data is an Experience."*
 
