@@ -86,20 +86,22 @@ function _classify(intent) {
   const s = intent.toLowerCase().trim();
 
   // ── Status / what's playing ──────────────────────────────────────────────
-  if (/\b(what('s| is)\s+(playing|on|showing)|status|now playing|current(ly)?)\b/.test(s)) {
+  if (/\b(what('s| is|s)\s+(playing|on|showing)|status|now playing|current(ly)?|whats\s+playing)\b/.test(s) ||
+      s === 'status' || s === 'what is playing' || s === 'whats playing') {
     return { type: 'status' };
   }
 
   // ── Stop / cancel all media ──────────────────────────────────────────────
   if (/\b(stop|cancel|close|quit|exit)\b.*\b(media|music|audio|video|image|photo|playing)\b/.test(s) ||
-      /\b(stop|cancel)\s+(playing|all)\b/.test(s)) {
+      /\b(stop|cancel)\s+(playing|all)\b/.test(s) ||
+      /^(stop|cancel|halt)$/.test(s.trim())) {  // bare "stop" or "cancel"
     return { type: 'stop' };
   }
 
   // ── Volume ───────────────────────────────────────────────────────────────
   const volUp   = /\b(volume\s+up|louder|turn\s+up|increase\s+volume)\b/.test(s);
   const volDown = /\b(volume\s+down|quieter|softer|turn\s+down|decrease\s+volume|lower\s+volume)\b/.test(s);
-  const volMute = /\b(mute|silence|quiet)\b/.test(s);
+  const volMute = /\b(mute|silence|quiet|quieten)\b/.test(s);
   const volSet  = s.match(/\bvolume\s+(?:to\s+)?(\d{1,3})\s*%?/);
   if (volUp)   return { type: 'volume', action: 'up' };
   if (volDown) return { type: 'volume', action: 'down' };
