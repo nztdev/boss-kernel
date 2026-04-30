@@ -38,6 +38,7 @@ const _state = {
   oscillator:     null,   // Web Audio fallback tone
   gainNode:       null,
   volume:         0.7,
+  preMuteVolume:  0.7,  // restored on unmute
   isPlaying:      false,
   streamUrl:      null,
   currentTrack:   null,
@@ -101,12 +102,14 @@ function _classify(intent) {
   // ── Volume ───────────────────────────────────────────────────────────────
   const volUp   = /\b(volume\s+up|louder|turn\s+up|increase\s+volume)\b/.test(s);
   const volDown = /\b(volume\s+down|quieter|softer|turn\s+down|decrease\s+volume|lower\s+volume)\b/.test(s);
-  const volMute = /\b(mute|silence|quiet|quieten)\b/.test(s);
+  const volUnmute = /\b(unmute|un-mute|restore\s+volume|unsilence)\b/.test(s);
+  const volMute   = !volUnmute && /\b(mute|silence|quiet|quieten)\b/.test(s);
   const volSet  = s.match(/\bvolume\s+(?:to\s+)?(\d{1,3})\s*%?/);
-  if (volUp)   return { type: 'volume', action: 'up' };
-  if (volDown) return { type: 'volume', action: 'down' };
-  if (volMute) return { type: 'volume', action: 'mute' };
-  if (volSet)  return { type: 'volume', action: 'set', value: parseInt(volSet[1]) / 100 };
+  if (volUnmute) return { type: 'volume', action: 'unmute' };
+  if (volUp)     return { type: 'volume', action: 'up' };
+  if (volDown)   return { type: 'volume', action: 'down' };
+  if (volMute)   return { type: 'volume', action: 'mute' };
+  if (volSet)    return { type: 'volume', action: 'set', value: parseInt(volSet[1]) / 100 };
 
   // ── Image / photo ─────────────────────────────────────────────────────────
   const isImageIntent = /\b(show|display|open|view|look\s+at)\b.*\b(image|photo|picture|pic)\b/.test(s) ||
@@ -276,8 +279,13 @@ function _handleVolume(parsed, clog) {
       clog(`📀 MEDIA: volume → ${Math.round(_state.volume * 100)}%`, 'log-action');
       break;
     case 'mute':
+      _state.preMuteVolume = _state.volume || 0.7;
       _state.volume = 0;
       clog('📀 MEDIA: muted', 'log-action');
+      break;
+    case 'unmute':
+      _state.volume = _state.preMuteVolume || 0.7;
+      clog(`📀 MEDIA: unmuted — volume restored to ${Math.round(_state.volume * 100)}%`, 'log-action');
       break;
     case 'set':
       _state.volume = Math.max(0, Math.min(1, parsed.value));
