@@ -86,7 +86,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'MEDIA',
-    specialty:    'music sound audio playback play volume track song speaker listen headphones photo image picture video visual show display watch screen gallery wallpaper',
+    specialty:    'music sound audio playback play pause stop mute volume track song speaker listen headphones photo image picture video visual show display watch screen gallery wallpaper stream playing',
     color:        '#00F0FF',
     resonance:    1.4,
     tier:         'active',
