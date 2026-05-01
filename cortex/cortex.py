@@ -78,6 +78,26 @@ threading.Thread(target=_load_model, daemon=True).start()
 
 memory_pool: list[str] = []
 memory_embeddings = None
+VAULT_PATH = Path("boss_vault.json")
+
+def _load_vault():
+    global memory_pool
+    if VAULT_PATH.exists():
+        try:
+            import json
+            data = json.loads(VAULT_PATH.read_text())
+            memory_pool = data if isinstance(data, list) else []
+            print(f"OK Vault loaded: {len(memory_pool)} entries")
+        except Exception as e:
+            print(f"WARN Vault load failed: {e}")
+            memory_pool = []
+
+def _save_vault():
+    try:
+        import json
+        VAULT_PATH.write_text(json.dumps(memory_pool, indent=2))
+    except Exception as e:
+        print(f"WARN Vault save failed: {e}")
 
 def rebuild_embeddings():
     global memory_embeddings
@@ -189,12 +209,13 @@ URGENT_FLAG = Path("URGENT_ACTION.txt")
 @app.route("/handshake", methods=["GET"])
 def handshake():
     return jsonify({
-        "status":   "online",
-        "identity": "BOSS-CORTEX-0.7",
-        "engine":   "Liquid-V0.7",
-        "model":    "all-MiniLM-L6-v2",
+        "status":      "online",
+        "identity":    "BOSS-CORTEX-0.7",
+        "engine":      "Liquid-V0.7",
+        "model":       "all-MiniLM-L6-v2",
         "model_ready": _model_ready,
-        "rate_limit": _rate_limit,
+        "rate_limit":  _rate_limit,
+        "vault_size":  len(memory_pool),
     })
 
 
@@ -311,10 +332,32 @@ def remember():
         if text not in memory_pool:
             memory_pool.append(text)
             rebuild_embeddings()
+            _save_vault()
             return jsonify({"status": "ingested", "pool_size": len(memory_pool)})
         return jsonify({"status": "duplicate"})
     except Exception as e:
         return err(f"Remember failed: {str(e)}", "remember_error", 500)
+
+
+@app.route("/vault", methods=["GET", "DELETE"])
+def vault():
+    import json
+    if request.method == "DELETE":
+        try:
+            memory_pool.clear()
+            global memory_embeddings
+            memory_embeddings = None
+            _save_vault()
+            return jsonify({"status": "cleared"})
+        except Exception as e:
+            return err(f"Vault clear failed: {str(e)}", "vault_clear_error", 500)
+    try:
+        return jsonify({
+            "entries": len(memory_pool),
+            "vault": [{"preview": e[:80], "length": len(e)} for e in memory_pool],
+        })
+    except Exception as e:
+        return err(f"Vault read failed: {str(e)}", "vault_read_error", 500)
 
 
 @app.route("/registry", methods=["GET", "POST"])
@@ -362,6 +405,9 @@ def stream():
 # ── BOOT ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.environ.get("BOSS_PORT", "5000"))
+    _load_vault()
+    if memory_pool and _model_ready:
+        rebuild_embeddings()
     Heart.start(_event_queue)
     print(f"🔺 Cortex online — port {port}")
     print(f"   Downloads watch: {WATCH_PATH}")
