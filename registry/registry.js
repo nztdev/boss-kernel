@@ -53,7 +53,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'SOMA',
-    specialty:    'identity self who what soma appearance theme colour color ui somatic personality profile customise mood feeling state',
+    specialty:    'identity self who what soma appearance theme colour color switch style skin palette ui somatic personality profile customise mood feeling state crimson amber violet ice solar',
     color:        '#ff66aa',
     resonance:    1.8,
     tier:         'active',
