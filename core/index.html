@@ -443,6 +443,7 @@ import { Nervous, EVENT }                                from '../nervous/nervou
 import { Immune }                                        from '../immune/immune.js';
 import { ChronosAction }                                 from '../actions/chronos.js';
 import { MediaAction }                                   from '../actions/media.js';
+import { SomaAction, restoreTheme }                      from '../actions/soma.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse = firePulse;
@@ -460,8 +461,9 @@ window.dismissToast = dismissToast;
 window.Nervous      = Nervous;
 window.Immune       = Immune;
 window.Registry     = Registry;
-window.MediaAction  = MediaAction;
+window.MediaAction   = MediaAction;
 window.ChronosAction = ChronosAction;
+window.SomaAction    = SomaAction;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -535,10 +537,10 @@ function engineConfigured() {
 // ── Semantic similarity ───────────────────────────────────────────────────────
 const SYNONYMS = {
   health:   ['vitality','status','wellbeing','monitor','check','diagnostics','condition','battery','power','system','reboot','uptime'],
-  identity: ['self','id','soma','look','feel','interface','appearance','who','name','describe','about','you'],
+  identity: ['self','id','soma','look','feel','interface','appearance','who','what','name','describe','about','you','mood','theme','colour','color'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai'],
   data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory'],
-  media:    ['music','sound','audio','playback','play','pause','stop','mute','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery','playing','stream'],
+  media:    ['music','sound','audio','playback','play','pause','stop','mute','unmute','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery','playing','stream'],
   time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm'],
 };
 
@@ -943,6 +945,7 @@ async function testCortex() {
     setCortexStatus('online');
     clog(`🟢 ${d.identity} | ${d.engine || d.model || 'online'}`, 'log-win');
     Nervous.emit(EVENT.CORTEX_ONLINE, { source: 'CORTEX', payload: { identity: d.identity } });
+    SomaAction.setHandshakeData(d);  // SOMA uses vault_size etc. for identity response
     // Sync Registry with Cortex on successful handshake
     Registry.sync(pcUrl()).then(() => {
       ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
@@ -1259,13 +1262,11 @@ const ACTION_MAP = {
     MediaAction.handle(intent, clog, Nervous, EVENT, pcUrl());
   },
   'SOMA': function(intent) {
-    // Placeholder — SOMA real actions in actions/soma.js (Phase 7)
-    clog('🎨 SOMA ignited — interface response', 'log-action');
-    const f = document.createElement('div');
-    f.className = 'action-flash';
-    f.style.background = 'rgba(255,102,170,0.06)';
-    document.body.appendChild(f);
-    setTimeout(() => f.remove(), 600);
+    SomaAction.handle(
+      intent, clog, Nervous, EVENT,
+      () => nodes, () => chain,
+      Immune, Registry
+    );
   },
   'CHRONOS': function(intent) {
     // Real temporal actions via ChronosAction module
@@ -1427,6 +1428,7 @@ Registry.init();
 ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
 Immune.init(Registry, Nervous);
 clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models`, 'log-sys');
+restoreTheme(clog);  // SOMA: restore persisted theme on boot
 
 await Heart.initBiometrics();
 const restored = Heart.loadKernel();
@@ -1471,6 +1473,7 @@ if (restored) {
 Heart.init(nodes, chain, systemVitals);
 Heart.start();
 clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models`, 'log-sys');
+restoreTheme(clog);  // SOMA: restore persisted theme on boot
 
 // Initialise engine pool
 enginePool = buildEnginePool();
