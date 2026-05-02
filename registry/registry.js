@@ -53,14 +53,14 @@ const DEFAULT_NODES = [
   },
   {
     name:         'SOMA',
-    specialty:    'identity self who soma appearance theme ui somatic personality profile customise',
+    specialty:    'identity self who what soma appearance theme colour color ui somatic personality profile customise mood feeling state',
     color:        '#ff66aa',
     resonance:    1.8,
     tier:         'active',
     hasAction:    true,
     actionType:   'interface',
-    capabilities: ['theme_change', 'personality_response', 'identity_query'],
-    description:  'Identity, interface appearance, and somatic self-representation.',
+    capabilities: ['theme_change', 'personality_response', 'identity_query', 'theme_list', 'colour_change'],
+    description:  'Identity, interface appearance, personality, and somatic self-representation.',
   },
   {
     name:         'CORTEX',
