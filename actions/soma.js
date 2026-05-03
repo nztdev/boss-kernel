@@ -250,7 +250,10 @@ function _classify(intent) {
     return { type: 'theme_list' };
   }
 
-  // Theme change
+  // Theme change — requires explicit theme/colour/mode context word.
+  // "switch theme to crimson", "change colour to red", "use violet mode" — correct.
+  // "switch to crimson" alone is too ambiguous — "switch" is a generic verb
+  // that future capabilities will also use. Context word is required.
   if (/\b(theme|colour|color|mode|skin|appearance|look)\b/.test(s) ||
       /\b(switch|change|set|use)\b.*\b(theme|colour|color|mode)\b/.test(s)) {
     return { type: 'theme', parsed: _parseThemeIntent(s) };
@@ -299,7 +302,10 @@ export const SomaAction = {
 
     if (!classified) {
       clog(`🎨 SOMA: no recognised action in "${intent}"`, 'log-action');
-      clog('   Try: "who are you" · "how are you" · "change theme to crimson" · "list themes"', 'log-action');
+      clog('   Identity: "who are you" · "how are you"', 'log-action');
+      clog('   Themes:   "switch theme to crimson" · "change theme to amber" · "list themes"', 'log-action');
+      clog('   Colour:   "change colour to #ff6600" · "change colour to red"', 'log-action');
+      clog('   Reset:    "reset theme"', 'log-action');
       return;
     }
 
@@ -331,7 +337,7 @@ export const SomaAction = {
       case 'theme_list': {
         const names = Object.values(THEMES).map(t => t.name).join(' · ');
         clog(`🎨 Available themes: ${names}`, 'log-action');
-        clog('   Say "switch to [name]" or "change colour to [colour/hex]"', 'log-action');
+        clog('   Say "switch theme to [name]" or "change colour to [colour/hex]"', 'log-action');
         break;
       }
 
