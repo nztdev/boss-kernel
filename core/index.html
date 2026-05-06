@@ -438,7 +438,7 @@ if ('serviceWorker' in navigator) {
 import { Heart }                                        from '../heart/heart.js';
 import { deliberate, buildDefaultPool, loadPool, savePool,
          LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN }    from '../engine/engine.js';
-import { Registry }                                      from '../registry/registry.js';
+import { Registry, INTENT_SOURCE }                       from '../registry/registry.js';
 import { Nervous, EVENT }                                from '../nervous/nervous.js';
 import { Immune }                                        from '../immune/immune.js';
 import { ChronosAction }                                 from '../actions/chronos.js';
@@ -458,9 +458,10 @@ window.dismissToast = dismissToast;
 
 // Expose debug interfaces globally — accessible from DevTools console
 // Nervous.history(n), Immune.report(), Registry.export()
-window.Nervous      = Nervous;
-window.Immune       = Immune;
-window.Registry     = Registry;
+window.Nervous        = Nervous;
+window.Immune         = Immune;
+window.Registry       = Registry;
+window.INTENT_SOURCE  = INTENT_SOURCE;
 window.MediaAction   = MediaAction;
 window.ChronosAction = ChronosAction;
 window.SomaAction    = SomaAction;
@@ -1427,7 +1428,7 @@ function seed() {
 Registry.init();
 ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
 Immune.init(Registry, Nervous);
-clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models`, 'log-sys');
+clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models, ${Registry.getAllPresets().length} presets`, 'log-sys');
 restoreTheme(clog);  // SOMA: restore persisted theme on boot
 
 await Heart.initBiometrics();
@@ -1472,7 +1473,7 @@ if (restored) {
 // Heart.init after nodes/chain finalised — references must be correct
 Heart.init(nodes, chain, systemVitals);
 Heart.start();
-clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models`, 'log-sys');
+clog(`📋 Registry: ${Registry.getAllNodes().length} nodes, ${Registry.getAllModels().length} models, ${Registry.getAllPresets().length} presets`, 'log-sys');
 restoreTheme(clog);  // SOMA: restore persisted theme on boot
 
 // Initialise engine pool
