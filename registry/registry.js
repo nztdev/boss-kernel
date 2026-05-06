@@ -31,7 +31,29 @@
  */
 
 const REGISTRY_KEY     = 'BOSS_REGISTRY';
-const REGISTRY_VERSION = '1.0.0';
+const REGISTRY_VERSION = '1.1.0';  // added preset schema and intent source model
+
+// ── Intent source types ───────────────────────────────────────────────────────
+// All intent inputs are normalised to this structure before routing.
+// Source is metadata — the kernel physics are source-agnostic.
+export const INTENT_SOURCE = {
+  CHAT:    'chat',     // typed text input (current)
+  TAP:     'tap',     // node tap / orbital preset tap
+  VOICE:   'voice',   // voice input (sensory layer, future)
+  HABIT:   'habit',   // scheduled/pattern-triggered (future)
+  VITALS:  'vitals',  // biometric-triggered (future)
+  PRESET:  'preset',  // fired from a saved preset directly
+};
+
+/**
+ * Canonical intent object structure.
+ * All intent sources produce this shape before entering the kernel.
+ * @typedef {Object} BossIntent
+ * @property {string}   text       — the intent string
+ * @property {string}   source     — one of INTENT_SOURCE
+ * @property {string[]} nodeHints  — explicit node targets (multi-node tap)
+ * @property {string}   presetId   — set when source === 'preset'
+ */
 
 // ── Default node definitions ──────────────────────────────────────────────────
 // These are the canonical seed definitions. They populate the Registry on
@@ -118,6 +140,253 @@ const DEFAULT_NODES = [
   },
 ];
 
+// ── Default preset definitions ───────────────────────────────────────────────
+// Presets are pre-resolved intent-action mappings.
+// No deliberation at fire time — actions array is executed directly.
+// source: 'default' = built-in, 'user' = created via Birth Protocol.
+// Modular by design — fields can be extended without breaking existing presets.
+
+const DEFAULT_PRESETS = [
+  // ── CHRONOS presets ────────────────────────────────────────────────────────
+  {
+    id:         'chronos_timer_5m',
+    label:      '5 min timer',
+    icon:       '⏱',
+    nodes:      ['CHRONOS'],
+    intent:     'set a timer for 5 minutes',
+    actions:    [{ node: 'CHRONOS', command: 'timer', params: { ms: 300000, label: '5 minutes' } }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['timer', 'quick'],
+  },
+  {
+    id:         'chronos_timer_25m',
+    label:      '25 min timer',
+    icon:       '🍅',
+    nodes:      ['CHRONOS'],
+    intent:     'set a timer for 25 minutes',
+    actions:    [{ node: 'CHRONOS', command: 'timer', params: { ms: 1500000, label: '25 minutes' } }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['timer', 'pomodoro', 'focus'],
+  },
+  {
+    id:         'chronos_remind_morning',
+    label:      'Remind tomorrow',
+    icon:       '⏰',
+    nodes:      ['CHRONOS'],
+    intent:     'remind me tomorrow morning',
+    actions:    [{ node: 'CHRONOS', command: 'alarm', params: { label: 'tomorrow morning' } }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['alarm', 'morning', 'reminder'],
+  },
+
+  // ── MEDIA presets ──────────────────────────────────────────────────────────
+  {
+    id:         'media_play',
+    label:      'Play music',
+    icon:       '▶',
+    nodes:      ['MEDIA'],
+    intent:     'play music',
+    actions:    [{ node: 'MEDIA', command: 'audio', params: { action: 'play' } }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['audio', 'music'],
+  },
+  {
+    id:         'media_pause',
+    label:      'Pause',
+    icon:       '⏸',
+    nodes:      ['MEDIA'],
+    intent:     'pause',
+    actions:    [{ node: 'MEDIA', command: 'audio', params: { action: 'pause' } }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['audio', 'pause'],
+  },
+  {
+    id:         'media_status',
+    label:      "What's playing",
+    icon:       '🎵',
+    nodes:      ['MEDIA'],
+    intent:     'whats playing',
+    actions:    [{ node: 'MEDIA', command: 'status', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['audio', 'status'],
+  },
+
+  // ── SOMA presets ───────────────────────────────────────────────────────────
+  {
+    id:         'soma_identity',
+    label:      'Who are you',
+    icon:       '🧠',
+    nodes:      ['SOMA'],
+    intent:     'who are you',
+    actions:    [{ node: 'SOMA', command: 'identity', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['identity', 'self'],
+  },
+  {
+    id:         'soma_mood',
+    label:      'How are you',
+    icon:       '💫',
+    nodes:      ['SOMA'],
+    intent:     'how are you',
+    actions:    [{ node: 'SOMA', command: 'personality', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['personality', 'mood'],
+  },
+  {
+    id:         'soma_themes',
+    label:      'List themes',
+    icon:       '🎨',
+    nodes:      ['SOMA'],
+    intent:     'list themes',
+    actions:    [{ node: 'SOMA', command: 'theme_list', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['theme', 'appearance'],
+  },
+
+  // ── CORE presets ───────────────────────────────────────────────────────────
+  {
+    id:         'core_status',
+    label:      'System status',
+    icon:       '💻',
+    nodes:      ['CORE'],
+    intent:     'check system status',
+    actions:    [{ node: 'CORE', command: 'status', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['system', 'status'],
+  },
+  {
+    id:         'core_battery',
+    label:      'Battery level',
+    icon:       '🔋',
+    nodes:      ['CORE'],
+    intent:     'check battery level',
+    actions:    [{ node: 'CORE', command: 'battery', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['battery', 'power'],
+  },
+
+  // ── MEMORY presets ─────────────────────────────────────────────────────────
+  {
+    id:         'memory_recall',
+    label:      'What do you remember',
+    icon:       '🧬',
+    nodes:      ['MEMORY'],
+    intent:     'what do you remember',
+    actions:    [{ node: 'MEMORY', command: 'recall', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['memory', 'recall'],
+  },
+  {
+    id:         'memory_remember',
+    label:      'Remember this',
+    icon:       '📌',
+    nodes:      ['MEMORY'],
+    intent:     'remember this',
+    actions:    [{ node: 'MEMORY', command: 'store', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['memory', 'store'],
+  },
+
+  // ── CORTEX presets ─────────────────────────────────────────────────────────
+  {
+    id:         'cortex_analyse',
+    label:      'Analyse this',
+    icon:       '🔬',
+    nodes:      ['CORTEX'],
+    intent:     'analyse this',
+    actions:    [{ node: 'CORTEX', command: 'analyse', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['reasoning', 'analysis'],
+  },
+  {
+    id:         'cortex_explain',
+    label:      'Explain this',
+    icon:       '💡',
+    nodes:      ['CORTEX'],
+    intent:     'explain this',
+    actions:    [{ node: 'CORTEX', command: 'explain', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['reasoning', 'explain'],
+  },
+
+  // ── Compound presets (multi-node) ──────────────────────────────────────────
+  {
+    id:         'compound_work_session',
+    label:      'Work session',
+    icon:       '💼',
+    nodes:      ['MEDIA', 'CHRONOS'],
+    intent:     'play focus music and set a 25 minute timer',
+    actions:    [
+      { node: 'MEDIA',   command: 'audio', params: { action: 'play' } },
+      { node: 'CHRONOS', command: 'timer', params: { ms: 1500000, label: '25 minutes' } },
+    ],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['compound', 'focus', 'work'],
+  },
+  {
+    id:         'compound_morning_check',
+    label:      'Morning check',
+    icon:       '🌅',
+    nodes:      ['CORE', 'CHRONOS'],
+    intent:     'check system status and what is scheduled today',
+    actions:    [
+      { node: 'CORE',    command: 'status',  params: {} },
+      { node: 'CHRONOS', command: 'schedule', params: {} },
+    ],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['compound', 'morning', 'routine'],
+  },
+  {
+    id:         'compound_wind_down',
+    label:      'Wind down',
+    icon:       '🌙',
+    nodes:      ['MEDIA', 'CHRONOS'],
+    intent:     'play calm music and set a 30 minute sleep timer',
+    actions:    [
+      { node: 'MEDIA',   command: 'audio', params: { action: 'play' } },
+      { node: 'CHRONOS', command: 'timer', params: { ms: 1800000, label: '30 minutes' } },
+    ],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['compound', 'sleep', 'wind-down'],
+  },
+];
+
 // ── Default model definitions ─────────────────────────────────────────────────
 // Engine pool LLM nodes. These mirror buildDefaultPool() in engine.js
 // but live in the Registry so they can be inspected and modified at runtime.
@@ -162,6 +431,7 @@ const DEFAULT_MODELS = [
 export const Registry = {
   _nodes:   {},   // name → node definition + runtime metrics
   _models:  {},   // id   → model definition + runtime metrics
+  _presets: {},   // id   → preset definition + usage metrics
   _meta:    {},   // registry-level metadata
   _dirty:   false,
 
@@ -172,17 +442,19 @@ export const Registry = {
       try {
         const stored = JSON.parse(raw);
         if (stored.version === REGISTRY_VERSION) {
-          this._nodes  = stored.nodes  || {};
-          this._models = stored.models || {};
-          this._meta   = stored.meta   || {};
+          this._nodes   = stored.nodes   || {};
+          this._models  = stored.models  || {};
+          this._presets = stored.presets || {};
+          this._meta    = stored.meta    || {};
           this._ensureDefaults();
           return;
         }
         // Version mismatch — migrate defaults in, preserve runtime metrics
         console.warn('[Registry] Version mismatch — migrating to', REGISTRY_VERSION);
-        this._nodes  = stored.nodes  || {};
-        this._models = stored.models || {};
-        this._meta   = stored.meta   || {};
+        this._nodes   = stored.nodes   || {};
+        this._models  = stored.models  || {};
+        this._presets = stored.presets || {};
+        this._meta    = stored.meta    || {};
       } catch(_) {
         console.warn('[Registry] Corrupt data — resetting to defaults');
       }
@@ -191,11 +463,13 @@ export const Registry = {
   },
 
   _loadDefaults() {
-    this._nodes  = {};
-    this._models = {};
-    this._meta   = { created: Date.now(), instanceId: this._generateId() };
-    DEFAULT_NODES.forEach(n  => { this._nodes[n.name]  = this._nodeEntry(n);  });
-    DEFAULT_MODELS.forEach(m => { this._models[m.id]   = this._modelEntry(m); });
+    this._nodes   = {};
+    this._models  = {};
+    this._presets = {};
+    this._meta    = { created: Date.now(), instanceId: this._generateId() };
+    DEFAULT_NODES.forEach(n   => { this._nodes[n.name]    = this._nodeEntry(n);    });
+    DEFAULT_MODELS.forEach(m  => { this._models[m.id]     = this._modelEntry(m);   });
+    DEFAULT_PRESETS.forEach(p => { this._presets[p.id]    = this._presetEntry(p);  });
     this.save();
   },
 
@@ -210,6 +484,12 @@ export const Registry = {
     DEFAULT_MODELS.forEach(m => {
       if (!this._models[m.id]) {
         this._models[m.id] = this._modelEntry(m);
+        this._dirty = true;
+      }
+    });
+    DEFAULT_PRESETS.forEach(p => {
+      if (!this._presets[p.id]) {
+        this._presets[p.id] = this._presetEntry(p);
         this._dirty = true;
       }
     });
@@ -251,6 +531,14 @@ export const Registry = {
 
   _generateId() {
     return Math.random().toString(36).slice(2, 10).toUpperCase();
+  },
+
+  _presetEntry(def) {
+    return {
+      ...def,
+      usageCount: def.usageCount || 0,
+      createdAt:  def.createdAt  || (def.source === 'user' ? Date.now() : null),
+    };
   },
 
   // ── Node access ───────────────────────────────────────────────────────────────
@@ -304,6 +592,70 @@ export const Registry = {
 
   getActiveModels() {
     return Object.values(this._models).filter(m => !m.metrics.suspended);
+  },
+
+  // ── Preset access ─────────────────────────────────────────────────────────
+  getPreset(id) {
+    return this._presets[id] || null;
+  },
+
+  getAllPresets() {
+    return Object.values(this._presets);
+  },
+
+  getPresetsForNode(nodeName) {
+    return Object.values(this._presets).filter(p =>
+      p.nodes.length === 1 && p.nodes[0] === nodeName.toUpperCase()
+    );
+  },
+
+  getPresetsForNodes(nodeNames) {
+    const sorted = [...nodeNames].map(n => n.toUpperCase()).sort().join(',');
+    return Object.values(this._presets).filter(p => {
+      const pSorted = [...p.nodes].sort().join(',');
+      return pSorted === sorted;
+    });
+  },
+
+  getCompoundPresets() {
+    return Object.values(this._presets).filter(p => p.nodes.length > 1);
+  },
+
+  /**
+   * Add a user-created preset — called by Birth Protocol preset mode.
+   * @param {object} def — preset definition (id auto-generated if not provided)
+   */
+  addPreset(def) {
+    const id = def.id || 'user_' + this._generateId().toLowerCase();
+    if (this._presets[id]) {
+      console.warn(`[Registry] Preset ${id} already exists`);
+      return false;
+    }
+    this._presets[id] = this._presetEntry({
+      ...def,
+      id,
+      source:    'user',
+      createdAt: Date.now(),
+      usageCount: 0,
+    });
+    this._dirty = true;
+    this.save();
+    return id;
+  },
+
+  removePreset(id) {
+    if (!this._presets[id] || this._presets[id].source === 'default') return false;
+    delete this._presets[id];
+    this._dirty = true;
+    this.save();
+    return true;
+  },
+
+  recordPresetFired(id) {
+    if (this._presets[id]) {
+      this._presets[id].usageCount++;
+      this._dirty = true;
+    }
   },
 
   // ── Reliability metrics ───────────────────────────────────────────────────────
@@ -391,6 +743,7 @@ export const Registry = {
         version: REGISTRY_VERSION,
         nodes:   this._nodes,
         models:  this._models,
+        presets: this._presets,
         meta:    { ...this._meta, lastSaved: Date.now() },
       }));
       this._dirty = false;
@@ -461,6 +814,7 @@ export const Registry = {
       version: REGISTRY_VERSION,
       nodes:   { ...this._nodes },
       models:  { ...this._models },
+      presets: { ...this._presets },
       meta:    { ...this._meta },
     };
   },
