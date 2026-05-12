@@ -444,6 +444,8 @@ import { Immune }                                        from '../immune/immune.
 import { ChronosAction }                                 from '../actions/chronos.js';
 import { MediaAction }                                   from '../actions/media.js';
 import { SomaAction, restoreTheme }                      from '../actions/soma.js';
+import { MemoryAction }                                  from '../actions/memory.js';
+import { CortexAction }                                  from '../actions/cortex.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse = firePulse;
@@ -465,6 +467,8 @@ window.INTENT_SOURCE  = INTENT_SOURCE;
 window.MediaAction   = MediaAction;
 window.ChronosAction = ChronosAction;
 window.SomaAction    = SomaAction;
+window.MemoryAction  = MemoryAction;
+window.CortexAction  = CortexAction;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -539,8 +543,8 @@ function engineConfigured() {
 const SYNONYMS = {
   health:   ['vitality','status','wellbeing','monitor','check','diagnostics','condition','battery','power','system','reboot','uptime'],
   identity: ['self','id','soma','look','feel','interface','appearance','who','what','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
-  think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai'],
-  data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory'],
+  think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine'],
+  data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory','remember','forget','store','memorize','note'],
   media:    ['music','sound','audio','playback','play','pause','stop','mute','unmute','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery','playing','stream'],
   time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm'],
 };
@@ -1215,7 +1219,7 @@ async function firePulse() {
   winner.ignite(intent);
   clog(`📡 ${winner.name} | freq=${top.total.toFixed(3)} Δ=${delta===Infinity?'∞':delta.toFixed(3)}`, 'log-win');
 
-  // Engine response takes priority over cortex response when available
+  // Engine response takes priority — set by Arbiter engine escalation path
   if (winner._engineResponse) {
     const t = winner._engineResponse.length > 120
       ? winner._engineResponse.slice(0, 120) + '…'
@@ -1224,7 +1228,9 @@ async function firePulse() {
     winner.lastOutput = winner._engineResponse;
     vaultRemember(winner._engineResponse.slice(0, 80));
     delete winner._engineResponse;
-  } else {
+  } else if (!winner.action) {
+    // Passive nodes (no action callback) query the Python Cortex server
+    // for a response. Active nodes handle their own responses via action modules.
     const resp = await queryPulse(intent, winner.name);
     if (resp) {
       const t = resp.length > 90 ? resp.slice(0, 90) + '…' : resp;
@@ -1272,6 +1278,14 @@ const ACTION_MAP = {
   'CHRONOS': function(intent) {
     // Real temporal actions via ChronosAction module
     ChronosAction.handle(intent, clog, Nervous, EVENT);
+  },
+  'MEMORY': function(intent) {
+    // Vault interaction via MemoryAction module
+    MemoryAction.handle(intent, clog, Nervous, EVENT, pcUrl());
+  },
+  'CORTEX': function(intent) {
+    // Reasoning via deliberation engine + OS actions via Python Cortex server
+    CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberate, Immune, Registry, pcUrl());
   },
 };
 
