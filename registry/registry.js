@@ -86,7 +86,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'CORTEX',
-    specialty:    'ai logic intelligence think reason analyse explain evaluate process decide infer breakdown examine what is how does why',
+    specialty:    'ai logic intelligence think reason analyse explain evaluate process decide infer breakdown examine what is how does why open launch run engine model status download',
     color:        '#cc00ff',
     resonance:    1.6,
     tier:         'active',
