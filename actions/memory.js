@@ -54,6 +54,11 @@ function _classify(intent) {
     return { type: 'recall', query };
   }
 
+  // Download awareness — delegate to Python Cortex server
+  if (/\b(download|downloaded|recent\s+file|what.*download)\b/.test(s)) {
+    return { type: 'download' };
+  }
+
   return null;
 }
 
@@ -184,12 +189,18 @@ function _handleForget(content, clog) {
     return;
   }
 
-  const vault   = _getVault();
-  const before  = vault.length;
+  const vault  = _getVault();
+  const before = vault.length;
+  const query  = content.toLowerCase();
 
-  // Remove entries with high similarity to the forget query
-  const filtered = vault.filter(m => semanticSim(content, m.content || '') < 0.6);
-  const removed  = before - filtered.length;
+  // Remove entries matching by substring OR semantic similarity
+  const filtered = vault.filter(m => {
+    const text = (m.content || '').toLowerCase();
+    const subMatch = text.includes(query) || query.split(/\s+/).some(w => w.length > 3 && text.includes(w));
+    const simMatch = semanticSim(content, m.content || '') > 0.35;
+    return !subMatch && !simMatch;
+  });
+  const removed = before - filtered.length;
 
   if (!removed) {
     clog(`🧬 MEMORY: nothing found matching "${content.slice(0, 40)}" to forget`, 'log-mem');
@@ -233,11 +244,28 @@ export const MemoryAction = {
     }
 
     switch (classified.type) {
-      case 'status': _handleStatus(clog);                                          break;
-      case 'list':   _handleList(clog);                                            break;
-      case 'recall': _handleRecall(classified.query, intent, clog, cortexUrl);    break;
-      case 'store':  _handleStore(classified.content, clog, Nervous, EVENT);      break;
-      case 'forget': _handleForget(classified.content, clog);                     break;
+      case 'status':   _handleStatus(clog);                                        break;
+      case 'list':     _handleList(clog);                                          break;
+      case 'recall':   _handleRecall(classified.query, intent, clog, cortexUrl);  break;
+      case 'store':    _handleStore(classified.content, clog, Nervous, EVENT);    break;
+      case 'forget':   _handleForget(classified.content, clog);                   break;
+      case 'download':
+        // Delegate to Python Cortex server — requires local OS access
+        if (cortexUrl) {
+          fetch(`${cortexUrl}/pulse`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ intent, node: 'MEMORY' }),
+            signal: AbortSignal.timeout(3000),
+          })
+          .then(r => r.json())
+          .then(d => { if (d.response) clog(`🧬 [cortex→MEMORY] ${d.response}`, 'log-mem'); })
+          .catch(() => clog('🧬 MEMORY: Cortex server offline — cannot check downloads', 'log-mem'));
+        } else {
+          clog('🧬 MEMORY: download awareness requires Python Cortex server', 'log-mem');
+          clog('   Tap cortex pill → configure endpoint', 'log-mem');
+        }
+        break;
     }
   },
 };
