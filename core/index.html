@@ -658,7 +658,12 @@ class Node {
     this.resonance += 0.01;
     this.flashT     = performance.now();
     if (this.action) {
-      try { this.action(intent); }
+      try {
+        const result = this.action(intent);
+        if (result && typeof result.catch === 'function') {
+          result.catch(e => clog(`⚠ Action error on ${this.name}: ${e.message}`, 'log-err'));
+        }
+      }
       catch(e) { clog(`⚠ Action error on ${this.name}: ${e.message}`, 'log-err'); }
     }
     Nervous.emit(EVENT.NODE_FIRED, { source: 'SOMA', node: this.name,
@@ -1273,13 +1278,11 @@ const ACTION_MAP = {
     // Real temporal actions via ChronosAction module
     ChronosAction.handle(intent, clog, Nervous, EVENT);
   },
-  'MEMORY': function(intent) {
-    // Vault interaction via MemoryAction module
-    MemoryAction.handle(intent, clog, Nervous, EVENT, pcUrl());
+  'MEMORY': async function(intent) {
+    await MemoryAction.handle(intent, clog, Nervous, EVENT, pcUrl());
   },
-  'CORTEX': function(intent) {
-    // Reasoning via deliberation engine + OS actions via Python Cortex server
-    CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberate, Immune, Registry, pcUrl());
+  'CORTEX': async function(intent) {
+    await CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberate, Immune, Registry, pcUrl());
   },
 };
 
