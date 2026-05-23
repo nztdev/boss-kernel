@@ -31,7 +31,8 @@ function _classify(intent) {
 
   // Export / list recent
   if (/\b(list|show|export|recent|all)\b.*\b(memor|vault|remember)\b/.test(s) ||
-      /\b(what|everything).*\b(remember|stored|know)\b/.test(s)) {
+      /\b(what|everything).*\b(remember|stored|know)\b/.test(s) ||
+      /^list\s+memor/.test(s) || s === 'list memories' || s === 'show memories') {
     return { type: 'list' };
   }
 
@@ -48,8 +49,11 @@ function _classify(intent) {
   }
 
   // Recall / search — "what do you remember about X", "do you know X"
-  if (/\b(recall|retrieve|find|search|look\s+up|what.*know|do\s+you\s+know|what.*remember)\b/.test(s) ||
-      s === 'what do you remember' || s === 'recall') {
+  // Explicitly exclude "explain/analyse/think" — those belong to CORTEX
+  const isExplainIntent = /\b(explain|analyse|analyze|think|reason|what\s+is|how\s+does)\b/.test(s);
+  if (!isExplainIntent &&
+      (/\b(recall|retrieve|find|search|look\s+up|what.*know|do\s+you\s+know|what.*remember)\b/.test(s) ||
+      s === 'what do you remember' || s === 'recall')) {
     const query = _extractQuery(s);
     return { type: 'recall', query };
   }
