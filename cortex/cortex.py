@@ -53,9 +53,9 @@ import torch
 
 app = Flask(__name__)
 CORS(app, origins=[
-    "http://localhost", "http://127.0.0.1",
+    "https://localhost", "https://127.0.0.1",
     "null",             # file:// origin for local HTML
-    "http://192.168.1.*",
+    "https://192.168.1.*",
 ])
 
 # ── VECTOR BRAIN ───────────────────────────────────────────────────────────────
