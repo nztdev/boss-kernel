@@ -445,6 +445,7 @@ import { ChronosAction }                                 from '../actions/chrono
 import { MediaAction }                                   from '../actions/media.js';
 import { SomaAction, restoreTheme }                      from '../actions/soma.js';
 import { MemoryAction }                                  from '../actions/memory.js';
+import { CoreAction }                                    from '../actions/core.js';
 import { CortexAction }                                  from '../actions/cortex.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
@@ -468,6 +469,7 @@ window.MediaAction   = MediaAction;
 window.ChronosAction = ChronosAction;
 window.SomaAction    = SomaAction;
 window.MemoryAction  = MemoryAction;
+window.CoreAction    = CoreAction;
 window.CortexAction  = CortexAction;
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -541,7 +543,7 @@ function engineConfigured() {
 
 // ── Semantic similarity ───────────────────────────────────────────────────────
 const SYNONYMS = {
-  health:   ['vitality','status','wellbeing','monitor','check','diagnostics','condition','battery','power','system','reboot','uptime'],
+  health:   ['vitality','status','wellbeing','monitor','check','diagnostics','diagnostic','condition','battery','charge','power','system','reboot','uptime','network','online','offline','memory','ram','performance','session'],
   identity: ['self','id','soma','look','feel','interface','appearance','who','what','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine','open','launch','run','start','engine','model','download','chrome','spotify','notepad','app','application'],
   data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory','remember','forget','store','memorize','note'],
@@ -1263,6 +1265,9 @@ function recover() {
 // Each callback receives the user's intent string so it can parse what to do.
 // New action modules: import at top of file, register here.
 const ACTION_MAP = {
+  'CORE': async function(intent) {
+    await CoreAction.handle(intent, clog, Nervous, EVENT, systemVitals, () => nodes, Immune);
+  },
   'MEDIA': function(intent) {
     // Real sensory actions via MediaAction module
     MediaAction.handle(intent, clog, Nervous, EVENT, pcUrl());
