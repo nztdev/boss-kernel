@@ -64,14 +64,14 @@ export const INTENT_SOURCE = {
 const DEFAULT_NODES = [
   {
     name:         'CORE',
-    specialty:    'health battery power status diagnostics system reboot uptime integrity vitals',
+    specialty:    'health battery charge power status diagnostics system reboot uptime integrity vitals network online offline memory performance session',
     color:        '#00ffcc',
     resonance:    2.0,
-    tier:         'passive',
-    hasAction:    false,
-    actionType:   null,
-    capabilities: ['system_query', 'diagnostics', 'battery_monitor'],
-    description:  'System health, diagnostics, and vitals monitoring.',
+    tier:         'active',
+    hasAction:    true,
+    actionType:   'system',
+    capabilities: ['system_query', 'diagnostics', 'battery_monitor', 'network_status', 'uptime'],
+    description:  'System health, diagnostics, battery, network, and vitals monitoring.',
   },
   {
     name:         'SOMA',
