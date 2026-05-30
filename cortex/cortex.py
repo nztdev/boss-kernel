@@ -52,11 +52,9 @@ from sentence_transformers import SentenceTransformer, util
 import torch
 
 app = Flask(__name__)
-CORS(app, origins=[
-    "https://localhost", "https://127.0.0.1",
-    "null",             # file:// origin for local HTML
-    "https://192.168.1.*",
-])
+# Open CORS for local development — the Cortex runs on the user's own machine.
+# Tighten to specific origins for any hosted deployment.
+CORS(app)
 
 # ── VECTOR BRAIN ───────────────────────────────────────────────────────────────
 print("🧠 B.O.S.S. Cortex warming up...")
@@ -414,4 +412,4 @@ if __name__ == "__main__":
     print(f"   Whitelist: {list(WHITELIST.keys())}")
     print(f"   Rate limit: {_rate_limit} req/min on /resonate")
     print(f"   Model loading in background...")
-    app.run(host="0.0.0.0", port=port, threaded=True)
+    app.run(host="0.0.0.0", port=port, threaded=True, ssl_context='adhoc')
