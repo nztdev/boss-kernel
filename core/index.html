@@ -40,7 +40,9 @@ canvas {
   display: block;
   position: fixed;
   top: 0; left: 0;
-  width: 100vw; height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;  /* dynamic viewport height — accounts for mobile browser chrome */
 }
 
 /* ── STATUS BAR ── */
@@ -1146,7 +1148,8 @@ window.confirmBirth = function() {
   // Instantiate immediately in the field — no reload required
   const cx    = canvas.width / 2, cy = canvas.height / 2;
   const angle = Math.random() * Math.PI * 2;
-  const r     = Math.min(canvas.width, canvas.height) * 0.28;
+  const maxR  = Math.min(canvas.width, canvas.height);
+  const r     = maxR * (maxR < 400 ? 0.32 : 0.28);
   const node  = new Node(name, specialty, cx + r * Math.cos(angle), cy + r * Math.sin(angle),
                          _birthColor, 1.0, false, null);
   nodes.push(node);
@@ -1311,8 +1314,15 @@ const ACTION_MAP = {
 const canvas = document.getElementById('canvas');
 const ctx    = canvas.getContext('2d');
 
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+function resize() {
+  canvas.width  = window.innerWidth;
+  // Reserve space for bottom UI (console + input bar) so nodes stay visible.
+  // On desktop the bottom UI is ~180px; on mobile ~200px due to browser chrome.
+  const bottomUI = window.innerWidth < 600 ? 200 : 180;
+  canvas.height = (window.visualViewport?.height || window.innerHeight) - bottomUI;
+}
 window.addEventListener('resize', resize);
+window.visualViewport?.addEventListener('resize', resize);
 resize();
 
 function drawGrid() {
@@ -1637,7 +1647,8 @@ function seed() {
   // Read node definitions from Registry instead of hardcoded array.
   // Registry is the single source of truth — seeds, colors, capabilities all live there.
   const cx   = canvas.width / 2, cy = canvas.height / 2;
-  const r    = Math.min(canvas.width, canvas.height) * 0.28;
+  const maxR = Math.min(canvas.width, canvas.height);
+  const r    = maxR * (maxR < 400 ? 0.32 : 0.28);
   const defs = Registry.getAllNodes();
 
   defs.forEach((d, i) => {
@@ -1689,9 +1700,10 @@ if (restored) {
   const savedNames = new Set(nodes.map(n => n.name));
   Registry.getAllNodes().forEach((d, i) => {
     if (!savedNames.has(d.name)) {
-      const cx = canvas.width / 2, cy = canvas.height / 2;
+      const cx   = canvas.width / 2, cy = canvas.height / 2;
       const angle = (i / Registry.getAllNodes().length) * Math.PI * 2 - Math.PI / 2;
-      const r = Math.min(canvas.width, canvas.height) * 0.28;
+      const maxR  = Math.min(canvas.width, canvas.height);
+      const r     = maxR * (maxR < 400 ? 0.32 : 0.28);
       nodes.push(new Node(
         d.name, d.specialty,
         cx + r * Math.cos(angle), cy + r * Math.sin(angle),
