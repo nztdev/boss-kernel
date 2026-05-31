@@ -40,7 +40,7 @@ function _classify(intent) {
   }
 
   // Memory / performance diagnostics
-  if (/\b(memory|ram|heap|performance|diagnos|diagnostic)\b/.test(s)) {
+  if (/\b(memory|ram|heap|performance|diagnostic)/.test(s)) {
     return { type: 'diagnostics' };
   }
 
