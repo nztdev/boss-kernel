@@ -449,7 +449,10 @@ import { CoreAction }                                    from '../actions/core.j
 import { CortexAction }                                  from '../actions/cortex.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
-window.firePulse = firePulse;
+window.firePulse      = firePulse;
+window.firePreset     = firePreset;
+window.dismissOrbital = dismissOrbital;
+window.activateOrbital = activateOrbital;
 window.recover = recover;
 window.openCortexModal = openCortexModal;
 window.closeCortexModal = closeCortexModal;
@@ -497,6 +500,14 @@ const VECTOR_WEIGHT  = 2.0;
 // Birth Protocol threshold: max(match) below this → no existing node is relevant
 const BIRTH_THRESHOLD = 0.15;
 let   confThreshold  = 1.5;
+
+// ── Orbital preset UI state ───────────────────────────────────────────────────
+let _orbitalNode    = null;   // currently expanded node
+let _orbitals       = [];     // [{preset, x, y, w, h, alpha}] hit-test rects
+let _orbitalAnim    = 0;      // 0→1 animation progress
+let _orbitalTarget  = null;   // node animating toward centre
+const ORBITAL_RADIUS  = 88;   // px from node centre to orbital pill centre
+const ORBITAL_ANIM_MS = 350;  // animation duration
 // ACTIVE_NODES is now driven by the Registry.
 // getActiveNodeNames() reads nodes where hasAction=true.
 // Kept as a Set for O(1) lookup — rebuilt from Registry at boot.
@@ -1161,6 +1172,7 @@ async function firePulse() {
   if (!intent) return;
   if (limpMode) { clog('🩼 LIMP MODE — tap Recover', 'log-grief'); return; }
   el.value = '';
+  dismissOrbital();  // clear active orbitals before new pulse
   pulseCount++;
   document.getElementById('h-pulses').textContent = pulseCount;
   clog(`⚡ "${intent}"`, 'log-pulse');
@@ -1218,6 +1230,8 @@ async function firePulse() {
 
   chain.push(winner.id);
   winner.ignite(intent);
+  // Activate orbital presets for the winning node
+  activateOrbital(winner);
   clog(`📡 ${winner.name} | freq=${top.total.toFixed(3)} Δ=${delta===Infinity?'∞':delta.toFixed(3)}`, 'log-win');
 
   // Engine response takes priority — set by Arbiter engine escalation path
@@ -1347,34 +1361,121 @@ function applyForces() {
 }
 
 // Touch
+// ── Pointer state ─────────────────────────────────────────────────────────────
+// Tap vs drag distinction:
+//   Movement < TAP_THRESHOLD px → tap → activate orbital
+//   Movement >= TAP_THRESHOLD px → drag → move node
+const TAP_THRESHOLD = 6;  // px in canvas space
+
+// Touch
 let touching = null, tox = 0, toy = 0;
+let _touchStartX = 0, _touchStartY = 0, _touchMoved = false;
+
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   const t   = e.touches[0];
-  const hit = nodes.find(n => Math.hypot(n.x - t.clientX, n.y - t.clientY) < 48);
-  if (hit) { touching = hit; tox = t.clientX - hit.x; toy = t.clientY - hit.y; }
+  const r   = canvas.getBoundingClientRect();
+  const mx  = (t.clientX - r.left) * (canvas.width  / r.width);
+  const my  = (t.clientY - r.top)  * (canvas.height / r.height);
+
+  // Orbital tap check first
+  if (_orbitals.length) {
+    for (const o of _orbitals) {
+      if (mx >= o.x - o.w / 2 && mx <= o.x + o.w / 2 &&
+          my >= o.y - o.h / 2 && my <= o.y + o.h / 2) {
+        firePreset(o.preset);
+        return;
+      }
+    }
+    dismissOrbital();
+    return;
+  }
+
+  _touchStartX = mx; _touchStartY = my; _touchMoved = false;
+  const hit = nodes.find(n => Math.hypot(n.x - mx, n.y - my) < 48);
+  if (hit) { touching = hit; tox = mx - hit.x; toy = my - hit.y; }
 }, { passive: false });
+
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   if (!touching) return;
-  const t = e.touches[0];
-  touching.x = t.clientX - tox; touching.y = t.clientY - toy;
-  touching.vx = 0; touching.vy = 0;
+  const t  = e.touches[0];
+  const r  = canvas.getBoundingClientRect();
+  const mx = (t.clientX - r.left) * (canvas.width  / r.width);
+  const my = (t.clientY - r.top)  * (canvas.height / r.height);
+  if (Math.hypot(mx - _touchStartX, my - _touchStartY) > TAP_THRESHOLD) {
+    _touchMoved = true;
+  }
+  if (_touchMoved) {
+    touching.x = mx - tox; touching.y = my - toy;
+    touching.vx = 0; touching.vy = 0;
+  }
 }, { passive: false });
-canvas.addEventListener('touchend', () => { if (touching) { Heart.save(); touching = null; } });
+
+canvas.addEventListener('touchend', () => {
+  if (touching) {
+    if (!_touchMoved) {
+      // Short tap on node — activate orbital (Path 1)
+      activateOrbital(touching);
+    } else {
+      Heart.save();
+    }
+    touching = null;
+  }
+});
 
 // Mouse
 let dragging = null, dox = 0, doy = 0;
+let _mouseStartX = 0, _mouseStartY = 0, _mouseMoved = false;
+
 canvas.addEventListener('mousedown', e => {
-  const hit = nodes.find(n => Math.hypot(n.x - e.clientX, n.y - e.clientY) < 40);
-  if (hit) { dragging = hit; dox = e.clientX - hit.x; doy = e.clientY - hit.y; }
+  const r  = canvas.getBoundingClientRect();
+  const mx = (e.clientX - r.left) * (canvas.width  / r.width);
+  const my = (e.clientY - r.top)  * (canvas.height / r.height);
+
+  // Orbital tap check first
+  if (_orbitals.length) {
+    for (const o of _orbitals) {
+      if (mx >= o.x - o.w / 2 && mx <= o.x + o.w / 2 &&
+          my >= o.y - o.h / 2 && my <= o.y + o.h / 2) {
+        firePreset(o.preset);
+        return;
+      }
+    }
+    dismissOrbital();
+    return;
+  }
+
+  _mouseStartX = mx; _mouseStartY = my; _mouseMoved = false;
+  const hit = nodes.find(n => Math.hypot(n.x - mx, n.y - my) < 40);
+  if (hit) { dragging = hit; dox = mx - hit.x; doy = my - hit.y; }
 });
+
 canvas.addEventListener('mousemove', e => {
   if (!dragging) return;
-  dragging.x = e.clientX - dox; dragging.y = e.clientY - doy;
-  dragging.vx = 0; dragging.vy = 0;
+  const r  = canvas.getBoundingClientRect();
+  const mx = (e.clientX - r.left) * (canvas.width  / r.width);
+  const my = (e.clientY - r.top)  * (canvas.height / r.height);
+  if (Math.hypot(mx - _mouseStartX, my - _mouseStartY) > TAP_THRESHOLD) {
+    _mouseMoved = true;
+  }
+  if (_mouseMoved) {
+    dragging.x = mx - dox; dragging.y = my - doy;
+    dragging.vx = 0; dragging.vy = 0;
+  }
 });
-canvas.addEventListener('mouseup', () => { if (dragging) { Heart.save(); dragging = null; } });
+
+canvas.addEventListener('mouseup', e => {
+  if (dragging) {
+    if (!_mouseMoved) {
+      // Short click on node — activate orbital (Path 1)
+      activateOrbital(dragging);
+    } else {
+      Heart.save();
+    }
+    dragging = null;
+  }
+});
 
 // Tooltip
 const tip = document.getElementById('tip');
@@ -1405,10 +1506,128 @@ function clog(msg, cls = 'log-sys') {
 function updateHeader() { document.getElementById('h-nodes').textContent = nodes.length; }
 
 // ── Main loop ─────────────────────────────────────────────────────────────────
+// ── Orbital preset pill rendering ────────────────────────────────────────────
+function drawOrbitals(now) {
+  if (!_orbitalNode || !_orbitals.length) return;
+
+  // Animate alpha
+  _orbitalAnim = Math.min(1, _orbitalAnim + (16 / ORBITAL_ANIM_MS));
+  const alpha  = _easeOut(_orbitalAnim);
+
+  _orbitals.forEach(o => {
+    const { preset, x, y, w, h } = o;
+    o.alpha = alpha;
+
+    // Pill background
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.92;
+    ctx.beginPath();
+    _roundRect(ctx, x - w / 2, y - h / 2, w, h, 10);
+    ctx.fillStyle   = '#050a06';
+    ctx.strokeStyle = _orbitalNode.color + 'aa';
+    ctx.lineWidth   = 1;
+    ctx.shadowBlur  = 8;
+    ctx.shadowColor = _orbitalNode.color + '66';
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+
+    // Icon + label
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle   = _orbitalNode.color;
+    ctx.font        = '11px "Share Tech Mono", monospace';
+    ctx.textAlign   = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${preset.icon || '◆'} ${preset.label}`, x, y);
+    ctx.restore();
+
+    // Connector line from node to orbital
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.25;
+    ctx.beginPath();
+    ctx.moveTo(_orbitalNode.x, _orbitalNode.y);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = _orbitalNode.color;
+    ctx.lineWidth   = 0.5;
+    ctx.setLineDash([3, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  });
+}
+
+function _easeOut(t) { return 1 - Math.pow(1 - t, 2); }
+
+function _roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ── Activate orbital for a node ───────────────────────────────────────────────
+function activateOrbital(node) {
+  if (!node) return;
+  const presets = Registry.getPresetsForNode(node.name);
+  if (!presets.length) return;
+
+  _orbitalNode   = node;
+  _orbitalAnim   = 0;
+  _orbitals      = [];
+
+  // Calculate orbital positions around node
+  presets.forEach((preset, i) => {
+    const angle  = (i / presets.length) * Math.PI * 2 - Math.PI / 2;
+    const ox     = node.x + ORBITAL_RADIUS * Math.cos(angle);
+    const oy     = node.y + ORBITAL_RADIUS * Math.sin(angle);
+    const label  = `${preset.icon || '◆'} ${preset.label}`;
+    // Estimate pill width from label length
+    const w      = Math.max(90, label.length * 7.5 + 20);
+    const h      = 24;
+    _orbitals.push({ preset, x: ox, y: oy, w, h, alpha: 0 });
+  });
+}
+
+function dismissOrbital() {
+  _orbitalNode  = null;
+  _orbitals     = [];
+  _orbitalAnim  = 0;
+}
+
+// ── Fire a preset directly (bypasses intent input and routing) ────────────────
+async function firePreset(preset) {
+  clog(`◆ PRESET: "${preset.label}" (${preset.nodes.join('+')})`, 'log-sys');
+  Registry.recordPresetFired(preset.id);
+  dismissOrbital();
+
+  for (const action of preset.actions) {
+    const node = nodes.find(n => n.name === action.node);
+    if (!node) continue;
+
+    // Ignite node visually
+    node.ignite(preset.intent);
+
+    // Execute action via ACTION_MAP if available
+    const fn = ACTION_MAP[action.node];
+    if (fn) {
+      try { await fn(preset.intent); }
+      catch(e) { clog(`⚠ Preset action error: ${e.message}`, 'log-err'); }
+    }
+  }
+}
+
 function loop(now) {
   ctx.fillStyle = '#050a06'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   drawGrid(); applyForces(); drawBonds();
   nodes.forEach(n => { n.update(now); n.draw(ctx, chain, now); });
+  drawOrbitals(now);
   updateHeader();
   requestAnimationFrame(loop);
 }
