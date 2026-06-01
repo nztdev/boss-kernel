@@ -636,6 +636,9 @@ class Node {
     this.flashT       = 0;
     this.lastVecBoost = 0;
     this.action       = action;   // executable callback — presence triggers hard Arbiter path
+    this._scale       = 1.0;      // current render scale
+    this._targetScale = 1.0;      // lerp target
+    this._targetCx    = false;    // pull toward canvas centre when active
   }
 
   update(now) {
@@ -643,6 +646,12 @@ class Node {
       const dt = (now - this.lastT) / 1000;
       this.warmth *= Math.exp(-systemVitals.decayRate * dt);
       if (this.warmth < 0.05) this.warmth = 0.05;
+      // Scale animation lerp
+      this._scale += (this._targetScale - this._scale) * 0.1;
+      // Decay target scale back to 1.0 when not the active orbital node
+      if (this !== _orbitalNode && this._targetScale > 1.0) {
+        this._targetScale = Math.max(1.0, this._targetScale - 0.015);
+      }
     }
     this.lastT = now;
   }
@@ -669,6 +678,7 @@ class Node {
   }
 
   ignite(intent = '') {
+    this._activateScale();
     this.warmth     = Math.min(this.warmth + 2.5, 10);
     this.resonance += 0.01;
     this.flashT     = performance.now();
@@ -683,6 +693,31 @@ class Node {
     }
     Nervous.emit(EVENT.NODE_FIRED, { source: 'SOMA', node: this.name,
       payload: { warmth: this.warmth, resonance: this.resonance, intent } });
+  }
+
+  // Async version — returns whether action fully handled the intent
+  async igniteAsync(intent = '') {
+    this._activateScale();
+    this.warmth     = Math.min(this.warmth + 2.5, 10);
+    this.resonance += 0.01;
+    this.flashT     = performance.now();
+    let handled = false;
+    if (this.action) {
+      try {
+        const result = await this.action(intent);
+        handled = result === true;
+      }
+      catch(e) { clog(`⚠ Action error on ${this.name}: ${e.message}`, 'log-err'); }
+    }
+    Nervous.emit(EVENT.NODE_FIRED, { source: 'SOMA', node: this.name,
+      payload: { warmth: this.warmth, resonance: this.resonance, intent } });
+    return handled;
+  }
+
+  // Activate scale animation — node grows and pulls toward centre
+  _activateScale() {
+    this._targetScale  = 1.45;
+    this._targetCx     = true;  // pull toward canvas centre
   }
 
   grieve() {
@@ -707,8 +742,15 @@ class Node {
     const isActive   = chain.length && chain[chain.length - 1] === this.id;
     const r          = 20 + this.resonance * 3 + this.warmth * 2;
     const glow       = 10 + this.warmth * 22;
+    const sc         = this._scale || 1.0;
 
     ctx.save();
+    // Apply scale transform around node centre
+    if (sc !== 1.0) {
+      ctx.translate(this.x, this.y);
+      ctx.scale(sc, sc);
+      ctx.translate(-this.x, -this.y);
+    }
 
     if (this.warmth > 0.15) {
       const g = ctx.createRadialGradient(this.x, this.y, r * .3, this.x, this.y, r * 3.5);
@@ -1234,9 +1276,10 @@ async function firePulse() {
   }
 
   chain.push(winner.id);
-  winner.ignite(intent);
-  // Activate orbital presets for the winning node
-  activateOrbital(winner);
+  // ignite returns whether action fully handled the intent
+  // true = handled (no orbitals needed), false/undefined = needs follow-up
+  const handled = await winner.igniteAsync(intent);
+  if (!handled) activateOrbital(winner);
   clog(`📡 ${winner.name} | freq=${top.total.toFixed(3)} Δ=${delta===Infinity?'∞':delta.toFixed(3)}`, 'log-win');
 
   // Engine response takes priority — set by Arbiter engine escalation path
@@ -1367,6 +1410,21 @@ function applyForces() {
       n.vy += (dy/d) * Math.min(s * .5, 0.8);
     });
     n.vx *= 0.84; n.vy *= 0.84;
+
+    // Centripetal pull — active orbital node drifts toward canvas centre
+    if (n === _orbitalNode && n._targetCx) {
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+      n.vx += (cx - n.x) * 0.018;
+      n.vy += (cy - n.y) * 0.018;
+    } else if (_orbitalNode && n !== _orbitalNode) {
+      // Gently push non-active nodes outward from centre
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+      const dx = n.x - cx, dy = n.y - cy;
+      const dist = Math.hypot(dx, dy) || 1;
+      n.vx += (dx / dist) * 0.35;
+      n.vy += (dy / dist) * 0.35;
+    }
+
     n.x = Math.max(60, Math.min(n.x + n.vx, canvas.width  - 60));
     n.y = Math.max(58, Math.min(n.y + n.vy, canvas.height - 165));
   });
@@ -1530,13 +1588,13 @@ function drawOrbitals(now) {
     const { preset, x, y, w, h } = o;
     o.alpha = alpha;
 
-    // Pill background
+    // Pill background — active timer orbitals glow differently
     ctx.save();
     ctx.globalAlpha = alpha * 0.92;
     ctx.beginPath();
     _roundRect(ctx, x - w / 2, y - h / 2, w, h, 10);
-    ctx.fillStyle   = '#050a06';
-    ctx.strokeStyle = _orbitalNode.color + 'aa';
+    ctx.fillStyle   = o.isActive ? '#0a1a10' : '#050a06';
+    ctx.strokeStyle = o.isActive ? '#ffaa00aa' : _orbitalNode.color + 'aa';
     ctx.lineWidth   = 1;
     ctx.shadowBlur  = 8;
     ctx.shadowColor = _orbitalNode.color + '66';
@@ -1587,12 +1645,40 @@ function _roundRect(ctx, x, y, w, h, r) {
 // ── Activate orbital for a node ───────────────────────────────────────────────
 function activateOrbital(node) {
   if (!node) return;
-  const presets = Registry.getPresetsForNode(node.name);
+
+  // Base presets from Registry
+  let presets = Registry.getPresetsForNode(node.name);
+
+  // Inject runtime state as additional orbitals
+  // CHRONOS: show active timers as live orbitals
+  if (node.name === 'CHRONOS' && window.ChronosAction) {
+    const active = ChronosAction.getTimers();
+    active.forEach(t => {
+      const remaining = Math.max(0, t.fireAt.getTime() - Date.now());
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+      // Insert as a synthetic preset at the front
+      presets = [{
+        id:      `active_${t.id}`,
+        label:   `⏱ ${timeStr}`,
+        icon:    '⏱',
+        nodes:   ['CHRONOS'],
+        intent:  'cancel timer',
+        actions: [{ node: 'CHRONOS', command: 'cancel', params: {} }],
+        source:  'runtime',
+        _isActive: true,
+        _timerId:  t.id,
+      }, ...presets];
+    });
+  }
+
   if (!presets.length) return;
 
   _orbitalNode   = node;
   _orbitalAnim   = 0;
   _orbitals      = [];
+  node._activateScale();  // trigger scale + centripetal animation
 
   // Calculate orbital positions around node
   presets.forEach((preset, i) => {
@@ -1600,14 +1686,19 @@ function activateOrbital(node) {
     const ox     = node.x + ORBITAL_RADIUS * Math.cos(angle);
     const oy     = node.y + ORBITAL_RADIUS * Math.sin(angle);
     const label  = `${preset.icon || '◆'} ${preset.label}`;
-    // Estimate pill width from label length
     const w      = Math.max(90, label.length * 7.5 + 20);
     const h      = 24;
-    _orbitals.push({ preset, x: ox, y: oy, w, h, alpha: 0 });
+    // Active timer orbitals get a different colour
+    _orbitals.push({ preset, x: ox, y: oy, w, h, alpha: 0,
+                     isActive: !!preset._isActive });
   });
 }
 
 function dismissOrbital() {
+  if (_orbitalNode) {
+    _orbitalNode._targetScale = 1.0;
+    _orbitalNode._targetCx   = false;
+  }
   _orbitalNode  = null;
   _orbitals     = [];
   _orbitalAnim  = 0;
