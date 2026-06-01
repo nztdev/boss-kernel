@@ -395,7 +395,7 @@ export const MediaAction = {
       clog('   Audio: "play music" · "pause" · "volume up" · "stop"', 'log-action');
       clog('   Image: "show image [url]"', 'log-action');
       clog('   Video: "play video [url]" · "watch [youtube url]"', 'log-action');
-      return;
+      return false;  // incomplete
     }
 
     // Emit event for Nervous System
@@ -420,6 +420,7 @@ export const MediaAction = {
         clog('   Say "play music" to start streaming', 'log-action');
         break;
     }
+    return true;
   },
 
   setStreamUrl(url) {
