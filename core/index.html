@@ -818,15 +818,17 @@ async function runArbiter(top, second, delta, intent) {
   }
 
   // True conflict — determine path based on whether actions are involved.
-  // Hard grief (kernel suspend) requires BOTH nodes to have actions.
-  // Rationale: if only one node has a side effect and the passive node wins,
-  // nothing irreversible happens. Suspending on one-action conflicts is too
-  // aggressive — it suspends the kernel on legitimate cross-domain intents.
-  const bothActive = !!(top.node.action && second.node.action);
+  // Hard grief only fires when BOTH nodes have external side-effect actions.
+  // Read-only nodes (CORE=diagnostics, MEMORY=vault reads) are excluded —
+  // their actions don't change external state so conflicts are never irreversible.
+  const SIDE_EFFECT_NODES = new Set(['CHRONOS', 'MEDIA', 'SOMA', 'CORTEX']);
+  const topSideEffect    = !!(top.node.action    && SIDE_EFFECT_NODES.has(top.node.name));
+  const secondSideEffect = !!(second.node.action && SIDE_EFFECT_NODES.has(second.node.name));
+  const bothActive   = topSideEffect && secondSideEffect;
   const eitherActive = !!(top.node.action || second.node.action);
 
   if (bothActive) {
-    // Hard stop — both nodes have irreversible actions, genuine conflict
+    // Hard stop — both nodes have irreversible side-effect actions
     clog(`   ⚠ OPPOSED + BOTH ACTION NODES — Grief Protocol (hard stop)`, 'log-grief');
     top.node.grieve(); second.node.grieve();
     clog(`   💔 ${top.node.name} res→${top.node.resonance.toFixed(3)}`, 'log-grief');
@@ -1620,16 +1622,8 @@ async function firePreset(preset) {
   for (const action of preset.actions) {
     const node = nodes.find(n => n.name === action.node);
     if (!node) continue;
-
-    // Ignite node visually
+    // ignite() calls this.action(intent) internally — do not call ACTION_MAP separately
     node.ignite(preset.intent);
-
-    // Execute action via ACTION_MAP if available
-    const fn = ACTION_MAP[action.node];
-    if (fn) {
-      try { await fn(preset.intent); }
-      catch(e) { clog(`⚠ Preset action error: ${e.message}`, 'log-err'); }
-    }
   }
 }
 
