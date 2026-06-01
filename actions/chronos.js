@@ -254,9 +254,8 @@ export const ChronosAction = {
     const parsed = _parseIntent(intent);
 
     if (!parsed) {
-      clog(`⏱ CHRONOS: no time expression found in "${intent}"`, 'log-action');
-      clog('   Try: "set a timer for 5 minutes" · "remind me at 3pm" · "cancel timer"', 'log-action');
-      return;
+      clog(`⏱ CHRONOS: no time expression in "${intent}" — choose a duration:`, 'log-action');
+      return false;  // incomplete — show orbitals
     }
 
     switch (parsed.type) {
@@ -266,6 +265,7 @@ export const ChronosAction = {
       case 'query':   _handleQuery(clog);                                   break;
       case 'elapsed': _handleElapsed(clog);                                 break;
     }
+    return true;  // fully handled
   },
 
   // Expose timer state for Soma inspection if needed
