@@ -271,5 +271,6 @@ export const MemoryAction = {
         }
         break;
     }
+    return true;
   },
 };
