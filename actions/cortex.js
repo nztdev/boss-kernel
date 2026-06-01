@@ -261,5 +261,6 @@ export const CortexAction = {
         );
         break;
     }
+    return true;
   },
 };
