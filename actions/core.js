@@ -254,5 +254,6 @@ export const CoreAction = {
       case 'uptime':      _handleUptime(clog, systemVitals);                               break;
       case 'status':      await _handleStatus(clog, systemVitals, nodes, Immune);          break;
     }
+    return true;
   },
 };
