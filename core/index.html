@@ -1585,10 +1585,27 @@ function drawOrbitals(now) {
   const alpha  = _easeOut(_orbitalAnim);
 
   _orbitals.forEach(o => {
-    const { preset, x, y, w, h } = o;
-    o.alpha = alpha;
+    // Position follows node current location each frame
+    const angle = (o.index / o.total) * Math.PI * 2 - Math.PI / 2;
+    o.x = _orbitalNode.x + ORBITAL_RADIUS * Math.cos(angle);
+    o.y = _orbitalNode.y + ORBITAL_RADIUS * Math.sin(angle);
 
-    // Pill background — active timer orbitals glow differently
+    // Live label — active timers show live countdown
+    let displayLabel;
+    if (o.isActive && o.preset._fireAt) {
+      const remaining = Math.max(0, o.preset._fireAt.getTime() - Date.now());
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      displayLabel = `⏱ ${mins > 0 ? mins + 'm ' : ''}${secs}s`;
+    } else {
+      displayLabel = `${o.preset.icon || '◆'} ${o.preset.label}`;
+    }
+
+    o.w = Math.max(90, displayLabel.length * 7.5 + 20);
+    o.alpha = alpha;
+    const { x, y, w, h } = o;
+
+    // Pill background
     ctx.save();
     ctx.globalAlpha = alpha * 0.92;
     ctx.beginPath();
@@ -1602,22 +1619,22 @@ function drawOrbitals(now) {
     ctx.stroke();
     ctx.shadowBlur  = 0;
 
-    // Icon + label
+    // Label
     ctx.globalAlpha = alpha;
-    ctx.fillStyle   = _orbitalNode.color;
+    ctx.fillStyle   = o.isActive ? '#ffaa00' : _orbitalNode.color;
     ctx.font        = '11px "Share Tech Mono", monospace';
     ctx.textAlign   = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${preset.icon || '◆'} ${preset.label}`, x, y);
+    ctx.fillText(displayLabel, x, y);
     ctx.restore();
 
-    // Connector line from node to orbital
+    // Connector line
     ctx.save();
     ctx.globalAlpha = alpha * 0.25;
     ctx.beginPath();
     ctx.moveTo(_orbitalNode.x, _orbitalNode.y);
     ctx.lineTo(x, y);
-    ctx.strokeStyle = _orbitalNode.color;
+    ctx.strokeStyle = o.isActive ? '#ffaa00' : _orbitalNode.color;
     ctx.lineWidth   = 0.5;
     ctx.setLineDash([3, 5]);
     ctx.stroke();
@@ -1654,20 +1671,17 @@ function activateOrbital(node) {
   if (node.name === 'CHRONOS' && window.ChronosAction) {
     const active = ChronosAction.getTimers();
     active.forEach(t => {
-      const remaining = Math.max(0, t.fireAt.getTime() - Date.now());
-      const mins = Math.floor(remaining / 60000);
-      const secs = Math.floor((remaining % 60000) / 1000);
-      const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-      // Insert as a synthetic preset at the front
+      // Store fireAt — label computed live each frame in drawOrbitals()
       presets = [{
         id:      `active_${t.id}`,
-        label:   `⏱ ${timeStr}`,
+        label:   '',          // computed live from _fireAt each frame
         icon:    '⏱',
         nodes:   ['CHRONOS'],
         intent:  'cancel timer',
         actions: [{ node: 'CHRONOS', command: 'cancel', params: {} }],
         source:  'runtime',
         _isActive: true,
+        _fireAt:   t.fireAt,  // Date object — used for live countdown
         _timerId:  t.id,
       }, ...presets];
     });
@@ -1680,17 +1694,18 @@ function activateOrbital(node) {
   _orbitals      = [];
   node._activateScale();  // trigger scale + centripetal animation
 
-  // Calculate orbital positions around node
+  // Store preset + index only — positions computed each frame in drawOrbitals()
+  // so orbitals follow the node as it drifts toward centre
   presets.forEach((preset, i) => {
-    const angle  = (i / presets.length) * Math.PI * 2 - Math.PI / 2;
-    const ox     = node.x + ORBITAL_RADIUS * Math.cos(angle);
-    const oy     = node.y + ORBITAL_RADIUS * Math.sin(angle);
-    const label  = `${preset.icon || '◆'} ${preset.label}`;
-    const w      = Math.max(90, label.length * 7.5 + 20);
-    const h      = 24;
-    // Active timer orbitals get a different colour
-    _orbitals.push({ preset, x: ox, y: oy, w, h, alpha: 0,
-                     isActive: !!preset._isActive });
+    _orbitals.push({
+      preset,
+      index:    i,
+      total:    presets.length,
+      x: node.x, y: node.y,  // initial position — updated each frame
+      w: 0, h: 24,            // width computed each frame from label
+      alpha:    0,
+      isActive: !!preset._isActive,
+    });
   });
 }
 
