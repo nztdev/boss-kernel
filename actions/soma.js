@@ -77,7 +77,6 @@ const THEMES = {
     bg:       '#060500',
     bg2:      '#040400',
     terminal: 'rgba(20,18,0,0.85)',
-    return true;
   },
 };
 
@@ -375,5 +374,6 @@ export const SomaAction = {
         break;
       }
     }
+    return true;
   },
 };
