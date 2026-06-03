@@ -318,6 +318,66 @@ canvas {
   accent-color: var(--glow);
 }
 
+/* ── MEDIA PROMPT MODAL ── */
+#media-prompt {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #00F0FF66;
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 260px;
+  max-width: 320px;
+  box-shadow: 0 0 24px #00F0FF22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#media-prompt.show { display: block; }
+#media-prompt-title {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #00F0FF;
+  opacity: 0.7;
+  margin-bottom: 10px;
+}
+#media-prompt-input {
+  width: 100%;
+  background: #030a08;
+  border: 1px solid #00F0FF44;
+  border-radius: 6px;
+  color: #00F0FF;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 7px 10px;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+#media-prompt-input:focus { border-color: #00F0FFaa; }
+#media-prompt-input::placeholder { color: #00F0FF44; }
+.media-prompt-btns {
+  display: flex;
+  gap: 8px;
+}
+.media-prompt-btns button {
+  flex: 1;
+  background: none;
+  border: 1px solid #00F0FF66;
+  border-radius: 6px;
+  color: #00F0FF;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 6px 0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.media-prompt-btns button:hover { background: #00F0FF11; }
+.media-prompt-btns button.dim {
+  border-color: #335544;
+  color: #335544;
+}
+.media-prompt-btns button.dim:hover { background: none; color: #00F0FF44; }
+
 /* ── GRIEF OVERLAY ── */
 .grief-overlay {
   display: none; position: fixed; inset: 0;
@@ -473,6 +533,17 @@ canvas {
 </div>
 
 <!-- GRIEF OVERLAY (hard stop — action nodes only) -->
+<!-- MEDIA PROMPT MODAL — appears near MEDIA node for URL input -->
+<div id="media-prompt">
+  <div id="media-prompt-title">MEDIA · ENTER URL</div>
+  <input id="media-prompt-input" type="url" placeholder="https://…"
+    onkeydown="if(event.key==='Enter')submitMediaPrompt(); if(event.key==='Escape')closeMediaPrompt()">
+  <div class="media-prompt-btns">
+    <button onclick="submitMediaPrompt()" id="media-prompt-action-btn">▶ Play</button>
+    <button class="dim" onclick="closeMediaPrompt()">✕ Cancel</button>
+  </div>
+</div>
+
 <!-- MEDIA PANEL — slides up from bottom for audio/image/video display -->
 <div id="media-panel">
   <div id="media-panel-header">
@@ -648,6 +719,63 @@ function startWaveform(audioContext, sourceNode) {
   }
   draw();
 }
+
+// ── Media prompt modal ───────────────────────────────────────────────────────
+let _mediaPromptAction = '';  // intent prefix to prepend to user input
+
+function positionMediaPrompt(node) {
+  const prompt = document.getElementById('media-prompt');
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  // Convert canvas coords to page coords
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + node.x * scaleX;
+  const py = rect.top  + node.y * scaleY;
+
+  // Position prompt near node, clamped to viewport
+  const pw = 300, ph = 110;
+  let left = px - pw / 2;
+  let top  = py - ph - 20;  // above node
+  left = Math.max(10, Math.min(left, window.innerWidth  - pw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - ph - 10));
+
+  prompt.style.left = left + 'px';
+  prompt.style.top  = top  + 'px';
+}
+
+function openMediaPrompt(node, preset) {
+  _mediaPromptAction = preset._promptAction || 'play ';
+  const prompt = document.getElementById('media-prompt');
+  const input  = document.getElementById('media-prompt-input');
+  const btn    = document.getElementById('media-prompt-action-btn');
+  const title  = document.getElementById('media-prompt-title');
+
+  title.textContent = `MEDIA · ${preset._promptLabel || 'ENTER URL'}`;
+  input.placeholder = preset._promptHint || 'https://…';
+  input.value       = '';
+  btn.textContent   = preset.icon + ' ' + preset.label;
+
+  positionMediaPrompt(node);
+  prompt.classList.add('show');
+  setTimeout(() => input.focus(), 50);
+}
+
+window.closeMediaPrompt = function() {
+  document.getElementById('media-prompt').classList.remove('show');
+  document.getElementById('media-prompt-input').value = '';
+  _mediaPromptAction = '';
+};
+
+window.submitMediaPrompt = function() {
+  const url = document.getElementById('media-prompt-input').value.trim();
+  if (!url) return;
+  const intent = _mediaPromptAction + url;
+  closeMediaPrompt();
+  // Fire as a chat pulse
+  document.getElementById('pulse-input').value = intent;
+  firePulse();
+};
 
 // Listen for Nervous System media events
 Nervous.on('MEDIA_ACTION', (event) => {
@@ -1902,8 +2030,14 @@ function _roundRect(ctx, x, y, w, h, r) {
 function activateOrbital(node) {
   if (!node) return;
 
-  // Base presets from Registry
-  let presets = Registry.getPresetsForNode(node.name);
+  // Base presets from Registry — filter context-sensitive ones
+  let presets = Registry.getPresetsForNode(node.name).filter(p => {
+    if (p._onlyWhenPlaying) {
+      // Only show pause/status orbitals when MEDIA is actually playing
+      return window.MediaAction ? MediaAction.getState().isPlaying : false;
+    }
+    return true;
+  });
 
   // Inject runtime state as additional orbitals
   // CHRONOS: show active timers as live orbitals
@@ -1960,6 +2094,29 @@ function dismissOrbital() {
 
 // ── Fire a preset directly (bypasses intent input and routing) ────────────────
 async function firePreset(preset) {
+  // Handle presets that always require a URL prompt
+  if (preset._alwaysPrompt) {
+    const mediaNode = nodes.find(n => n.name === 'MEDIA');
+    if (mediaNode) openMediaPrompt(mediaNode, preset);
+    return;
+  }
+
+  // Handle play music — prompt only if no stream configured
+  if (preset._promptIfNoStream && window.MediaAction) {
+    const state = MediaAction.getState();
+    if (!state.streamUrl) {
+      const mediaNode = nodes.find(n => n.name === 'MEDIA');
+      if (mediaNode) openMediaPrompt(mediaNode, {
+        _promptLabel:  'Stream URL',
+        _promptHint:   'https://stream.example.com/radio.mp3',
+        _promptAction: 'use stream url ',
+        icon:          '▶',
+        label:         'Play music',
+      });
+      return;
+    }
+  }
+
   clog(`◆ PRESET: "${preset.label}" (${preset.nodes.join('+')})`, 'log-sys');
   Registry.recordPresetFired(preset.id);
   dismissOrbital();
@@ -1967,7 +2124,6 @@ async function firePreset(preset) {
   for (const action of preset.actions) {
     const node = nodes.find(n => n.name === action.node);
     if (!node) continue;
-    // ignite() calls this.action(intent) internally — do not call ACTION_MAP separately
     node.ignite(preset.intent);
   }
 }
