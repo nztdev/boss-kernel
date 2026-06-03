@@ -219,6 +219,105 @@ canvas {
 }
 #pulse-btn:active { background: #004433; }
 
+/* ── MEDIA PANEL ── */
+#media-panel {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 0;
+  overflow: hidden;
+  background: rgba(3,8,5,0.97);
+  border-top: 1px solid #0f2a20;
+  z-index: 25;
+  transition: height 0.32s cubic-bezier(0.4,0,0.2,1);
+  display: flex;
+  flex-direction: column;
+}
+#media-panel.open {
+  height: 220px;
+}
+#media-panel.open.video {
+  height: 320px;
+}
+#media-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 4px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--glow);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+#media-panel-header button {
+  background: none; border: none;
+  color: var(--glow); cursor: pointer;
+  font-size: 14px; opacity: 0.5;
+  padding: 0; line-height: 1;
+}
+#media-panel-header button:hover { opacity: 1; }
+#media-panel-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+#media-image-view {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: none;
+}
+#media-video-view {
+  width: 100%; height: 100%;
+  border: none;
+  display: none;
+}
+#media-audio-view {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 16px;
+  gap: 10px;
+}
+#media-waveform {
+  width: 100%;
+  height: 60px;
+}
+#media-track-label {
+  font-size: 10px;
+  color: var(--glow);
+  opacity: 0.7;
+  text-align: center;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#media-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+#media-controls button {
+  background: none;
+  border: 1px solid var(--glow);
+  color: var(--glow);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+#media-controls button:hover { opacity: 1; }
+#media-vol-slider {
+  width: 80px;
+  accent-color: var(--glow);
+}
+
 /* ── GRIEF OVERLAY ── */
 .grief-overlay {
   display: none; position: fixed; inset: 0;
@@ -374,6 +473,34 @@ canvas {
 </div>
 
 <!-- GRIEF OVERLAY (hard stop — action nodes only) -->
+<!-- MEDIA PANEL — slides up from bottom for audio/image/video display -->
+<div id="media-panel">
+  <div id="media-panel-header">
+    <span id="media-panel-title">MEDIA</span>
+    <button onclick="closeMediaPanel()" title="Close">✕</button>
+  </div>
+  <div id="media-panel-content">
+    <!-- Audio view -->
+    <div id="media-audio-view">
+      <canvas id="media-waveform"></canvas>
+      <div id="media-track-label">awaiting stream…</div>
+      <div id="media-controls">
+        <button onclick="mediaPanelCmd('play')">▶ play</button>
+        <button onclick="mediaPanelCmd('pause')">⏸ pause</button>
+        <button onclick="mediaPanelCmd('stop')">⏹ stop</button>
+        <input id="media-vol-slider" type="range" min="0" max="100" value="70"
+               oninput="mediaPanelVolume(this.value)" title="Volume">
+      </div>
+    </div>
+    <!-- Image view -->
+    <img id="media-image-view" alt="BOSS media image">
+    <!-- Video view -->
+    <iframe id="media-video-view" allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+    </iframe>
+  </div>
+</div>
+
 <div class="grief-overlay" id="grief-overlay">
   <div class="grief-box">
     ⚠ GRIEF PROTOCOL
@@ -451,10 +578,122 @@ import { CoreAction }                                    from '../actions/core.j
 import { CortexAction }                                  from '../actions/cortex.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
-window.firePulse      = firePulse;
-window.firePreset     = firePreset;
-window.dismissOrbital = dismissOrbital;
+window.firePulse       = firePulse;
+window.firePreset      = firePreset;
+window.dismissOrbital  = dismissOrbital;
 window.activateOrbital = activateOrbital;
+
+// ── Media panel ───────────────────────────────────────────────────────────────
+let _mediaPanelMode = null;  // 'audio' | 'image' | 'video'
+let _waveformCtx    = null;
+let _waveformAnim   = null;
+let _analyser       = null;
+
+function openMediaPanel(mode) {
+  _mediaPanelMode = mode;
+  const panel = document.getElementById('media-panel');
+  panel.className = mode === 'video' ? 'open video' : 'open';
+
+  // Show correct view
+  document.getElementById('media-audio-view').style.display = mode === 'audio' ? 'flex' : 'none';
+  document.getElementById('media-image-view').style.display = mode === 'image' ? 'block' : 'none';
+  document.getElementById('media-video-view').style.display = mode === 'video' ? 'block' : 'none';
+}
+
+window.closeMediaPanel = function() {
+  const panel = document.getElementById('media-panel');
+  panel.className = '';
+  // Stop waveform animation
+  if (_waveformAnim) { cancelAnimationFrame(_waveformAnim); _waveformAnim = null; }
+  // Clear video src to stop playback
+  const vf = document.getElementById('media-video-view');
+  vf.src = '';
+  _mediaPanelMode = null;
+};
+
+window.mediaPanelCmd = function(cmd) {
+  if (window.MediaAction) MediaAction.handle(cmd, clog, Nervous, EVENT, pcUrl());
+};
+
+window.mediaPanelVolume = function(val) {
+  const v = parseInt(val) / 100;
+  if (window.MediaAction) MediaAction.handle(`volume to ${val}%`, clog, Nervous, EVENT, pcUrl());
+};
+
+// Waveform visualiser using Web Audio API analyser
+function startWaveform(audioContext, sourceNode) {
+  if (!audioContext) return;
+  const canvas  = document.getElementById('media-waveform');
+  if (!canvas) return;
+  _waveformCtx  = canvas.getContext('2d');
+  _analyser     = audioContext.createAnalyser();
+  _analyser.fftSize = 128;
+  if (sourceNode) sourceNode.connect(_analyser);
+
+  const buf = new Uint8Array(_analyser.frequencyBinCount);
+  const glow = getComputedStyle(document.documentElement).getPropertyValue('--glow').trim() || '#00ffcc';
+
+  function draw() {
+    _waveformAnim = requestAnimationFrame(draw);
+    _analyser.getByteFrequencyData(buf);
+    const w = canvas.width = canvas.offsetWidth;
+    const h = canvas.height = canvas.offsetHeight;
+    _waveformCtx.clearRect(0, 0, w, h);
+    const bw   = w / buf.length;
+    buf.forEach((v, i) => {
+      const bh = (v / 255) * h;
+      _waveformCtx.fillStyle = glow + Math.floor((v / 255) * 255).toString(16).padStart(2, '0');
+      _waveformCtx.fillRect(i * bw, h - bh, bw - 1, bh);
+    });
+  }
+  draw();
+}
+
+// Listen for Nervous System media events
+Nervous.on('MEDIA_ACTION', (event) => {
+  const { type } = event.payload;
+  if (type === 'audio') {
+    openMediaPanel('audio');
+    // Attempt to hook into MediaAction audio state for waveform
+    setTimeout(() => {
+      if (window.MediaAction) {
+        const state = MediaAction.getState();
+        if (state.currentTrack) {
+          document.getElementById('media-track-label').textContent =
+            state.currentTrack.length > 60
+              ? state.currentTrack.slice(0, 60) + '…'
+              : state.currentTrack;
+        }
+      }
+    }, 500);
+  } else if (type === 'stop') {
+    closeMediaPanel();
+  }
+});
+
+Nervous.on('MEDIA_IMAGE_REQUESTED', (event) => {
+  const { url } = event.payload;
+  const img = document.getElementById('media-image-view');
+  img.src = url;
+  img.onload  = () => openMediaPanel('image');
+  img.onerror = () => clog(`🖼 MEDIA: image failed to load — ${url}`, 'log-err');
+  clog(`🖼 MEDIA: loading image…`, 'log-action');
+});
+
+Nervous.on('MEDIA_VIDEO_REQUESTED', (event) => {
+  const { url } = event.payload;
+  let embedUrl = url;
+
+  // Convert YouTube watch URL to embed URL
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) {
+    embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
+  }
+
+  document.getElementById('media-video-view').src = embedUrl;
+  openMediaPanel('video');
+  clog(`🎬 MEDIA: video panel opened`, 'log-action');
+});
 window.recover = recover;
 window.openCortexModal = openCortexModal;
 window.closeCortexModal = closeCortexModal;
