@@ -197,6 +197,39 @@ const DEFAULT_PRESETS = [
     createdAt:  null,
     usageCount: 0,
     tags:       ['audio', 'music'],
+    _promptIfNoStream: true,  // show URL modal if no stream configured
+  },
+  {
+    id:         'media_video',
+    label:      'Play video',
+    icon:       '🎬',
+    nodes:      ['MEDIA'],
+    intent:     'play video',
+    actions:    [{ node: 'MEDIA', command: 'video', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['video'],
+    _alwaysPrompt: true,
+    _promptLabel:  'Video URL',
+    _promptHint:   'https://youtube.com/watch?v=…',
+    _promptAction: 'play video ',
+  },
+  {
+    id:         'media_photo',
+    label:      'Show photo',
+    icon:       '🖼',
+    nodes:      ['MEDIA'],
+    intent:     'show image',
+    actions:    [{ node: 'MEDIA', command: 'image', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['image', 'photo'],
+    _alwaysPrompt: true,
+    _promptLabel:  'Image URL',
+    _promptHint:   'https://example.com/photo.jpg',
+    _promptAction: 'show image ',
   },
   {
     id:         'media_pause',
@@ -209,6 +242,7 @@ const DEFAULT_PRESETS = [
     createdAt:  null,
     usageCount: 0,
     tags:       ['audio', 'pause'],
+    _onlyWhenPlaying: true,  // only show orbital when audio is playing
   },
   {
     id:         'media_status',
@@ -221,6 +255,7 @@ const DEFAULT_PRESETS = [
     createdAt:  null,
     usageCount: 0,
     tags:       ['audio', 'status'],
+    _onlyWhenPlaying: true,  // only show orbital when audio is playing
   },
 
   // ── SOMA presets ───────────────────────────────────────────────────────────
