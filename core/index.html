@@ -317,6 +317,105 @@ canvas {
   width: 80px;
   accent-color: var(--glow);
 }
+#media-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: #0f2a20;
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+#media-progress-fill {
+  height: 100%;
+  background: var(--glow);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.5s linear;
+  pointer-events: none;
+}
+#media-time-label {
+  font-size: 9px;
+  color: var(--glow);
+  opacity: 0.5;
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+/* ── TIMEZONE MODAL ── */
+#timezone-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #ffaa0066;
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 260px;
+  max-width: 320px;
+  box-shadow: 0 0 24px #ffaa0022;
+  font-family: 'Share Tech Mono', monospace;
+}
+#timezone-modal.show { display: block; }
+#timezone-modal-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #ffaa00; opacity: 0.7; margin-bottom: 8px;
+}
+#timezone-current {
+  font-size: 11px; color: #ffaa00;
+  margin-bottom: 10px; opacity: 0.8;
+}
+#timezone-search {
+  width: 100%;
+  background: #030a08;
+  border: 1px solid #ffaa0044;
+  border-radius: 6px;
+  color: #ffaa00;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 7px 10px;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+}
+#timezone-search:focus { border-color: #ffaa00aa; }
+#timezone-search::placeholder { color: #ffaa0044; }
+#timezone-results {
+  max-height: 120px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.tz-result {
+  padding: 5px 8px;
+  font-size: 10px;
+  color: #ffaa00;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.7;
+}
+.tz-result:hover { background: #ffaa0011; opacity: 1; }
+#timezone-add-clock {
+  font-size: 9px; color: #ffaa00; opacity: 0.5;
+  margin-bottom: 8px; letter-spacing: 0.08em;
+}
+#world-clocks-list { margin-bottom: 10px; }
+.world-clock-item {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; color: #ffaa00; opacity: 0.7;
+  padding: 3px 0; border-bottom: 1px solid #ffaa0011;
+}
+.world-clock-item button {
+  background: none; border: none; color: #ffaa0055;
+  cursor: pointer; font-size: 11px; padding: 0 4px;
+}
+.world-clock-item button:hover { color: #ffaa00; }
+.tz-modal-close {
+  width: 100%; background: none;
+  border: 1px solid #ffaa0033; border-radius: 6px;
+  color: #ffaa0066; font-family: inherit;
+  font-size: 10px; padding: 6px 0; cursor: pointer;
+}
+.tz-modal-close:hover { border-color: #ffaa0066; color: #ffaa00; }
 
 /* ── MEDIA PROMPT MODAL ── */
 #media-prompt {
@@ -533,6 +632,19 @@ canvas {
 </div>
 
 <!-- GRIEF OVERLAY (hard stop — action nodes only) -->
+<!-- TIMEZONE MODAL — appears near CHRONOS node -->
+<div id="timezone-modal">
+  <div id="timezone-modal-title">CHRONOS · TIMEZONE</div>
+  <div id="timezone-current"></div>
+  <input id="timezone-search" type="text" placeholder="Search city or timezone…"
+    oninput="tzSearch(this.value)"
+    onkeydown="if(event.key==='Escape')closeTzModal()">
+  <div id="timezone-results"></div>
+  <div id="timezone-add-clock">+ ADD WORLD CLOCK</div>
+  <div id="world-clocks-list"></div>
+  <button class="tz-modal-close" onclick="closeTzModal()">✕ Close</button>
+</div>
+
 <!-- MEDIA PROMPT MODAL — appears near MEDIA node for URL input -->
 <div id="media-prompt">
   <div id="media-prompt-title">MEDIA · ENTER URL</div>
@@ -555,9 +667,13 @@ canvas {
     <div id="media-audio-view">
       <canvas id="media-waveform"></canvas>
       <div id="media-track-label">awaiting stream…</div>
+      <div id="media-progress-bar" onclick="mediaPanelSeek(event)" title="Click to seek">
+        <div id="media-progress-fill"></div>
+      </div>
+      <div id="media-time-label">--:-- / --:--</div>
       <div id="media-controls">
         <button onclick="mediaPanelCmd('play')">▶ play</button>
-        <button onclick="mediaPanelCmd('pause')">⏸ pause</button>
+        <button onclick="mediaPanelCmd('pause')" id="media-pause-btn">⏸ pause</button>
         <button onclick="mediaPanelCmd('stop')">⏹ stop</button>
         <input id="media-vol-slider" type="range" min="0" max="100" value="70"
                oninput="mediaPanelVolume(this.value)" title="Volume">
@@ -641,7 +757,7 @@ import { deliberate, buildDefaultPool, loadPool, savePool,
 import { Registry, INTENT_SOURCE }                       from '../registry/registry.js';
 import { Nervous, EVENT }                                from '../nervous/nervous.js';
 import { Immune }                                        from '../immune/immune.js';
-import { ChronosAction }                                 from '../actions/chronos.js';
+import { ChronosAction, chronosBoot, getClockState }     from '../actions/chronos.js';
 import { MediaAction }                                   from '../actions/media.js';
 import { SomaAction, restoreTheme }                      from '../actions/soma.js';
 import { MemoryAction }                                  from '../actions/memory.js';
@@ -719,6 +835,156 @@ function startWaveform(audioContext, sourceNode) {
   }
   draw();
 }
+
+// ── Timezone modal ───────────────────────────────────────────────────────────
+const COMMON_TZ = [
+  'Europe/London','Europe/Paris','Europe/Berlin','Europe/Madrid','Europe/Rome',
+  'Europe/Amsterdam','Europe/Moscow','Europe/Istanbul','Europe/Lisbon',
+  'Asia/Dubai','Asia/Kolkata','Asia/Bangkok','Asia/Singapore','Asia/Tokyo',
+  'Asia/Seoul','Asia/Shanghai','Asia/Hong_Kong','Australia/Sydney',
+  'Pacific/Auckland','America/New_York','America/Chicago','America/Denver',
+  'America/Los_Angeles','America/Toronto','America/Sao_Paulo',
+  'America/Mexico_City','Africa/Johannesburg','Africa/Cairo','Africa/Lagos',
+];
+
+function openTzModal(node) {
+  const modal = document.getElementById('timezone-modal');
+  const canvas = document.querySelector('canvas');
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + node.x * scaleX;
+  const py = rect.top  + node.y * scaleY;
+  let left = px - 140, top = py - 280;
+  left = Math.max(10, Math.min(left, window.innerWidth  - 330));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - 380));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+
+  const cs = getClockState();
+  document.getElementById('timezone-current').textContent =
+    `${cs.time} · ${cs.timezone}`;
+
+  // Render world clocks
+  _renderWorldClocks();
+  tzSearch('');
+  modal.classList.add('show');
+  setTimeout(() => document.getElementById('timezone-search').focus(), 50);
+}
+
+function _renderWorldClocks() {
+  const cs   = getClockState();
+  const list = document.getElementById('world-clocks-list');
+  if (!cs.worldClocks.length) { list.innerHTML = ''; return; }
+  list.innerHTML = cs.worldClocks.map((wc, i) =>
+    `<div class="world-clock-item">
+      <span>${wc.label}: ${wc.time}</span>
+      <button onclick="removeWorldClock(${i})" title="Remove">✕</button>
+    </div>`
+  ).join('');
+}
+
+window.removeWorldClock = function(i) {
+  ChronosAction.handle(`remove world clock ${i}`, clog, Nervous, EVENT);
+  // Direct state manipulation via exported function not available —
+  // re-fire "add" flow or use intent. For now just close and re-open.
+  closeTzModal();
+};
+
+window.tzSearch = function(q) {
+  const results = document.getElementById('timezone-results');
+  const filtered = q.length < 1
+    ? COMMON_TZ
+    : COMMON_TZ.filter(tz => tz.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+  results.innerHTML = filtered.map(tz =>
+    `<div class="tz-result" onclick="selectTimezone('${tz}')">${tz}</div>`
+  ).join('');
+};
+
+window.selectTimezone = function(tz) {
+  // Ask CHRONOS to add as world clock or set as primary
+  const search = document.getElementById('timezone-search').value;
+  const isSearch = search.length > 0;
+  if (isSearch) {
+    // Add as world clock
+    const city = tz.split('/').pop().replace(/_/g, ' ');
+    ChronosAction.handle(`add world clock in ${city}`, clog, Nervous, EVENT);
+    _renderWorldClocks();
+    document.getElementById('timezone-search').value = '';
+    tzSearch('');
+  }
+};
+
+window.closeTzModal = function() {
+  document.getElementById('timezone-modal').classList.remove('show');
+};
+
+// Live clock orbital — injected into CHRONOS activateOrbital
+// Returns a synthetic preset showing current time, tapping opens tz modal
+function _getClockOrbital() {
+  const cs = getClockState();
+  return {
+    id:      'runtime_clock',
+    label:   cs.time,
+    icon:    '🕐',
+    nodes:   ['CHRONOS'],
+    intent:  '',
+    actions: [],
+    source:  'runtime',
+    _isLiveClock: true,
+    _isClock: true,
+  };
+}
+
+// ── Media panel progress bar ─────────────────────────────────────────────────
+function _formatTime(s) {
+  if (!s || !isFinite(s)) return '--:--';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function _onMediaProgress({ currentTime, duration, isStream, ended } = {}) {
+  const fill  = document.getElementById('media-progress-fill');
+  const label = document.getElementById('media-time-label');
+  const bar   = document.getElementById('media-progress-bar');
+  const pauseBtn = document.getElementById('media-pause-btn');
+
+  if (ended) {
+    if (fill)  fill.style.width = '0%';
+    if (label) label.textContent = '--:-- / --:--';
+    return;
+  }
+
+  if (isStream !== undefined) {
+    // Stream — hide progress bar, show live indicator
+    if (bar)   bar.style.opacity = isStream ? '0.3' : '1';
+    if (bar)   bar.style.cursor  = isStream ? 'default' : 'pointer';
+    if (label) label.textContent = isStream ? '● LIVE' : '--:-- / --:--';
+    return;
+  }
+
+  if (currentTime !== undefined && duration) {
+    const pct = (currentTime / duration) * 100;
+    if (fill)  fill.style.width = `${pct}%`;
+    if (label) label.textContent = `${_formatTime(currentTime)} / ${_formatTime(duration)}`;
+  }
+}
+
+window.mediaPanelSeek = function(e) {
+  if (!window.MediaAction) return;
+  const state = MediaAction.getState();
+  if (state.isStream || !state.duration) return;
+  const bar  = document.getElementById('media-progress-bar');
+  const rect = bar.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  MediaAction.seek(pct * state.duration);
+};
+
+// Register progress callback when MediaAction is available
+setTimeout(() => {
+  if (window.MediaAction) MediaAction.registerProgressCallback(_onMediaProgress);
+}, 500);
 
 // ── Media prompt modal ───────────────────────────────────────────────────────
 let _mediaPromptAction = '';  // intent prefix to prepend to user input
@@ -1957,9 +2223,12 @@ function drawOrbitals(now) {
     o.x = _orbitalNode.x + ORBITAL_RADIUS * Math.cos(angle);
     o.y = _orbitalNode.y + ORBITAL_RADIUS * Math.sin(angle);
 
-    // Live label — active timers show live countdown
+    // Live label — clock and timers update each frame
     let displayLabel;
-    if (o.isActive && o.preset._fireAt) {
+    if (o.preset._isClock) {
+      const cs = getClockState();
+      displayLabel = `🕐 ${cs.time}`;
+    } else if (o.isActive && o.preset._fireAt) {
       const remaining = Math.max(0, o.preset._fireAt.getTime() - Date.now());
       const mins = Math.floor(remaining / 60000);
       const secs = Math.floor((remaining % 60000) / 1000);
@@ -1977,8 +2246,9 @@ function drawOrbitals(now) {
     ctx.globalAlpha = alpha * 0.92;
     ctx.beginPath();
     _roundRect(ctx, x - w / 2, y - h / 2, w, h, 10);
-    ctx.fillStyle   = o.isActive ? '#0a1a10' : '#050a06';
-    ctx.strokeStyle = o.isActive ? '#ffaa00aa' : _orbitalNode.color + 'aa';
+    const isSpecial = o.isActive || o.preset._isClock;
+    ctx.fillStyle   = isSpecial ? '#0a1a10' : '#050a06';
+    ctx.strokeStyle = isSpecial ? '#ffaa00aa' : _orbitalNode.color + 'aa';
     ctx.lineWidth   = 1;
     ctx.shadowBlur  = 8;
     ctx.shadowColor = _orbitalNode.color + '66';
@@ -1988,7 +2258,7 @@ function drawOrbitals(now) {
 
     // Label
     ctx.globalAlpha = alpha;
-    ctx.fillStyle   = o.isActive ? '#ffaa00' : _orbitalNode.color;
+    ctx.fillStyle   = (o.isActive || o.preset._isClock) ? '#ffaa00' : _orbitalNode.color;
     ctx.font        = '11px "Share Tech Mono", monospace';
     ctx.textAlign   = 'center';
     ctx.textBaseline = 'middle';
@@ -2042,19 +2312,22 @@ function activateOrbital(node) {
   // Inject runtime state as additional orbitals
   // CHRONOS: show active timers as live orbitals
   if (node.name === 'CHRONOS' && window.ChronosAction) {
+    // Live clock orbital — always first
+    presets = [_getClockOrbital(), ...presets];
+
+    // Active timers
     const active = ChronosAction.getTimers();
     active.forEach(t => {
-      // Store fireAt — label computed live each frame in drawOrbitals()
       presets = [{
         id:      `active_${t.id}`,
-        label:   '',          // computed live from _fireAt each frame
+        label:   '',
         icon:    '⏱',
         nodes:   ['CHRONOS'],
         intent:  'cancel timer',
         actions: [{ node: 'CHRONOS', command: 'cancel', params: {} }],
         source:  'runtime',
         _isActive: true,
-        _fireAt:   t.fireAt,  // Date object — used for live countdown
+        _fireAt:   t.fireAt,
         _timerId:  t.id,
       }, ...presets];
     });
@@ -2094,6 +2367,13 @@ function dismissOrbital() {
 
 // ── Fire a preset directly (bypasses intent input and routing) ────────────────
 async function firePreset(preset) {
+  // Clock orbital — open timezone modal
+  if (preset._isClock) {
+    const chronosNode = nodes.find(n => n.name === 'CHRONOS');
+    if (chronosNode) openTzModal(chronosNode);
+    return;
+  }
+
   // Handle presets that always require a URL prompt
   if (preset._alwaysPrompt) {
     const mediaNode = nodes.find(n => n.name === 'MEDIA');
@@ -2222,6 +2502,7 @@ restoreTheme(clog);  // SOMA: restore persisted theme on boot
 enginePool = buildEnginePool();
 updateEngineStatus();
 clog(`🧬 Engine: ${engineConfigured() ? 'ready' : 'unconfigured — tap cortex pill → Engine Keys'}`, 'log-sys');
+chronosBoot(clog);  // CHRONOS: display current time and date on boot
 
 // Register engine pool save callback with Heart
 // Heart calls this on every beat — keeps engine metabolic state persistent
