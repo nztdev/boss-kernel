@@ -22,11 +22,71 @@
  */
 
 // ── Timer state ───────────────────────────────────────────────────────────────
-// Persists across intents within a session.
-// Not persisted to localStorage — timers are session-scoped.
-const _timers = [];  // [{ id, label, fireAt, timeoutId }]
+const _timers = [];       // [{ id, label, fireAt, timeoutId }]
 let   _notificationPermission = null;
-let   _elapsedStart = null;  // tracks when CHRONOS last fired
+let   _elapsedStart = null;
+
+// ── Stopwatch state ───────────────────────────────────────────────────────────
+let _stopwatchStart = null;
+let _stopwatchPaused = 0;   // accumulated ms when paused
+let _stopwatchRunning = false;
+let _laps = [];
+
+// ── Timezone state ────────────────────────────────────────────────────────────
+const CHRONOS_CONFIG_KEY = 'BOSS_CHRONOS_CONFIG';
+let _userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+let _worldClocks  = [];  // [{ label, timezone }]
+
+function _loadChronosConfig() {
+  try {
+    const raw = localStorage.getItem(CHRONOS_CONFIG_KEY);
+    if (!raw) return;
+    const cfg = JSON.parse(raw);
+    if (cfg.timezone)   _userTimezone = cfg.timezone;
+    if (cfg.worldClocks) _worldClocks = cfg.worldClocks;
+  } catch(_) {}
+}
+
+function _saveChronosConfig() {
+  try {
+    localStorage.setItem(CHRONOS_CONFIG_KEY, JSON.stringify({
+      timezone:   _userTimezone,
+      worldClocks: _worldClocks,
+    }));
+  } catch(_) {}
+}
+
+_loadChronosConfig();
+
+// ── Time formatting ───────────────────────────────────────────────────────────
+function _formatClockTime(date, timezone) {
+  return new Intl.DateTimeFormat('en', {
+    timeZone: timezone,
+    hour:     '2-digit',
+    minute:   '2-digit',
+    second:   '2-digit',
+    hour12:   false,
+  }).format(date);
+}
+
+function _formatClockDate(date, timezone) {
+  return new Intl.DateTimeFormat('en', {
+    timeZone: timezone,
+    weekday:  'long',
+    day:      'numeric',
+    month:    'long',
+    year:     'numeric',
+  }).format(date);
+}
+
+function _formatStopwatch(ms) {
+  const h   = Math.floor(ms / 3600000);
+  const m   = Math.floor((ms % 3600000) / 60000);
+  const s   = Math.floor((ms % 60000) / 1000);
+  const cs  = Math.floor((ms % 1000) / 10);
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+}
 
 // ── Notification helper ───────────────────────────────────────────────────────
 async function _requestNotificationPermission() {
@@ -63,6 +123,31 @@ function _notify(title, body) {
  */
 function _parseIntent(intent) {
   const s = intent.toLowerCase().trim();
+
+  // Stopwatch
+  if (/\bstopwatch\b/.test(s)) {
+    if (/\b(start|begin|go)\b/.test(s) || s === 'stopwatch') return { type: 'stopwatch_start' };
+    if (/\b(stop|pause|hold)\b/.test(s))  return { type: 'stopwatch_stop' };
+    if (/\b(reset|clear|zero)\b/.test(s)) return { type: 'stopwatch_reset' };
+    if (/\blap\b/.test(s))                return { type: 'stopwatch_lap' };
+    return { type: 'stopwatch_check' };
+  }
+
+  // World clock
+  const worldMatch = s.match(/(?:what(?:'s| is) (?:the )?time (?:in|at)|time (?:in|at)|clock (?:in|at))\s+(.+)/);
+  if (worldMatch) return { type: 'world_clock', place: worldMatch[1].trim() };
+
+  // Add world clock
+  if (/\b(add|save|track)\b.*\b(clock|time)\b/.test(s)) {
+    const m = s.match(/(?:in|at|for)\s+(.+)/);
+    return { type: 'add_world_clock', place: m ? m[1].trim() : '' };
+  }
+
+  // Current time/date
+  if (/\b(what(?:'s| is) (?:the )?(?:time|date|day)|current time|today)\b/.test(s) ||
+      s === 'time' || s === 'date' || s === 'what time is it') {
+    return { type: 'current_time' };
+  }
 
   // Cancel
   if (/\b(cancel|stop|clear|dismiss)\b.*\btimer\b/.test(s) ||
@@ -132,6 +217,101 @@ function _parseIntent(intent) {
 }
 
 // ── Action handlers ───────────────────────────────────────────────────────────
+
+const CITY_TZ = {
+  'london': 'Europe/London', 'paris': 'Europe/Paris', 'berlin': 'Europe/Berlin',
+  'madrid': 'Europe/Madrid', 'rome': 'Europe/Rome', 'amsterdam': 'Europe/Amsterdam',
+  'moscow': 'Europe/Moscow', 'dubai': 'Asia/Dubai', 'mumbai': 'Asia/Kolkata',
+  'india': 'Asia/Kolkata', 'delhi': 'Asia/Kolkata', 'bangkok': 'Asia/Bangkok',
+  'singapore': 'Asia/Singapore', 'hong kong': 'Asia/Hong_Kong',
+  'beijing': 'Asia/Shanghai', 'shanghai': 'Asia/Shanghai', 'china': 'Asia/Shanghai',
+  'tokyo': 'Asia/Tokyo', 'japan': 'Asia/Tokyo', 'seoul': 'Asia/Seoul',
+  'sydney': 'Australia/Sydney', 'melbourne': 'Australia/Melbourne',
+  'auckland': 'Pacific/Auckland', 'new zealand': 'Pacific/Auckland',
+  'los angeles': 'America/Los_Angeles', 'la': 'America/Los_Angeles',
+  'san francisco': 'America/Los_Angeles', 'new york': 'America/New_York',
+  'nyc': 'America/New_York', 'toronto': 'America/Toronto', 'chicago': 'America/Chicago',
+  'sao paulo': 'America/Sao_Paulo', 'mexico city': 'America/Mexico_City',
+  'johannesburg': 'Africa/Johannesburg', 'cairo': 'Africa/Cairo',
+  'lagos': 'Africa/Lagos', 'nairobi': 'Africa/Nairobi',
+  'lisbon': 'Europe/Lisbon', 'oslo': 'Europe/Oslo', 'stockholm': 'Europe/Stockholm',
+  'istanbul': 'Europe/Istanbul', 'athens': 'Europe/Athens',
+};
+
+function _handleCurrentTime(clog) {
+  const now  = new Date();
+  clog(`⏱ ${_formatClockTime(now, _userTimezone)}`, 'log-action');
+  clog(`   ${_formatClockDate(now, _userTimezone)}`, 'log-action');
+  clog(`   timezone: ${_userTimezone}`, 'log-action');
+  if (_worldClocks.length) {
+    _worldClocks.forEach(wc => {
+      clog(`   ${wc.label}: ${_formatClockTime(now, wc.timezone)}`, 'log-action');
+    });
+  }
+}
+
+function _handleWorldClock(place, clog) {
+  const tz = CITY_TZ[place.toLowerCase().trim()];
+  if (!tz) {
+    clog(`⏱ CHRONOS: unknown location "${place}"`, 'log-action');
+    clog('   Try: "what time is it in Tokyo" · "time in London"', 'log-action');
+    return;
+  }
+  const now = new Date();
+  clog(`⏱ ${place.charAt(0).toUpperCase() + place.slice(1)}: ${_formatClockTime(now, tz)}`, 'log-action');
+  clog(`   ${_formatClockDate(now, tz)}`, 'log-action');
+}
+
+function _handleAddWorldClock(place, clog) {
+  const tz = CITY_TZ[place.toLowerCase().trim()];
+  if (!tz) { clog(`⏱ Unknown location "${place}"`, 'log-action'); return; }
+  const label = place.charAt(0).toUpperCase() + place.slice(1);
+  if (!_worldClocks.find(w => w.timezone === tz)) {
+    _worldClocks.push({ label, timezone: tz });
+    _saveChronosConfig();
+    clog(`⏱ World clock added: ${label}`, 'log-action');
+  } else {
+    clog(`⏱ ${label} already in world clocks`, 'log-action');
+  }
+}
+
+function _handleStopwatchStart(clog) {
+  if (_stopwatchRunning) { clog('⏱ Stopwatch already running', 'log-action'); return; }
+  _stopwatchStart   = Date.now() - _stopwatchPaused;
+  _stopwatchRunning = true;
+  _laps = [];
+  clog('⏱ Stopwatch started', 'log-action');
+}
+
+function _handleStopwatchStop(clog) {
+  if (!_stopwatchRunning) { clog('⏱ Stopwatch not running', 'log-action'); return; }
+  _stopwatchPaused  = Date.now() - _stopwatchStart;
+  _stopwatchRunning = false;
+  clog(`⏱ Stopped: ${_formatStopwatch(_stopwatchPaused)}`, 'log-action');
+}
+
+function _handleStopwatchReset(clog) {
+  _stopwatchStart = null; _stopwatchPaused = 0;
+  _stopwatchRunning = false; _laps = [];
+  clog('⏱ Stopwatch reset', 'log-action');
+}
+
+function _handleStopwatchLap(clog) {
+  if (!_stopwatchRunning) { clog('⏱ Stopwatch not running', 'log-action'); return; }
+  const elapsed = Date.now() - _stopwatchStart;
+  _laps.push(elapsed);
+  clog(`⏱ Lap ${_laps.length}: ${_formatStopwatch(elapsed)}`, 'log-action');
+}
+
+function _handleStopwatchCheck(clog) {
+  if (!_stopwatchStart && !_stopwatchPaused) {
+    clog('⏱ Stopwatch not started — say "start stopwatch"', 'log-action'); return;
+  }
+  const elapsed = _stopwatchRunning ? Date.now() - _stopwatchStart : _stopwatchPaused;
+  clog(`⏱ Stopwatch: ${_formatStopwatch(elapsed)} ${_stopwatchRunning ? '▶' : '⏸'}`, 'log-action');
+  _laps.forEach((l, i) => clog(`   lap ${i+1}: ${_formatStopwatch(l)}`, 'log-action'));
+}
+
 function _handleTimer(parsed, intent, clog, Nervous, EVENT) {
   const fireAt = new Date(Date.now() + parsed.ms);
   const timeStr = fireAt.toLocaleTimeString('en', { hour12: false });
@@ -230,6 +410,42 @@ function _flash() {
   setTimeout(() => f.remove(), 600);
 }
 
+// ── Boot time display ─────────────────────────────────────────────────────────
+export function chronosBoot(clog) {
+  const now  = new Date();
+  const time = _formatClockTime(now, _userTimezone);
+  const date = _formatClockDate(now, _userTimezone);
+  clog(`⏱ CHRONOS: ${time} · ${date}`, 'log-sys');
+  if (_worldClocks.length) {
+    _worldClocks.forEach(wc => {
+      const t = _formatClockTime(now, wc.timezone);
+      clog(`   ${wc.label}: ${t}`, 'log-sys');
+    });
+  }
+}
+
+// Returns live clock state for orbital rendering
+export function getClockState() {
+  const now = new Date();
+  return {
+    time:      _formatClockTime(now, _userTimezone),
+    timezone:  _userTimezone,
+    worldClocks: _worldClocks.map(wc => ({
+      label: wc.label,
+      time:  _formatClockTime(now, wc.timezone),
+    })),
+    stopwatch: _stopwatchRunning
+      ? _formatStopwatch(Date.now() - _stopwatchStart)
+      : _stopwatchPaused ? _formatStopwatch(_stopwatchPaused) : null,
+    stopwatchRunning: _stopwatchRunning,
+    timers: _timers.map(t => ({
+      id:     t.id,
+      label:  t.label,
+      fireAt: t.fireAt,
+    })),
+  };
+}
+
 // ── Public interface ──────────────────────────────────────────────────────────
 export const ChronosAction = {
   /**
@@ -259,11 +475,19 @@ export const ChronosAction = {
     }
 
     switch (parsed.type) {
-      case 'timer':   _handleTimer(parsed, intent, clog, Nervous, EVENT);  break;
-      case 'alarm':   _handleAlarm(parsed, intent, clog, Nervous, EVENT);  break;
-      case 'cancel':  _handleCancel(clog);                                  break;
-      case 'query':   _handleQuery(clog);                                   break;
-      case 'elapsed': _handleElapsed(clog);                                 break;
+      case 'timer':            _handleTimer(parsed, intent, clog, Nervous, EVENT); break;
+      case 'alarm':            _handleAlarm(parsed, intent, clog, Nervous, EVENT); break;
+      case 'cancel':           _handleCancel(clog);                                break;
+      case 'query':            _handleQuery(clog);                                 break;
+      case 'elapsed':          _handleElapsed(clog);                               break;
+      case 'current_time':     _handleCurrentTime(clog);                           break;
+      case 'world_clock':      _handleWorldClock(parsed.place, clog);              break;
+      case 'add_world_clock':  _handleAddWorldClock(parsed.place, clog);           break;
+      case 'stopwatch_start':  _handleStopwatchStart(clog);                        break;
+      case 'stopwatch_stop':   _handleStopwatchStop(clog);                         break;
+      case 'stopwatch_reset':  _handleStopwatchReset(clog);                        break;
+      case 'stopwatch_lap':    _handleStopwatchLap(clog);                          break;
+      case 'stopwatch_check':  _handleStopwatchCheck(clog);                        break;
     }
     return true;  // fully handled
   },
