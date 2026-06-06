@@ -231,19 +231,7 @@ const DEFAULT_PRESETS = [
     _promptHint:   'https://example.com/photo.jpg',
     _promptAction: 'show image ',
   },
-  {
-    id:         'media_pause',
-    label:      'Pause',
-    icon:       '⏸',
-    nodes:      ['MEDIA'],
-    intent:     'pause',
-    actions:    [{ node: 'MEDIA', command: 'audio', params: { action: 'pause' } }],
-    source:     'default',
-    createdAt:  null,
-    usageCount: 0,
-    tags:       ['audio', 'pause'],
-    _onlyWhenPlaying: true,  // only show orbital when audio is playing
-  },
+
   {
     id:         'media_status',
     label:      "What's playing",
