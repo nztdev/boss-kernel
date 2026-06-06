@@ -358,6 +358,14 @@ function _handleAlarm(parsed, intent, clog, Nervous, EVENT) {
 
   _timers.push({ id, label: parsed.label, fireAt: parsed.fireAt, timeoutId, intent });
   clog(`⏰ Alarm set: ${parsed.label} (fires at ${timeStr})`, 'log-action');
+
+  // Persist alarm to config so modal can list it
+  try {
+    const cfg    = JSON.parse(localStorage.getItem(CHRONOS_CONFIG_KEY) || '{}');
+    cfg.alarms   = cfg.alarms || [];
+    cfg.alarms.push({ time: parsed.label, label: intent, id, _timeoutId: timeoutId });
+    localStorage.setItem(CHRONOS_CONFIG_KEY, JSON.stringify(cfg));
+  } catch(_) {}
 }
 
 function _handleCancel(clog) {
@@ -492,7 +500,38 @@ export const ChronosAction = {
     return true;  // fully handled
   },
 
-  // Expose timer state for Soma inspection if needed
+  // Expose timer state for Soma inspection
   getTimers() { return [..._timers]; },
   clearAll()  { _handleCancel(() => {}); },
+
+  // Cancel a specific timer by id — used by timer modal ✕ button
+  cancelById(id) {
+    const idx = _timers.findIndex(t => t.id === id);
+    if (idx >= 0) {
+      clearTimeout(_timers[idx].timeoutId);
+      _timers.splice(idx, 1);
+    }
+  },
+
+  // Alarm persistence — alarms stored in config alongside world clocks
+  getAlarms() {
+    try {
+      const cfg = JSON.parse(localStorage.getItem(CHRONOS_CONFIG_KEY) || '{}');
+      return cfg.alarms || [];
+    } catch(_) { return []; }
+  },
+
+  removeAlarmByIndex(i) {
+    try {
+      const cfg    = JSON.parse(localStorage.getItem(CHRONOS_CONFIG_KEY) || '{}');
+      const alarms = cfg.alarms || [];
+      if (i >= 0 && i < alarms.length) {
+        // Cancel the timeout if it exists
+        if (alarms[i]._timeoutId) clearTimeout(alarms[i]._timeoutId);
+        alarms.splice(i, 1);
+        cfg.alarms = alarms;
+        localStorage.setItem(CHRONOS_CONFIG_KEY, JSON.stringify(cfg));
+      }
+    } catch(_) {}
+  },
 };
