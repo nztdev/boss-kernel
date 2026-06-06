@@ -40,8 +40,12 @@ const _state = {
   volume:         0.7,
   preMuteVolume:  0.7,  // restored on unmute
   isPlaying:      false,
+  isPaused:       false,  // true when paused (file-based only)
+  isStream:       false,  // true for live radio streams (no seek/pause)
   streamUrl:      null,
   currentTrack:   null,
+  duration:       0,      // track duration in seconds (0 for streams)
+  onProgressUpdate: null, // callback for media panel progress bar
 
   // Visual (panel managed by Soma)
   currentImage:   null,
@@ -215,21 +219,48 @@ function _playStream(url, clog) {
     _state.audioElement = null;
   }
 
+  // Detect live stream vs file — streams have no duration or infinite duration
+  // Common stream extensions/patterns vs file extensions
+  const isLikelyStream = /\.(php|aac|ogg|opus)|\/stream|radio|live|icecast|shoutcast/i.test(url)
+    || !/\.(mp3|mp4|m4a|wav|flac|ogg|webm)/i.test(url);
+
   const audio = new Audio(url);
   audio.volume = _state.volume;
+  // Only set crossOrigin if needed — some servers reject CORS preflight
+  // which breaks pause/resume on file-based audio
   audio.crossOrigin = 'anonymous';
+
+  audio.addEventListener('loadedmetadata', () => {
+    // Infinity or 0 duration = live stream
+    _state.isStream  = !isFinite(audio.duration) || audio.duration === 0 || isLikelyStream;
+    _state.duration  = isFinite(audio.duration) ? audio.duration : 0;
+    // Notify media panel of duration for progress bar
+    if (_state.onProgressUpdate) _state.onProgressUpdate({ duration: _state.duration, isStream: _state.isStream });
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    if (_state.onProgressUpdate && !_state.isStream) {
+      _state.onProgressUpdate({ currentTime: audio.currentTime, duration: audio.duration });
+    }
+  });
 
   audio.addEventListener('playing', () => {
     _state.isPlaying  = true;
+    _state.isPaused   = false;
     _state.currentTrack = url;
-    clog(`📀 MEDIA: streaming ${url.length > 50 ? url.slice(0, 50) + '…' : url}`, 'log-action');
+    clog(`📀 MEDIA: ${_state.isStream ? 'streaming' : 'playing'} ${url.length > 50 ? url.slice(0, 50) + '…' : url}`, 'log-action');
   });
+
   audio.addEventListener('error', (e) => {
-    clog(`📀 MEDIA: stream error — ${e.message || 'could not load URL'}`, 'log-err');
-    clog('   Try: "use stream url https://…" to set a working stream', 'log-action');
+    clog(`📀 MEDIA: audio error — could not load URL`, 'log-err');
     _playTone(clog);
   });
-  audio.addEventListener('ended', () => { _state.isPlaying = false; });
+
+  audio.addEventListener('ended', () => {
+    _state.isPlaying = false;
+    _state.isPaused  = false;
+    if (_state.onProgressUpdate) _state.onProgressUpdate({ ended: true });
+  });
 
   audio.play().catch(err => {
     clog(`📀 MEDIA: autoplay blocked — ${err.message}`, 'log-err');
@@ -255,9 +286,18 @@ function _handleAudio(parsed, clog) {
 
     case 'pause':
       if (_state.audioElement) {
-        _state.audioElement.pause();
-        _state.isPlaying = false;
-        clog('📀 MEDIA: paused', 'log-action');
+        if (_state.isPaused) {
+          // Resume — restore position for file-based audio
+          _state.audioElement.play().catch(() => {});
+          _state.isPlaying = true;
+          _state.isPaused  = false;
+          clog('📀 MEDIA: resumed', 'log-action');
+        } else {
+          _state.audioElement.pause();
+          _state.isPlaying = false;
+          _state.isPaused  = true;
+          clog(`📀 MEDIA: paused${_state.isStream ? ' (stream — will restart on resume)' : ''}`, 'log-action');
+        }
       } else {
         _stopTone();
         _state.isPlaying = false;
@@ -431,11 +471,27 @@ export const MediaAction = {
   getState() {
     return {
       isPlaying:    _state.isPlaying,
+      isPaused:     _state.isPaused,
+      isStream:     _state.isStream,
       currentTrack: _state.currentTrack,
       volume:       _state.volume,
       streamUrl:    _state.streamUrl,
       currentImage: _state.currentImage,
       currentVideo: _state.currentVideo,
+      duration:     _state.duration,
+      currentTime:  _state.audioElement?.currentTime || 0,
     };
+  },
+
+  // Register callback for progress bar updates from media panel
+  registerProgressCallback(fn) {
+    _state.onProgressUpdate = fn;
+  },
+
+  // Seek to position (file-based only)
+  seek(seconds) {
+    if (_state.audioElement && !_state.isStream && isFinite(_state.audioElement.duration)) {
+      _state.audioElement.currentTime = Math.max(0, Math.min(seconds, _state.audioElement.duration));
+    }
   },
 };
