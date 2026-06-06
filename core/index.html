@@ -342,6 +342,95 @@ canvas {
   letter-spacing: 0.06em;
 }
 
+/* ── CHRONOS MODALS (Timer / Stopwatch / Alarms) ── */
+.chronos-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #ffaa0066;
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 260px;
+  max-width: 320px;
+  box-shadow: 0 0 24px #ffaa0022;
+  font-family: 'Share Tech Mono', monospace;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.chronos-modal.show { display: block; }
+.chronos-modal-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #ffaa00; opacity: 0.7; margin-bottom: 12px;
+}
+.chronos-input {
+  background: #030a08;
+  border: 1px solid #ffaa0044;
+  border-radius: 6px;
+  color: #ffaa00;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 7px 10px;
+  outline: none;
+  box-sizing: border-box;
+}
+.chronos-input:focus { border-color: #ffaa00aa; }
+.chronos-input::placeholder { color: #ffaa0044; }
+.chronos-row {
+  display: flex; gap: 8px; margin-bottom: 10px; align-items: center;
+}
+.chronos-btn {
+  flex: 1; background: none;
+  border: 1px solid #ffaa0066; border-radius: 6px;
+  color: #ffaa00; font-family: inherit;
+  font-size: 10px; padding: 7px 0; cursor: pointer;
+  transition: background 0.15s; text-align: center;
+}
+.chronos-btn:hover { background: #ffaa0011; }
+.chronos-btn.primary { border-color: #ffaa00aa; opacity: 1; }
+.chronos-btn.dim { border-color: #335544; color: #335544; }
+.chronos-btn.dim:hover { color: #ffaa0066; }
+.chronos-btn.danger { border-color: #ff444466; color: #ff4444; }
+.chronos-btn.danger:hover { background: #ff444411; }
+.chronos-divider {
+  border: none; border-top: 1px solid #ffaa0022;
+  margin: 10px 0;
+}
+.chronos-list-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid #ffaa0011;
+  font-size: 10px; color: #ffaa00; opacity: 0.8;
+}
+.chronos-list-item button {
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; padding: 0 4px;
+  color: #ffaa0055;
+}
+.chronos-list-item button:hover { color: #ff4444; }
+.sw-display {
+  font-size: 28px; color: #ffaa00;
+  text-align: center; letter-spacing: 0.05em;
+  padding: 10px 0; font-family: inherit;
+}
+.sw-laps {
+  max-height: 100px; overflow-y: auto; margin: 6px 0;
+}
+.sw-lap {
+  font-size: 10px; color: #ffaa00; opacity: 0.6;
+  padding: 2px 0; border-bottom: 1px solid #ffaa0011;
+}
+.alarm-time-input {
+  width: 80px;
+}
+.alarm-label-input {
+  flex: 1;
+}
+.alarm-section-label {
+  font-size: 9px; color: #ffaa00; opacity: 0.4;
+  letter-spacing: 0.1em; margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
 /* ── TIMEZONE MODAL ── */
 #timezone-modal {
   display: none;
@@ -632,6 +721,66 @@ canvas {
 </div>
 
 <!-- GRIEF OVERLAY (hard stop — action nodes only) -->
+<!-- TIMER MODAL -->
+<div id="chronos-timer-modal" class="chronos-modal">
+  <div class="chronos-modal-title">CHRONOS · TIMER</div>
+  <div class="chronos-row">
+    <input id="timer-duration" class="chronos-input" type="number" min="1" max="999"
+      placeholder="Duration" style="width:90px"
+      onkeydown="if(event.key==='Enter')startTimerFromModal()">
+    <select id="timer-unit" class="chronos-input" style="flex:1">
+      <option value="seconds">seconds</option>
+      <option value="minutes" selected>minutes</option>
+      <option value="hours">hours</option>
+    </select>
+  </div>
+  <div class="chronos-row">
+    <input id="timer-label" class="chronos-input" style="flex:1"
+      placeholder="Label (optional)"
+      onkeydown="if(event.key==='Enter')startTimerFromModal()">
+  </div>
+  <div class="chronos-row">
+    <button class="chronos-btn primary" onclick="startTimerFromModal()">⏱ Start Timer</button>
+    <button class="chronos-btn dim" onclick="closeChronosModal('timer')">✕</button>
+  </div>
+  <hr class="chronos-divider">
+  <div class="alarm-section-label">ACTIVE TIMERS</div>
+  <div id="timer-list"></div>
+</div>
+
+<!-- STOPWATCH MODAL -->
+<div id="chronos-stopwatch-modal" class="chronos-modal">
+  <div class="chronos-modal-title">CHRONOS · STOPWATCH</div>
+  <div class="sw-display" id="sw-display">00:00.00</div>
+  <div class="chronos-row">
+    <button class="chronos-btn primary" id="sw-start-btn" onclick="swAction('start')">▶ Start</button>
+    <button class="chronos-btn" onclick="swAction('lap')">⊙ Lap</button>
+    <button class="chronos-btn danger" onclick="swAction('reset')">↺ Reset</button>
+  </div>
+  <div class="sw-laps" id="sw-laps"></div>
+  <div class="chronos-row" style="margin-top:8px">
+    <button class="chronos-btn dim" onclick="closeChronosModal('stopwatch')">✕ Close</button>
+  </div>
+</div>
+
+<!-- ALARMS MODAL -->
+<div id="chronos-alarms-modal" class="chronos-modal">
+  <div class="chronos-modal-title">CHRONOS · ALARMS</div>
+  <div class="alarm-section-label">ADD ALARM</div>
+  <div class="chronos-row">
+    <input id="alarm-time" class="chronos-input alarm-time-input" type="time">
+    <input id="alarm-label" class="chronos-input alarm-label-input"
+      placeholder="Label" onkeydown="if(event.key==='Enter')addAlarmFromModal()">
+  </div>
+  <div class="chronos-row">
+    <button class="chronos-btn primary" onclick="addAlarmFromModal()">⏰ Add Alarm</button>
+    <button class="chronos-btn dim" onclick="closeChronosModal('alarms')">✕</button>
+  </div>
+  <hr class="chronos-divider">
+  <div class="alarm-section-label">SCHEDULED ALARMS</div>
+  <div id="alarm-list"></div>
+</div>
+
 <!-- TIMEZONE MODAL — appears near CHRONOS node -->
 <div id="timezone-modal">
   <div id="timezone-modal-title">CHRONOS · TIMEZONE</div>
@@ -835,6 +984,154 @@ function startWaveform(audioContext, sourceNode) {
   }
   draw();
 }
+
+// ── CHRONOS modal helpers ─────────────────────────────────────────────────────
+let _chronosModalNode  = null;   // reference to CHRONOS node for positioning
+let _swInterval        = null;   // stopwatch display interval
+
+function _positionChronosModal(id) {
+  const modal  = document.getElementById(id);
+  if (!_chronosModalNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + _chronosModalNode.x * scaleX;
+  const py = rect.top  + _chronosModalNode.y * scaleY;
+  const mw = 290, mh = 320;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+}
+
+function openChronosModal(type, node) {
+  _chronosModalNode = node;
+  // Close all chronos modals first
+  ['timer','stopwatch','alarms'].forEach(t =>
+    document.getElementById(`chronos-${t}-modal`).classList.remove('show')
+  );
+  const id = `chronos-${type}-modal`;
+  _positionChronosModal(id);
+  document.getElementById(id).classList.add('show');
+
+  if (type === 'timer')     _refreshTimerList();
+  if (type === 'stopwatch') _startSwDisplay();
+  if (type === 'alarms')    _refreshAlarmList();
+}
+
+window.closeChronosModal = function(type) {
+  document.getElementById(`chronos-${type}-modal`).classList.remove('show');
+  if (type === 'stopwatch') _stopSwDisplay();
+};
+
+// ── Timer modal ───────────────────────────────────────────────────────────────
+function _refreshTimerList() {
+  const list   = document.getElementById('timer-list');
+  const timers = ChronosAction.getTimers();
+  if (!timers.length) { list.innerHTML = '<div style="font-size:10px;opacity:0.4;color:#ffaa00">No active timers</div>'; return; }
+  list.innerHTML = timers.map(t => {
+    const remaining = Math.max(0, t.fireAt.getTime() - Date.now());
+    const m = Math.floor(remaining / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+    return `<div class="chronos-list-item">
+      <span>⏱ ${t.label} — ${m}m ${s}s</span>
+      <button onclick="cancelTimerById(${t.id})" title="Cancel">✕</button>
+    </div>`;
+  }).join('');
+}
+
+window.cancelTimerById = function(id) {
+  ChronosAction.cancelById(id);
+  _refreshTimerList();
+};
+
+window.startTimerFromModal = function() {
+  const val   = parseInt(document.getElementById('timer-duration').value);
+  const unit  = document.getElementById('timer-unit').value;
+  const label = document.getElementById('timer-label').value.trim();
+  if (!val || val < 1) return;
+  const ms = unit === 'seconds' ? val * 1000
+           : unit === 'minutes' ? val * 60000
+           : val * 3600000;
+  const displayLabel = label || `${val} ${unit}`;
+  ChronosAction.handle(`set a timer for ${val} ${unit}`, clog, Nervous, EVENT);
+  document.getElementById('timer-duration').value = '';
+  document.getElementById('timer-label').value    = '';
+  setTimeout(_refreshTimerList, 100);
+};
+
+// ── Stopwatch modal ───────────────────────────────────────────────────────────
+function _startSwDisplay() {
+  _stopSwDisplay();
+  _updateSwDisplay();
+  _swInterval = setInterval(_updateSwDisplay, 50);
+}
+
+function _stopSwDisplay() {
+  if (_swInterval) { clearInterval(_swInterval); _swInterval = null; }
+}
+
+function _updateSwDisplay() {
+  const cs  = getClockState();
+  const el  = document.getElementById('sw-display');
+  const btn = document.getElementById('sw-start-btn');
+  if (el) el.textContent = cs.stopwatch || '00:00.00';
+  if (btn) btn.textContent = cs.stopwatchRunning ? '⏸ Pause' : '▶ Start';
+  // Update laps
+  const laps = document.getElementById('sw-laps');
+  if (laps && window._swLaps) {
+    laps.innerHTML = window._swLaps.map((l, i) =>
+      `<div class="sw-lap">Lap ${i+1}: ${l}</div>`
+    ).join('');
+  }
+}
+
+window.swAction = function(action) {
+  if (action === 'start') {
+    const cs = getClockState();
+    ChronosAction.handle(cs.stopwatchRunning ? 'stop stopwatch' : 'start stopwatch', clog, Nervous, EVENT);
+  } else if (action === 'lap') {
+    ChronosAction.handle('stopwatch lap', clog, Nervous, EVENT);
+  } else if (action === 'reset') {
+    ChronosAction.handle('reset stopwatch', clog, Nervous, EVENT);
+    if (document.getElementById('sw-laps')) document.getElementById('sw-laps').innerHTML = '';
+  }
+};
+
+// ── Alarms modal ──────────────────────────────────────────────────────────────
+function _refreshAlarmList() {
+  const list   = document.getElementById('alarm-list');
+  const alarms = ChronosAction.getAlarms ? ChronosAction.getAlarms() : [];
+  if (!alarms.length) {
+    list.innerHTML = '<div style="font-size:10px;opacity:0.4;color:#ffaa00">No alarms set</div>';
+    return;
+  }
+  list.innerHTML = alarms.map((a, i) =>
+    `<div class="chronos-list-item">
+      <span>⏰ ${a.time}${a.label ? ' — ' + a.label : ''}</span>
+      <button onclick="removeAlarm(${i})" title="Remove">✕</button>
+    </div>`
+  ).join('');
+}
+
+window.addAlarmFromModal = function() {
+  const time  = document.getElementById('alarm-time').value;
+  const label = document.getElementById('alarm-label').value.trim();
+  if (!time) return;
+  const intent = label ? `remind me at ${time} for ${label}` : `set alarm at ${time}`;
+  ChronosAction.handle(intent, clog, Nervous, EVENT);
+  document.getElementById('alarm-time').value  = '';
+  document.getElementById('alarm-label').value = '';
+  setTimeout(_refreshAlarmList, 100);
+};
+
+window.removeAlarm = function(i) {
+  ChronosAction.removeAlarmByIndex(i);
+  _refreshAlarmList();
+};
 
 // ── Timezone modal ───────────────────────────────────────────────────────────
 const COMMON_TZ = [
@@ -2371,6 +2668,16 @@ async function firePreset(preset) {
   if (preset._isClock) {
     const chronosNode = nodes.find(n => n.name === 'CHRONOS');
     if (chronosNode) openTzModal(chronosNode);
+    return;
+  }
+
+  // Modal-opening presets — CHRONOS Timer/Stopwatch/Alarms
+  if (preset._openModal) {
+    const chronosNode = nodes.find(n => n.name === 'CHRONOS');
+    if (chronosNode) {
+      dismissOrbital();
+      openChronosModal(preset._openModal, chronosNode);
+    }
     return;
   }
 
