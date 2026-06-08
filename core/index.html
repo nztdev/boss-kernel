@@ -219,128 +219,7 @@ canvas {
 }
 #pulse-btn:active { background: #004433; }
 
-/* ── MEDIA PANEL ── */
-#media-panel {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  height: 0;
-  overflow: hidden;
-  background: rgba(3,8,5,0.97);
-  border-top: 1px solid #0f2a20;
-  z-index: 25;
-  transition: height 0.32s cubic-bezier(0.4,0,0.2,1);
-  display: flex;
-  flex-direction: column;
-}
-#media-panel.open {
-  height: 220px;
-}
-#media-panel.open.video {
-  height: 320px;
-}
-#media-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px 4px;
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  color: var(--glow);
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-#media-panel-header button {
-  background: none; border: none;
-  color: var(--glow); cursor: pointer;
-  font-size: 14px; opacity: 0.5;
-  padding: 0; line-height: 1;
-}
-#media-panel-header button:hover { opacity: 1; }
-#media-panel-content {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-#media-image-view {
-  width: 100%; height: 100%;
-  object-fit: contain;
-  display: none;
-}
-#media-video-view {
-  width: 100%; height: 100%;
-  border: none;
-  display: none;
-}
-#media-audio-view {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 0 16px;
-  gap: 10px;
-}
-#media-waveform {
-  width: 100%;
-  height: 60px;
-}
-#media-track-label {
-  font-size: 10px;
-  color: var(--glow);
-  opacity: 0.7;
-  text-align: center;
-  max-width: 90%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-#media-controls {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: center;
-}
-#media-controls button {
-  background: none;
-  border: 1px solid var(--glow);
-  color: var(--glow);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
-  cursor: pointer;
-  font-family: inherit;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-#media-controls button:hover { opacity: 1; }
-#media-vol-slider {
-  width: 80px;
-  accent-color: var(--glow);
-}
-#media-progress-bar {
-  width: 100%;
-  height: 3px;
-  background: #0f2a20;
-  border-radius: 2px;
-  overflow: hidden;
-  cursor: pointer;
-  position: relative;
-}
-#media-progress-fill {
-  height: 100%;
-  background: var(--glow);
-  border-radius: 2px;
-  width: 0%;
-  transition: width 0.5s linear;
-  pointer-events: none;
-}
-#media-time-label {
-  font-size: 9px;
-  color: var(--glow);
-  opacity: 0.5;
-  text-align: center;
-  letter-spacing: 0.06em;
-}
+/* media panel removed — replaced by media player modal */
 
 /* ── CHRONOS MODALS (Timer / Stopwatch / Alarms) ── */
 .chronos-modal {
@@ -505,6 +384,130 @@ canvas {
   font-size: 10px; padding: 6px 0; cursor: pointer;
 }
 .tz-modal-close:hover { border-color: #ffaa0066; color: #ffaa00; }
+
+/* ── MEDIA PLAYER MODAL ── */
+#media-player-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #00F0FF66;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 280px;
+  box-shadow: 0 0 24px #00F0FF22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#media-player-modal.show { display: block; }
+#media-player-modal.mini {
+  width: 200px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  top: 48px !important;
+  right: 10px !important;
+  left: auto !important;
+}
+.mp-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #00F0FF; opacity: 0.6; margin-bottom: 10px;
+}
+.mp-track {
+  font-size: 10px; color: #00F0FF;
+  opacity: 0.85; margin-bottom: 8px;
+  overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; cursor: pointer;
+}
+.mp-track:hover { opacity: 1; text-decoration: underline; }
+#mp-waveform {
+  width: 100%; height: 48px;
+  margin-bottom: 6px;
+}
+#mp-progress-bar {
+  width: 100%; height: 3px;
+  background: #0f2a20; border-radius: 2px;
+  overflow: hidden; cursor: pointer; margin-bottom: 4px;
+}
+#mp-progress-fill {
+  height: 100%; background: #00F0FF;
+  border-radius: 2px; width: 0%;
+  transition: width 0.5s linear;
+  pointer-events: none;
+}
+#mp-time-label {
+  font-size: 9px; color: #00F0FF; opacity: 0.4;
+  text-align: center; margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+.mp-controls {
+  display: flex; gap: 6px; align-items: center;
+  justify-content: center; margin-bottom: 8px;
+}
+.mp-btn {
+  background: none;
+  border: 1px solid #00F0FF55;
+  border-radius: 6px; color: #00F0FF;
+  font-family: inherit; font-size: 10px;
+  padding: 5px 10px; cursor: pointer;
+  transition: background 0.15s; opacity: 0.8;
+}
+.mp-btn:hover { background: #00F0FF11; opacity: 1; }
+.mp-vol {
+  display: flex; align-items: center;
+  gap: 6px; font-size: 9px; color: #00F0FF; opacity: 0.5;
+}
+.mp-vol input { flex: 1; accent-color: #00F0FF; }
+/* Mini player */
+.mp-mini-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.mp-mini-track {
+  flex: 1; font-size: 10px; color: #00F0FF;
+  opacity: 0.8; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.mp-mini-btn {
+  background: none; border: none;
+  color: #00F0FF; font-size: 14px;
+  cursor: pointer; opacity: 0.7; padding: 0 2px;
+}
+.mp-mini-btn:hover { opacity: 1; }
+
+/* ── IMAGE MODAL ── */
+#media-image-modal {
+  display: none; position: fixed; z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #00F0FF33;
+  border-radius: 12px; overflow: hidden;
+  width: 320px; max-height: 300px;
+}
+#media-image-modal.show { display: block; }
+#media-image-modal img {
+  width: 100%; height: 100%;
+  object-fit: contain; display: block;
+}
+#media-image-modal button {
+  position: absolute; top: 6px; right: 8px;
+  background: rgba(0,0,0,0.6); border: none;
+  color: #00F0FF; cursor: pointer; border-radius: 4px;
+  font-size: 12px; padding: 2px 6px;
+}
+
+/* ── VIDEO MODAL ── */
+#media-video-modal {
+  display: none; position: fixed; z-index: 45;
+  background: #000; border-radius: 12px; overflow: hidden;
+  width: 360px; border: 1px solid #00F0FF33;
+}
+#media-video-modal.show { display: block; }
+#media-video-modal iframe {
+  width: 100%; height: 220px; border: none; display: block;
+}
+#media-video-modal button {
+  position: absolute; top: 6px; right: 8px;
+  background: rgba(0,0,0,0.8); border: none;
+  color: #00F0FF; cursor: pointer; border-radius: 4px;
+  font-size: 12px; padding: 2px 6px;
+}
 
 /* ── MEDIA PROMPT MODAL ── */
 #media-prompt {
@@ -805,36 +808,54 @@ canvas {
   </div>
 </div>
 
-<!-- MEDIA PANEL — slides up from bottom for audio/image/video display -->
-<div id="media-panel">
-  <div id="media-panel-header">
-    <span id="media-panel-title">MEDIA</span>
-    <button onclick="closeMediaPanel()" title="Close">✕</button>
-  </div>
-  <div id="media-panel-content">
-    <!-- Audio view -->
-    <div id="media-audio-view">
-      <canvas id="media-waveform"></canvas>
-      <div id="media-track-label">awaiting stream…</div>
-      <div id="media-progress-bar" onclick="mediaPanelSeek(event)" title="Click to seek">
-        <div id="media-progress-fill"></div>
-      </div>
-      <div id="media-time-label">--:-- / --:--</div>
-      <div id="media-controls">
-        <button onclick="mediaPanelCmd('play')">▶ play</button>
-        <button onclick="mediaPanelCmd('pause')" id="media-pause-btn">⏸ pause</button>
-        <button onclick="mediaPanelCmd('stop')">⏹ stop</button>
-        <input id="media-vol-slider" type="range" min="0" max="100" value="70"
-               oninput="mediaPanelVolume(this.value)" title="Volume">
-      </div>
+<!-- MEDIA PLAYER MODAL — near node when selected, mini top-right when not -->
+<div id="media-player-modal">
+  <!-- Full view -->
+  <div id="mp-full">
+    <div class="mp-title">MEDIA · NOW PLAYING</div>
+    <div class="mp-track" id="mp-track-label" onclick="mpEditUrl()" title="Tap to change URL">
+      awaiting stream…
     </div>
-    <!-- Image view -->
-    <img id="media-image-view" alt="BOSS media image">
-    <!-- Video view -->
-    <iframe id="media-video-view" allowfullscreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-    </iframe>
+    <canvas id="mp-waveform"></canvas>
+    <div id="mp-progress-bar" onclick="mpSeek(event)">
+      <div id="mp-progress-fill"></div>
+    </div>
+    <div id="mp-time-label">--:-- / --:--</div>
+    <div class="mp-controls">
+      <button class="mp-btn" id="mp-pause-btn" onclick="mpCmd('pause')">⏸ pause</button>
+      <button class="mp-btn" onclick="mpCmd('stop')">⏹ stop</button>
+    </div>
+    <div class="mp-vol">
+      <span>🔈</span>
+      <input type="range" min="0" max="100" value="70" oninput="mpVolume(this.value)">
+      <span>🔊</span>
+    </div>
+    <button class="mp-btn" style="width:100%;margin-top:4px;font-size:9px;opacity:0.4"
+      onclick="closeMediaPlayer()">✕ close</button>
   </div>
+  <!-- Mini view -->
+  <div id="mp-mini" style="display:none">
+    <div class="mp-mini-row">
+      <span class="mp-mini-track" id="mp-mini-label">…</span>
+      <button class="mp-mini-btn" id="mp-mini-pause" onclick="mpCmd('pause')">⏸</button>
+      <button class="mp-mini-btn" onclick="mpCmd('stop')">⏹</button>
+      <button class="mp-mini-btn" onclick="mpExpand()">⤢</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE MODAL -->
+<div id="media-image-modal">
+  <img id="media-image-view" alt="BOSS media image">
+  <button onclick="closeImageModal()">✕</button>
+</div>
+
+<!-- VIDEO MODAL -->
+<div id="media-video-modal" style="position:fixed">
+  <iframe id="media-video-view" allowfullscreen
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+  </iframe>
+  <button onclick="closeVideoModal()">✕</button>
 </div>
 
 <div class="grief-overlay" id="grief-overlay">
@@ -1233,30 +1254,109 @@ function _getClockOrbital() {
   };
 }
 
-// ── Media panel progress bar ─────────────────────────────────────────────────
+// ── Media player modal ───────────────────────────────────────────────────────
+let _mpNode       = null;   // MEDIA node reference for positioning
+let _mpWaveCtx    = null;
+let _mpWaveAnim   = null;
+let _mpAnalyser   = null;
+let _mpMini       = false;  // true when showing mini player
+
 function _formatTime(s) {
   if (!s || !isFinite(s)) return '--:--';
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, '0')}`;
+  return `${m}:${sec.toString().padStart(2,'0')}`;
 }
 
-function _onMediaProgress({ currentTime, duration, isStream, ended } = {}) {
-  const fill  = document.getElementById('media-progress-fill');
-  const label = document.getElementById('media-time-label');
-  const bar   = document.getElementById('media-progress-bar');
-  const pauseBtn = document.getElementById('media-pause-btn');
+function _positionPlayerModal() {
+  const modal = document.getElementById('media-player-modal');
+  if (!_mpNode || _mpMini) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + _mpNode.x * scaleX;
+  const py = rect.top  + _mpNode.y * scaleY;
+  const mw = 290, mh = 280;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+  modal.style.right = '';
+}
+
+function openMediaPlayer(node) {
+  _mpNode = node || nodes.find(n => n.name === 'MEDIA');
+  _mpMini = false;
+  const modal = document.getElementById('media-player-modal');
+  document.getElementById('mp-full').style.display = 'block';
+  document.getElementById('mp-mini').style.display = 'none';
+  modal.classList.remove('mini');
+  _positionPlayerModal();
+  modal.classList.add('show');
+  _mpUpdateTrackLabel();
+  _mpStartWaveform();
+  MediaAction.registerProgressCallback(_mpOnProgress);
+}
+
+function _mpToMini() {
+  _mpMini = true;
+  const modal = document.getElementById('media-player-modal');
+  document.getElementById('mp-full').style.display = 'none';
+  document.getElementById('mp-mini').style.display = 'block';
+  modal.classList.add('mini');
+  modal.style.left = '';
+  modal.style.top  = '48px';
+  modal.style.right = '10px';
+  _mpUpdateTrackLabel();
+}
+
+window.mpExpand = function() {
+  _mpMini = false;
+  const modal = document.getElementById('media-player-modal');
+  document.getElementById('mp-full').style.display = 'block';
+  document.getElementById('mp-mini').style.display = 'none';
+  modal.classList.remove('mini');
+  _positionPlayerModal();
+};
+
+window.closeMediaPlayer = function() {
+  const modal = document.getElementById('media-player-modal');
+  modal.classList.remove('show');
+  _mpStopWaveform();
+  _mpMini = false;
+};
+
+function _mpUpdateTrackLabel() {
+  const state = MediaAction ? MediaAction.getState() : {};
+  const track = state.currentTrack || 'awaiting stream…';
+  const short = track.length > 40 ? track.slice(0, 40) + '…' : track;
+  const fullEl = document.getElementById('mp-track-label');
+  const miniEl = document.getElementById('mp-mini-label');
+  if (fullEl) fullEl.textContent = short;
+  if (miniEl) miniEl.textContent = short;
+}
+
+function _mpOnProgress({ currentTime, duration, isStream, ended } = {}) {
+  const fill  = document.getElementById('mp-progress-fill');
+  const label = document.getElementById('mp-time-label');
+  const pb    = document.getElementById('mp-progress-bar');
+  const pauseBtn = document.getElementById('mp-pause-btn');
+  const miniPause = document.getElementById('mp-mini-pause');
 
   if (ended) {
     if (fill)  fill.style.width = '0%';
     if (label) label.textContent = '--:-- / --:--';
+    // Auto-close player when track ends
+    window.closeMediaPlayer();
     return;
   }
 
   if (isStream !== undefined) {
-    // Stream — hide progress bar, show live indicator
-    if (bar)   bar.style.opacity = isStream ? '0.3' : '1';
-    if (bar)   bar.style.cursor  = isStream ? 'default' : 'pointer';
+    if (pb)    pb.style.opacity = isStream ? '0.3' : '1';
+    if (pb)    pb.style.cursor  = isStream ? 'default' : 'pointer';
     if (label) label.textContent = isStream ? '● LIVE' : '--:-- / --:--';
     return;
   }
@@ -1266,22 +1366,140 @@ function _onMediaProgress({ currentTime, duration, isStream, ended } = {}) {
     if (fill)  fill.style.width = `${pct}%`;
     if (label) label.textContent = `${_formatTime(currentTime)} / ${_formatTime(duration)}`;
   }
+
+  // Sync pause button state
+  const state = MediaAction ? MediaAction.getState() : {};
+  const isPaused = state.isPaused;
+  if (pauseBtn)  pauseBtn.textContent = isPaused ? '▶ resume' : '⏸ pause';
+  if (miniPause) miniPause.textContent = isPaused ? '▶' : '⏸';
 }
 
-window.mediaPanelSeek = function(e) {
+window.mpSeek = function(e) {
   if (!window.MediaAction) return;
   const state = MediaAction.getState();
   if (state.isStream || !state.duration) return;
-  const bar  = document.getElementById('media-progress-bar');
+  const bar  = document.getElementById('mp-progress-bar');
   const rect = bar.getBoundingClientRect();
   const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
   MediaAction.seek(pct * state.duration);
 };
 
-// Register progress callback when MediaAction is available
-setTimeout(() => {
-  if (window.MediaAction) MediaAction.registerProgressCallback(_onMediaProgress);
-}, 500);
+window.mpCmd = function(cmd) {
+  if (window.MediaAction) MediaAction.handle(cmd, clog, Nervous, EVENT, pcUrl());
+  if (cmd === 'stop') window.closeMediaPlayer();
+};
+
+window.mpVolume = function(val) {
+  if (window.MediaAction) MediaAction.handle(`volume to ${val}%`, clog, Nervous, EVENT, pcUrl());
+};
+
+window.mpEditUrl = function() {
+  // Open media prompt modal to change stream URL
+  const mediaNode = nodes.find(n => n.name === 'MEDIA');
+  if (mediaNode) openMediaPrompt(mediaNode, {
+    _promptLabel:  'Stream URL',
+    _promptHint:   'https://stream.example.com/radio.mp3',
+    _promptAction: 'use stream url ',
+    icon:          '▶',
+    label:         'Change stream',
+  });
+};
+
+function _mpStartWaveform() {
+  _mpStopWaveform();
+  // Will be connected when AudioContext is available via MediaAction
+  const canvas = document.getElementById('mp-waveform');
+  if (!canvas) return;
+  _mpWaveCtx = canvas.getContext('2d');
+  const glow = getComputedStyle(document.documentElement).getPropertyValue('--glow').trim() || '#00F0FF';
+
+  function drawFlat() {
+    _mpWaveAnim = requestAnimationFrame(drawFlat);
+    const w = canvas.width = canvas.offsetWidth;
+    const h = canvas.height = canvas.offsetHeight || 48;
+    _mpWaveCtx.clearRect(0, 0, w, h);
+    if (_mpAnalyser) {
+      const buf = new Uint8Array(_mpAnalyser.frequencyBinCount);
+      _mpAnalyser.getByteFrequencyData(buf);
+      const bw = w / buf.length;
+      buf.forEach((v, i) => {
+        const bh = (v / 255) * h;
+        _mpWaveCtx.fillStyle = '#00F0FF' + Math.floor((v / 255) * 200).toString(16).padStart(2,'0');
+        _mpWaveCtx.fillRect(i * bw, h - bh, bw - 1, bh);
+      });
+    } else {
+      // Idle animation — gentle sine wave
+      _mpWaveCtx.strokeStyle = glow + '44';
+      _mpWaveCtx.lineWidth = 1;
+      _mpWaveCtx.beginPath();
+      const t = Date.now() / 800;
+      for (let x = 0; x < w; x++) {
+        const y = h/2 + Math.sin(x / 20 + t) * 6;
+        x === 0 ? _mpWaveCtx.moveTo(x, y) : _mpWaveCtx.lineTo(x, y);
+      }
+      _mpWaveCtx.stroke();
+    }
+  }
+  drawFlat();
+}
+
+function _mpStopWaveform() {
+  if (_mpWaveAnim) { cancelAnimationFrame(_mpWaveAnim); _mpWaveAnim = null; }
+}
+
+// Image modal
+function openImageModal(url, node) {
+  const modal = document.getElementById('media-image-modal');
+  document.getElementById('media-image-view').src = url;
+  if (node) {
+    const canvas = document.querySelector('canvas');
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = rect.width  / canvas.width;
+    const scaleY = rect.height / canvas.height;
+    const px = rect.left + node.x * scaleX;
+    const py = rect.top  + node.y * scaleY;
+    let left = px - 160, top = py - 320;
+    left = Math.max(10, Math.min(left, window.innerWidth  - 340));
+    top  = Math.max(10, Math.min(top,  window.innerHeight - 320));
+    modal.style.left = left + 'px';
+    modal.style.top  = top  + 'px';
+  }
+  modal.classList.add('show');
+}
+
+window.closeImageModal = function() {
+  document.getElementById('media-image-modal').classList.remove('show');
+  document.getElementById('media-image-view').src = '';
+};
+
+// Video modal
+function openVideoModal(url, node) {
+  const modal = document.getElementById('media-video-modal');
+  let embedUrl = url;
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
+  document.getElementById('media-video-view').src = embedUrl;
+  if (node) {
+    const canvas = document.querySelector('canvas');
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = rect.width  / canvas.width;
+    const scaleY = rect.height / canvas.height;
+    const px = rect.left + node.x * scaleX;
+    const py = rect.top  + node.y * scaleY;
+    let left = px - 180, top = py - 260;
+    left = Math.max(10, Math.min(left, window.innerWidth  - 380));
+    top  = Math.max(10, Math.min(top,  window.innerHeight - 250));
+    modal.style.left = left + 'px';
+    modal.style.top  = top  + 'px';
+  }
+  modal.classList.add('show');
+  clog('🎬 MEDIA: video panel opened', 'log-action');
+}
+
+window.closeVideoModal = function() {
+  document.getElementById('media-video-modal').classList.remove('show');
+  document.getElementById('media-video-view').src = '';
+};
 
 // ── Media prompt modal ───────────────────────────────────────────────────────
 let _mediaPromptAction = '';  // intent prefix to prepend to user input
@@ -1343,47 +1561,34 @@ window.submitMediaPrompt = function() {
 // Listen for Nervous System media events
 Nervous.on('MEDIA_ACTION', (event) => {
   const { type } = event.payload;
-  if (type === 'audio') {
-    openMediaPanel('audio');
-    // Attempt to hook into MediaAction audio state for waveform
-    setTimeout(() => {
-      if (window.MediaAction) {
-        const state = MediaAction.getState();
-        if (state.currentTrack) {
-          document.getElementById('media-track-label').textContent =
-            state.currentTrack.length > 60
-              ? state.currentTrack.slice(0, 60) + '…'
-              : state.currentTrack;
+  const mediaNode = nodes.find(n => n.name === 'MEDIA');
+  if (type === 'audio' || type === 'stop') {
+    if (type === 'audio') {
+      setTimeout(() => {
+        const state = MediaAction ? MediaAction.getState() : {};
+        if (state.isPlaying || state.currentTrack) {
+          openMediaPlayer(mediaNode);
         }
-      }
-    }, 500);
-  } else if (type === 'stop') {
-    closeMediaPanel();
+      }, 300);
+    } else {
+      closeMediaPlayer();
+    }
   }
 });
 
 Nervous.on('MEDIA_IMAGE_REQUESTED', (event) => {
+  const mediaNode = nodes.find(n => n.name === 'MEDIA');
   const { url } = event.payload;
   const img = document.getElementById('media-image-view');
-  img.src = url;
-  img.onload  = () => openMediaPanel('image');
+  img.onload  = () => openImageModal(url, mediaNode);
   img.onerror = () => clog(`🖼 MEDIA: image failed to load — ${url}`, 'log-err');
+  img.src = url;
   clog(`🖼 MEDIA: loading image…`, 'log-action');
 });
 
 Nervous.on('MEDIA_VIDEO_REQUESTED', (event) => {
-  const { url } = event.payload;
-  let embedUrl = url;
-
-  // Convert YouTube watch URL to embed URL
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  if (ytMatch) {
-    embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
-  }
-
-  document.getElementById('media-video-view').src = embedUrl;
-  openMediaPanel('video');
-  clog(`🎬 MEDIA: video panel opened`, 'log-action');
+  const mediaNode = nodes.find(n => n.name === 'MEDIA');
+  openVideoModal(event.payload.url, mediaNode);
 });
 window.recover = recover;
 window.openCortexModal = openCortexModal;
@@ -1400,12 +1605,15 @@ window.Nervous        = Nervous;
 window.Immune         = Immune;
 window.Registry       = Registry;
 window.INTENT_SOURCE  = INTENT_SOURCE;
-window.MediaAction   = MediaAction;
-window.ChronosAction = ChronosAction;
-window.SomaAction    = SomaAction;
-window.MemoryAction  = MemoryAction;
-window.CoreAction    = CoreAction;
-window.CortexAction  = CortexAction;
+window.MediaAction     = MediaAction;
+window.ChronosAction   = ChronosAction;
+window.SomaAction      = SomaAction;
+window.MemoryAction    = MemoryAction;
+window.CoreAction      = CoreAction;
+window.CortexAction    = CortexAction;
+window.openMediaPlayer = openMediaPlayer;
+window.openImageModal  = openImageModal;
+window.openVideoModal  = openVideoModal;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -2600,11 +2808,24 @@ function activateOrbital(node) {
   // Base presets from Registry — filter context-sensitive ones
   let presets = Registry.getPresetsForNode(node.name).filter(p => {
     if (p._onlyWhenPlaying) {
-      // Only show pause/status orbitals when MEDIA is actually playing
       return window.MediaAction ? MediaAction.getState().isPlaying : false;
     }
     return true;
   });
+
+  // Music orbital: update label to show what's playing if audio is active
+  if (node.name === 'MEDIA' && window.MediaAction) {
+    const state = MediaAction.getState();
+    presets = presets.map(p => {
+      if (p.id === 'media_play' && state.isPlaying && state.currentTrack) {
+        const track = state.currentTrack.length > 22
+          ? state.currentTrack.slice(0, 22) + '…'
+          : state.currentTrack;
+        return { ...p, label: track, icon: '🎵', _showingTrack: true };
+      }
+      return p;
+    });
+  }
 
   // Inject runtime state as additional orbitals
   // CHRONOS: show active timers as live orbitals
@@ -2656,6 +2877,14 @@ function dismissOrbital() {
   if (_orbitalNode) {
     _orbitalNode._targetScale = 1.0;
     _orbitalNode._targetCx   = false;
+    // If MEDIA node was active and audio is playing — shrink player to mini
+    if (_orbitalNode.name === 'MEDIA' && window.MediaAction) {
+      const state = MediaAction.getState();
+      const playerVisible = document.getElementById('media-player-modal').classList.contains('show');
+      if (state.isPlaying && playerVisible && !_mpMini) {
+        _mpToMini();
+      }
+    }
   }
   _orbitalNode  = null;
   _orbitals     = [];
@@ -2688,11 +2917,18 @@ async function firePreset(preset) {
     return;
   }
 
-  // Handle play music — prompt only if no stream configured
+  // Music orbital — if showing current track, open player modal; else prompt
   if (preset._promptIfNoStream && window.MediaAction) {
-    const state = MediaAction.getState();
+    const state    = MediaAction.getState();
+    const mediaNode = nodes.find(n => n.name === 'MEDIA');
+    if (preset._showingTrack || state.isPlaying) {
+      // Track playing — open player modal
+      dismissOrbital();
+      openMediaPlayer(mediaNode);
+      return;
+    }
     if (!state.streamUrl) {
-      const mediaNode = nodes.find(n => n.name === 'MEDIA');
+      // No stream set — prompt for URL
       if (mediaNode) openMediaPrompt(mediaNode, {
         _promptLabel:  'Stream URL',
         _promptHint:   'https://stream.example.com/radio.mp3',
