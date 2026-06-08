@@ -191,7 +191,7 @@ const DEFAULT_PRESETS = [
   // ── MEDIA presets ──────────────────────────────────────────────────────────
   {
     id:         'media_play',
-    label:      'Play music',
+    label:      'Music',
     icon:       '▶',
     nodes:      ['MEDIA'],
     intent:     'play music',
@@ -204,7 +204,7 @@ const DEFAULT_PRESETS = [
   },
   {
     id:         'media_video',
-    label:      'Play video',
+    label:      'Video',
     icon:       '🎬',
     nodes:      ['MEDIA'],
     intent:     'play video',
@@ -220,7 +220,7 @@ const DEFAULT_PRESETS = [
   },
   {
     id:         'media_photo',
-    label:      'Show photo',
+    label:      'Photo',
     icon:       '🖼',
     nodes:      ['MEDIA'],
     intent:     'show image',
@@ -235,19 +235,7 @@ const DEFAULT_PRESETS = [
     _promptAction: 'show image ',
   },
 
-  {
-    id:         'media_status',
-    label:      "What's playing",
-    icon:       '🎵',
-    nodes:      ['MEDIA'],
-    intent:     'whats playing',
-    actions:    [{ node: 'MEDIA', command: 'status', params: {} }],
-    source:     'default',
-    createdAt:  null,
-    usageCount: 0,
-    tags:       ['audio', 'status'],
-    _onlyWhenPlaying: true,  // only show orbital when audio is playing
-  },
+
 
   // ── SOMA presets ───────────────────────────────────────────────────────────
   {
