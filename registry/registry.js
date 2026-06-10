@@ -352,6 +352,19 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['reasoning', 'explain'],
   },
+  {
+    id:         'cortex_calculate',
+    label:      'Calculate',
+    icon:       '🧮',
+    nodes:      ['CORTEX'],
+    intent:     'calculate',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['calculation', 'convert', 'math'],
+    _openModal: 'calculator',
+  },
 
   // ── Compound presets (multi-node) ──────────────────────────────────────────
   {
