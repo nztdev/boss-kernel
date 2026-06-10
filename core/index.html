@@ -310,6 +310,137 @@ canvas {
   text-transform: uppercase;
 }
 
+/* ── CALCULATOR MODAL ── */
+#calc-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #cc00ff66;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 300px;
+  box-shadow: 0 0 24px #cc00ff22;
+  font-family: 'Share Tech Mono', monospace;
+  max-height: 520px;
+  overflow-y: auto;
+}
+#calc-modal.show { display: block; }
+.calc-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #cc00ff; opacity: 0.6; margin-bottom: 10px;
+}
+#calc-display {
+  background: #030508;
+  border: 1px solid #cc00ff33;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  min-height: 52px;
+}
+#calc-expr {
+  font-size: 10px; color: #cc00ff;
+  opacity: 0.5; min-height: 16px;
+  word-break: break-all;
+}
+#calc-result {
+  font-size: 22px; color: #cc00ff;
+  text-align: right; word-break: break-all;
+}
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.calc-btn {
+  background: none;
+  border: 1px solid #cc00ff33;
+  border-radius: 6px;
+  color: #cc00ff;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 10px 0;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-align: center;
+}
+.calc-btn:hover { background: #cc00ff11; }
+.calc-btn:active { background: #cc00ff22; }
+.calc-btn.op { border-color: #cc00ff55; opacity: 0.9; }
+.calc-btn.eq {
+  background: #cc00ff22;
+  border-color: #cc00ff88;
+  font-size: 16px;
+}
+.calc-btn.eq:hover { background: #cc00ff33; }
+.calc-btn.clear { color: #ff4444; border-color: #ff444433; }
+.calc-btn.clear:hover { background: #ff444411; }
+.calc-btn.span2 { grid-column: span 2; }
+.calc-divider {
+  border: none; border-top: 1px solid #cc00ff22;
+  margin: 10px 0;
+}
+.calc-section-label {
+  font-size: 9px; color: #cc00ff;
+  opacity: 0.4; letter-spacing: 0.1em;
+  margin-bottom: 8px; text-transform: uppercase;
+}
+#calc-prompt-input {
+  width: 100%; box-sizing: border-box;
+  background: #030508;
+  border: 1px solid #cc00ff44;
+  border-radius: 6px;
+  color: #cc00ff;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 8px 10px;
+  outline: none;
+  margin-bottom: 6px;
+}
+#calc-prompt-input:focus { border-color: #cc00ffaa; }
+#calc-prompt-input::placeholder { color: #cc00ff33; }
+#calc-prompt-result {
+  background: #030508;
+  border: 1px solid #cc00ff22;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #cc00ff;
+  min-height: 36px;
+  margin-bottom: 8px;
+  display: none;
+  line-height: 1.6;
+}
+#calc-prompt-result.show { display: block; }
+.calc-quick-row {
+  display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px;
+}
+.calc-quick-btn {
+  background: none;
+  border: 1px solid #cc00ff33;
+  border-radius: 12px;
+  color: #cc00ff;
+  font-family: inherit;
+  font-size: 9px;
+  padding: 4px 8px;
+  cursor: pointer;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+.calc-quick-btn:hover { background: #cc00ff11; opacity: 1; }
+.calc-close-btn {
+  width: 100%; background: none;
+  border: 1px solid #cc00ff22;
+  border-radius: 6px;
+  color: #cc00ff44;
+  font-family: inherit;
+  font-size: 9px;
+  padding: 6px 0;
+  cursor: pointer; margin-top: 6px;
+}
+.calc-close-btn:hover { color: #cc00ff; border-color: #cc00ff44; }
+
 /* ── TIMEZONE MODAL ── */
 #timezone-modal {
   display: none;
@@ -784,6 +915,75 @@ canvas {
   <div id="alarm-list"></div>
 </div>
 
+<!-- CALCULATOR MODAL — appears near CORTEX node -->
+<div id="calc-modal">
+  <div class="calc-title">CORTEX · CALCULATOR</div>
+
+  <!-- Numeric display -->
+  <div id="calc-display">
+    <div id="calc-expr"></div>
+    <div id="calc-result">0</div>
+  </div>
+
+  <!-- Numeric pad -->
+  <div class="calc-grid">
+    <button class="calc-btn clear span2" onclick="calcClear()">C</button>
+    <button class="calc-btn op" onclick="calcOp('%')">%</button>
+    <button class="calc-btn op" onclick="calcOp('÷')">÷</button>
+
+    <button class="calc-btn" onclick="calcNum('7')">7</button>
+    <button class="calc-btn" onclick="calcNum('8')">8</button>
+    <button class="calc-btn" onclick="calcNum('9')">9</button>
+    <button class="calc-btn op" onclick="calcOp('×')">×</button>
+
+    <button class="calc-btn" onclick="calcNum('4')">4</button>
+    <button class="calc-btn" onclick="calcNum('5')">5</button>
+    <button class="calc-btn" onclick="calcNum('6')">6</button>
+    <button class="calc-btn op" onclick="calcOp('−')">−</button>
+
+    <button class="calc-btn" onclick="calcNum('1')">1</button>
+    <button class="calc-btn" onclick="calcNum('2')">2</button>
+    <button class="calc-btn" onclick="calcNum('3')">3</button>
+    <button class="calc-btn op" onclick="calcOp('+')">+</button>
+
+    <button class="calc-btn" onclick="calcSign()">+/−</button>
+    <button class="calc-btn" onclick="calcNum('0')">0</button>
+    <button class="calc-btn" onclick="calcNum('.')">.</button>
+    <button class="calc-btn eq" onclick="calcEquals()">=</button>
+  </div>
+
+  <hr class="calc-divider">
+
+  <!-- Prompt calculation -->
+  <div class="calc-section-label">PROMPT CALCULATE</div>
+  <input id="calc-prompt-input" type="text"
+    placeholder="e.g. 15% of 340 · 72kg to lbs · days until Christmas · 100 USD to EUR"
+    onkeydown="if(event.key==='Enter')calcPrompt()">
+  <div id="calc-prompt-result"></div>
+  <button class="calc-btn op" style="width:100%;margin-bottom:8px" onclick="calcPrompt()">
+    🧮 Calculate
+  </button>
+
+  <hr class="calc-divider">
+
+  <!-- Quick conversions -->
+  <div class="calc-section-label">QUICK CONVERT</div>
+  <div class="calc-quick-row">
+    <button class="calc-quick-btn" onclick="calcQuick('kg to lbs')">kg → lbs</button>
+    <button class="calc-quick-btn" onclick="calcQuick('lbs to kg')">lbs → kg</button>
+    <button class="calc-quick-btn" onclick="calcQuick('km to miles')">km → mi</button>
+    <button class="calc-quick-btn" onclick="calcQuick('miles to km')">mi → km</button>
+    <button class="calc-quick-btn" onclick="calcQuick('C to F')">°C → °F</button>
+    <button class="calc-quick-btn" onclick="calcQuick('F to C')">°F → °C</button>
+    <button class="calc-quick-btn" onclick="calcQuick('USD to EUR')">USD → EUR</button>
+    <button class="calc-quick-btn" onclick="calcQuick('EUR to USD')">EUR → USD</button>
+    <button class="calc-quick-btn" onclick="calcQuick('GBP to USD')">GBP → USD</button>
+    <button class="calc-quick-btn" onclick="calcQuick('days until Christmas')">🎄 days left</button>
+  </div>
+
+  <button class="calc-close-btn" onclick="closeCalcModal()">✕ close</button>
+</div>
+
 <!-- TIMEZONE MODAL — appears near CHRONOS node -->
 <div id="timezone-modal">
   <div id="timezone-modal-title">CHRONOS · TIMEZONE</div>
@@ -1152,6 +1352,306 @@ window.addAlarmFromModal = function() {
 window.removeAlarm = function(i) {
   ChronosAction.removeAlarmByIndex(i);
   _refreshAlarmList();
+};
+
+// ── Calculator modal ─────────────────────────────────────────────────────────
+let _calcExpr    = '';
+let _calcResult  = '0';
+let _calcNode    = null;
+
+const UNIT_CONVERSIONS = {
+  // Weight
+  'kg to lbs':    v => `${v} kg = ${(v * 2.20462).toFixed(3)} lbs`,
+  'lbs to kg':    v => `${v} lbs = ${(v / 2.20462).toFixed(3)} kg`,
+  'g to oz':      v => `${v} g = ${(v / 28.3495).toFixed(3)} oz`,
+  'oz to g':      v => `${v} oz = ${(v * 28.3495).toFixed(2)} g`,
+  'kg to stone':  v => `${v} kg = ${(v / 6.35029).toFixed(3)} stone`,
+  'stone to kg':  v => `${v} stone = ${(v * 6.35029).toFixed(2)} kg`,
+  // Length
+  'km to miles':  v => `${v} km = ${(v * 0.621371).toFixed(4)} miles`,
+  'miles to km':  v => `${v} miles = ${(v / 0.621371).toFixed(4)} km`,
+  'm to ft':      v => `${v} m = ${(v * 3.28084).toFixed(3)} ft`,
+  'ft to m':      v => `${v} ft = ${(v / 3.28084).toFixed(3)} m`,
+  'cm to in':     v => `${v} cm = ${(v / 2.54).toFixed(3)} in`,
+  'in to cm':     v => `${v} in = ${(v * 2.54).toFixed(2)} cm`,
+  'm to yards':   v => `${v} m = ${(v * 1.09361).toFixed(3)} yards`,
+  // Temperature
+  'C to F':       v => `${v}°C = ${(v * 9/5 + 32).toFixed(2)}°F`,
+  'F to C':       v => `${v}°F = ${((v - 32) * 5/9).toFixed(2)}°C`,
+  'C to K':       v => `${v}°C = ${(v + 273.15).toFixed(2)} K`,
+  'K to C':       v => `${v} K = ${(v - 273.15).toFixed(2)}°C`,
+  // Volume
+  'L to gallons': v => `${v} L = ${(v * 0.264172).toFixed(4)} gal`,
+  'gallons to L': v => `${v} gal = ${(v / 0.264172).toFixed(3)} L`,
+  'ml to oz':     v => `${v} ml = ${(v / 29.5735).toFixed(3)} fl oz`,
+  'oz to ml':     v => `${v} fl oz = ${(v * 29.5735).toFixed(2)} ml`,
+  // Speed
+  'kmh to mph':   v => `${v} km/h = ${(v * 0.621371).toFixed(3)} mph`,
+  'mph to kmh':   v => `${v} mph = ${(v / 0.621371).toFixed(3)} km/h`,
+  // Data
+  'MB to GB':     v => `${v} MB = ${(v / 1024).toFixed(4)} GB`,
+  'GB to MB':     v => `${v} GB = ${(v * 1024).toFixed(0)} MB`,
+  'GB to TB':     v => `${v} GB = ${(v / 1024).toFixed(6)} TB`,
+};
+
+// Safe expression evaluator — no raw eval
+function _safeEval(expr) {
+  const clean = expr
+    .replace(/÷/g, '/')
+    .replace(/×/g, '*')
+    .replace(/−/g, '-')
+    .replace(/[^0-9+\-*/.()%\s]/g, '');
+  if (!clean.trim()) return null;
+  try {
+    // Handle percentage: e.g. 340*15% → 340*0.15
+    const withPct = clean.replace(/(\d+(?:\.\d+)?)\s*%/g, (_, n) => `(${n}/100)`);
+    // Use Function constructor for sandboxed evaluation
+    const result = new Function(`"use strict"; return (${withPct})`)();
+    if (!isFinite(result)) return null;
+    // Format result — avoid floating point noise
+    return parseFloat(result.toPrecision(12)).toString();
+  } catch(_) { return null; }
+}
+
+function _parseDateQuery(s) {
+  const now = new Date();
+  // Days until a date
+  const untilMatch = s.match(/days?\s+until\s+(.+)/i);
+  if (untilMatch) {
+    const target = untilMatch[1].trim();
+    const yearTargets = {
+      'christmas':   new Date(now.getFullYear(), 11, 25),
+      'new year':    new Date(now.getFullYear() + 1, 0, 1),
+      'halloween':   new Date(now.getFullYear(), 9, 31),
+      'valentines':  new Date(now.getFullYear(), 1, 14),
+      'thanksgiving': new Date(now.getFullYear(), 10, 28),
+    };
+    const key = target.toLowerCase();
+    let targetDate = yearTargets[key] || new Date(target);
+    if (isNaN(targetDate)) return null;
+    // If date has passed this year, use next year
+    if (targetDate < now && !target.includes(now.getFullYear())) {
+      targetDate.setFullYear(now.getFullYear() + 1);
+    }
+    const days = Math.ceil((targetDate - now) / 86400000);
+    const name = target.charAt(0).toUpperCase() + target.slice(1);
+    return `${days} days until ${name} (${targetDate.toDateString()})`;
+  }
+  // Days between two dates
+  const betweenMatch = s.match(/days?\s+between\s+(.+)\s+and\s+(.+)/i);
+  if (betweenMatch) {
+    const d1 = new Date(betweenMatch[1]);
+    const d2 = new Date(betweenMatch[2]);
+    if (!isNaN(d1) && !isNaN(d2)) {
+      return `${Math.abs(Math.ceil((d2 - d1) / 86400000))} days`;
+    }
+  }
+  return null;
+}
+
+function _parseUnitConversion(s) {
+  // Extract number + unit conversion: "72 kg to lbs", "100 miles in km"
+  const match = s.match(/^([\d.]+)\s*(.+)/);
+  if (!match) return null;
+  const val  = parseFloat(match[1]);
+  const rest = match[2].toLowerCase().trim();
+  for (const [key, fn] of Object.entries(UNIT_CONVERSIONS)) {
+    if (rest.includes(key.split(' ')[0]) && rest.includes(key.split(' ')[2] || '')) {
+      return fn(val);
+    }
+  }
+  return null;
+}
+
+function _parsePercentage(s) {
+  // "15% of 340", "20% off 85", "tip of 15% on 120"
+  const ofMatch  = s.match(/([\d.]+)\s*%\s*of\s*([\d.]+)/i);
+  const offMatch = s.match(/([\d.]+)\s*%\s*off\s*([\d.]+)/i);
+  const tipMatch = s.match(/tip\s+(?:of\s+)?([\d.]+)\s*%\s+on\s+([\d.]+)/i);
+  if (ofMatch)  return `${ofMatch[1]}% of ${ofMatch[2]} = ${(parseFloat(ofMatch[1])/100 * parseFloat(ofMatch[2])).toFixed(2)}`;
+  if (offMatch) { const disc = parseFloat(offMatch[1])/100 * parseFloat(offMatch[2]); return `${offMatch[1]}% off ${offMatch[2]} = ${(parseFloat(offMatch[2]) - disc).toFixed(2)} (saving ${disc.toFixed(2)})`; }
+  if (tipMatch) { const tip = parseFloat(tipMatch[1])/100 * parseFloat(tipMatch[2]); return `${tipMatch[1]}% tip on ${tipMatch[2]} = ${tip.toFixed(2)} (total ${(parseFloat(tipMatch[2]) + tip).toFixed(2)})`; }
+  return null;
+}
+
+async function _fetchCurrency(amount, from, to) {
+  try {
+    const r = await fetch(`https://api.frankfurter.app/latest?from=${from.toUpperCase()}&to=${to.toUpperCase()}`,
+      { signal: AbortSignal.timeout(4000) });
+    if (!r.ok) throw new Error('rate unavailable');
+    const d = await r.json();
+    const rate = d.rates[to.toUpperCase()];
+    if (!rate) throw new Error('currency not found');
+    return `${amount} ${from.toUpperCase()} = ${(amount * rate).toFixed(2)} ${to.toUpperCase()} (rate: ${rate.toFixed(4)})`;
+  } catch(e) {
+    return null;  // caller falls back to engine
+  }
+}
+
+function _parseCurrency(s) {
+  // "100 USD to EUR", "convert 50 GBP to JPY"
+  const match = s.match(/([\d.]+)\s*([A-Za-z]{3})\s+(?:to|in)\s+([A-Za-z]{3})/i);
+  if (match) return { amount: parseFloat(match[1]), from: match[2], to: match[3] };
+  return null;
+}
+
+async function _calcOffline(query) {
+  const s = query.trim();
+
+  // Date arithmetic
+  const dateResult = _parseDateQuery(s);
+  if (dateResult) return dateResult;
+
+  // Percentage
+  const pctResult = _parsePercentage(s);
+  if (pctResult) return pctResult;
+
+  // Unit conversion
+  const unitResult = _parseUnitConversion(s);
+  if (unitResult) return unitResult;
+
+  // Currency — try live rate first
+  const currMatch = _parseCurrency(s);
+  if (currMatch) {
+    const liveResult = await _fetchCurrency(currMatch.amount, currMatch.from, currMatch.to);
+    if (liveResult) return liveResult;
+    // Fall through to engine
+    return null;
+  }
+
+  // Pure arithmetic
+  const mathResult = _safeEval(s);
+  if (mathResult !== null) return `= ${mathResult}`;
+
+  return null;  // needs engine
+}
+
+async function _calcWithEngine(query) {
+  if (!window.CortexAction || !enginePool || !enginePool.length) return null;
+  try {
+    const result = await deliberate(query, enginePool, {
+      systemPrompt: `You are a precise calculator and unit converter. 
+Answer the calculation, conversion, or date query directly and concisely.
+Return only the answer — no explanation unless asked. Be accurate.`,
+    });
+    return result.output || null;
+  } catch(_) { return null; }
+}
+
+function _showCalcPromptResult(text, loading = false) {
+  const el = document.getElementById('calc-prompt-result');
+  el.textContent = loading ? '⟳ calculating…' : text;
+  el.classList.add('show');
+}
+
+// Position calculator modal near CORTEX node
+function openCalcModal(node) {
+  _calcNode = node;
+  const modal = document.getElementById('calc-modal');
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + node.x * scaleX;
+  const py = rect.top  + node.y * scaleY;
+  const mw = 310, mh = 480;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+  modal.classList.add('show');
+  _calcClear();
+}
+
+window.closeCalcModal = function() {
+  document.getElementById('calc-modal').classList.remove('show');
+};
+
+// Numeric pad
+function _calcClear() {
+  _calcExpr   = '';
+  _calcResult = '0';
+  _calcUpdateDisplay();
+}
+window.calcClear = _calcClear;
+
+function _calcUpdateDisplay() {
+  document.getElementById('calc-expr').textContent   = _calcExpr;
+  document.getElementById('calc-result').textContent = _calcResult;
+}
+
+window.calcNum = function(n) {
+  if (_calcResult !== '0' && _calcExpr === '') {
+    // Start new calculation
+    _calcExpr = _calcResult;
+  }
+  if (n === '.' && _calcExpr.split(/[+\-×÷]/).pop().includes('.')) return;
+  _calcExpr   += n;
+  _calcResult  = _safeEval(_calcExpr) || _calcExpr;
+  _calcUpdateDisplay();
+};
+
+window.calcOp = function(op) {
+  if (_calcExpr === '' && _calcResult !== '0') _calcExpr = _calcResult;
+  if (_calcExpr && '÷×−+%'.includes(_calcExpr.slice(-1))) {
+    _calcExpr = _calcExpr.slice(0, -1);
+  }
+  _calcExpr += op;
+  _calcUpdateDisplay();
+};
+
+window.calcSign = function() {
+  if (_calcResult !== '0') {
+    _calcResult = (parseFloat(_calcResult) * -1).toString();
+    _calcExpr   = _calcResult;
+    _calcUpdateDisplay();
+  }
+};
+
+window.calcEquals = function() {
+  if (!_calcExpr) return;
+  const result = _safeEval(_calcExpr);
+  if (result !== null) {
+    document.getElementById('calc-expr').textContent   = _calcExpr + ' =';
+    _calcResult = result;
+    _calcExpr   = '';
+    document.getElementById('calc-result').textContent = _calcResult;
+  }
+};
+
+// Prompt calculation
+window.calcPrompt = async function() {
+  const input = document.getElementById('calc-prompt-input');
+  const query = input.value.trim();
+  if (!query) return;
+
+  _showCalcPromptResult('', true);
+
+  // Try offline first
+  const offlineResult = await _calcOffline(query);
+  if (offlineResult) {
+    _showCalcPromptResult(offlineResult);
+    return;
+  }
+
+  // Fall back to engine
+  const engineResult = await _calcWithEngine(query);
+  if (engineResult) {
+    _showCalcPromptResult(engineResult);
+  } else {
+    _showCalcPromptResult('⚠ Could not compute — check engine keys or try a simpler query');
+  }
+};
+
+// Quick conversion buttons — open prompt with pre-filled value from numeric pad
+window.calcQuick = function(query) {
+  const val = _calcResult !== '0' ? _calcResult + ' ' : '';
+  const input = document.getElementById('calc-prompt-input');
+  input.value = val + query;
+  input.focus();
+  if (val) calcPrompt();
 };
 
 // ── Timezone modal ───────────────────────────────────────────────────────────
@@ -1614,6 +2114,7 @@ window.CortexAction    = CortexAction;
 window.openMediaPlayer = openMediaPlayer;
 window.openImageModal  = openImageModal;
 window.openVideoModal  = openVideoModal;
+window.openCalcModal   = openCalcModal;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -2900,12 +3401,15 @@ async function firePreset(preset) {
     return;
   }
 
-  // Modal-opening presets — CHRONOS Timer/Stopwatch/Alarms
+  // Modal-opening presets — CHRONOS Timer/Stopwatch/Alarms + CORTEX Calculator
   if (preset._openModal) {
-    const chronosNode = nodes.find(n => n.name === 'CHRONOS');
-    if (chronosNode) {
-      dismissOrbital();
-      openChronosModal(preset._openModal, chronosNode);
+    dismissOrbital();
+    if (preset._openModal === 'calculator') {
+      const cortexNode = nodes.find(n => n.name === 'CORTEX');
+      if (cortexNode) openCalcModal(cortexNode);
+    } else {
+      const chronosNode = nodes.find(n => n.name === 'CHRONOS');
+      if (chronosNode) openChronosModal(preset._openModal, chronosNode);
     }
     return;
   }
