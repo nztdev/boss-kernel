@@ -9,10 +9,16 @@
   "theme_color": "#00ffcc",
   "icons": [
     {
-      "src": "https://img.icons8.com/wired/512/00ffcc/artificial-intelligence.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "./bosslogo.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "./bosslogo.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "maskable"
     }
   ]
 }
