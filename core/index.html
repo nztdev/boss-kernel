@@ -4,12 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#050a06">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="./bosslogo.jpg">
 <title>B.O.S.S. Kernel v0.8</title>
-<link rel="icon" type="image/jpeg" href="./bosslogo.jpg">
 <link rel="manifest" href="manifest.json">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
@@ -1453,13 +1450,72 @@ function _parseDateQuery(s) {
 }
 
 function _parseUnitConversion(s) {
-  // Extract number + unit conversion: "72 kg to lbs", "100 miles in km"
-  const match = s.match(/^([\d.]+)\s*(.+)/);
-  if (!match) return null;
-  const val  = parseFloat(match[1]);
-  const rest = match[2].toLowerCase().trim();
+  const sl = s.toLowerCase().trim();
+
+  // Temperature — no number required, match pattern first
+  // e.g. "20 C to F", "72 F to C", "C to F" (uses pad value)
+  const tempPatterns = [
+    { rx: /([-\d.]+)\s*°?c\s+(?:to|in)\s+°?f/i,  fn: v => `${v}°C = ${(v*9/5+32).toFixed(2)}°F` },
+    { rx: /([-\d.]+)\s*°?f\s+(?:to|in)\s+°?c/i,  fn: v => `${v}°F = ${((v-32)*5/9).toFixed(2)}°C` },
+    { rx: /([-\d.]+)\s*°?c\s+(?:to|in)\s+k/i,    fn: v => `${v}°C = ${(v+273.15).toFixed(2)} K` },
+    { rx: /([-\d.]+)\s*k\s+(?:to|in)\s+°?c/i,    fn: v => `${v} K = ${(v-273.15).toFixed(2)}°C` },
+  ];
+  for (const { rx, fn } of tempPatterns) {
+    const m = sl.match(rx);
+    if (m) return fn(parseFloat(m[1]));
+  }
+  // Temperature without number — use pad value via _calcResult
+  const tempNoNum = [
+    { rx: /^c\s+(?:to|in)\s+f$/i, fn: v => `${v}°C = ${(v*9/5+32).toFixed(2)}°F` },
+    { rx: /^f\s+(?:to|in)\s+c$/i, fn: v => `${v}°F = ${((v-32)*5/9).toFixed(2)}°C` },
+  ];
+  for (const { rx, fn } of tempNoNum) {
+    if (rx.test(sl)) {
+      const v = parseFloat(_calcResult) || 0;
+      return fn(v);
+    }
+  }
+
+  // General unit conversions — extract leading number then match exact key
+  const numMatch = sl.match(/^([-\d.]+)\s*(.+)/);
+  if (!numMatch) return null;
+  const val  = parseFloat(numMatch[1]);
+  const rest = numMatch[2].trim();
+
+  // Build normalised key from rest — handle "to", "in", "→"
+  const normRest = rest.replace(/\s*(to|in|→)\s*/g, ' to ').trim();
+
+  // Try exact key match first
+  if (UNIT_CONVERSIONS[normRest]) return UNIT_CONVERSIONS[normRest](val);
+
+  // Try alias matching — handle plural/abbreviation variants
+  const aliases = {
+    'lb to kg': 'lbs to kg', 'pound to kg': 'lbs to kg', 'pounds to kg': 'lbs to kg',
+    'kg to lb': 'kg to lbs', 'kg to pound': 'kg to lbs', 'kg to pounds': 'kg to lbs',
+    'mile to km': 'miles to km', 'mile to kilometers': 'miles to km',
+    'km to mile': 'km to miles', 'kilometers to miles': 'km to miles',
+    'foot to m': 'ft to m', 'feet to m': 'ft to m', 'foot to meters': 'ft to m',
+    'meter to ft': 'm to ft', 'meters to ft': 'm to ft', 'metres to ft': 'm to ft',
+    'inch to cm': 'in to cm', 'inches to cm': 'in to cm',
+    'cm to inch': 'cm to in', 'cm to inches': 'cm to in',
+    'gallon to l': 'gallons to L', 'gallons to l': 'gallons to L',
+    'liter to gallon': 'L to gallons', 'liters to gallons': 'L to gallons',
+    'litre to gallon': 'L to gallons', 'litres to gallons': 'L to gallons',
+    'kph to mph': 'kmh to mph', 'kmph to mph': 'kmh to mph',
+    'mph to kph': 'mph to kmh', 'mph to kmph': 'mph to kmh',
+    'oz to ml': 'oz to ml', 'fl oz to ml': 'oz to ml',
+    'mb to gb': 'MB to GB', 'gb to mb': 'GB to MB', 'gb to tb': 'GB to TB',
+    'stone to lbs': 'stone to kg',  // approximate via kg
+  };
+  const aliased = aliases[normRest.toLowerCase()];
+  if (aliased && UNIT_CONVERSIONS[aliased]) return UNIT_CONVERSIONS[aliased](val);
+
+  // Partial fuzzy match as last resort — but only if unambiguous direction
   for (const [key, fn] of Object.entries(UNIT_CONVERSIONS)) {
-    if (rest.includes(key.split(' ')[0]) && rest.includes(key.split(' ')[2] || '')) {
+    const kparts = key.toLowerCase().split(' to ');
+    const rparts = normRest.toLowerCase().split(' to ');
+    if (rparts.length === 2 &&
+        kparts[0].includes(rparts[0]) && kparts[1].includes(rparts[1])) {
       return fn(val);
     }
   }
@@ -1477,18 +1533,68 @@ function _parsePercentage(s) {
   return null;
 }
 
+// Static approximate exchange rates (base: USD) — updated periodically.
+// Always available, zero network dependency. Live APIs refine this when reachable.
+const STATIC_RATES_DATE = '2026-06';
+const STATIC_RATES_USD = {
+  USD: 1,      EUR: 0.92,   GBP: 0.79,   JPY: 156.0,  CHF: 0.90,
+  CAD: 1.37,   AUD: 1.52,   NZD: 1.66,   CNY: 7.25,   INR: 84.5,
+  MXN: 18.2,   BRL: 5.45,   ZAR: 18.3,   SGD: 1.35,   HKD: 7.81,
+  SEK: 10.6,   NOK: 10.9,   DKK: 6.86,   PLN: 4.0,    TRY: 32.5,
+  AED: 3.67,   SAR: 3.75,   KRW: 1380,   THB: 36.5,   IDR: 16200,
+};
+
+function _staticCurrency(amount, from, to) {
+  const fromU = from.toUpperCase(), toU = to.toUpperCase();
+  const fromRate = STATIC_RATES_USD[fromU];
+  const toRate   = STATIC_RATES_USD[toU];
+  if (!fromRate || !toRate) return null;
+  const usd    = amount / fromRate;
+  const result = usd * toRate;
+  const rate   = toRate / fromRate;
+  return `${amount} ${fromU} = ${result.toFixed(2)} ${toU} (≈${rate.toFixed(4)}, approx. ${STATIC_RATES_DATE})`;
+}
+
 async function _fetchCurrency(amount, from, to) {
+  const fromU = from.toUpperCase(), toU = to.toUpperCase();
+
+  // Live API — short timeout, enhancement only
   try {
-    const r = await fetch(`https://api.frankfurter.app/latest?from=${from.toUpperCase()}&to=${to.toUpperCase()}`,
-      { signal: AbortSignal.timeout(4000) });
-    if (!r.ok) throw new Error('rate unavailable');
-    const d = await r.json();
-    const rate = d.rates[to.toUpperCase()];
-    if (!rate) throw new Error('currency not found');
-    return `${amount} ${from.toUpperCase()} = ${(amount * rate).toFixed(2)} ${to.toUpperCase()} (rate: ${rate.toFixed(4)})`;
-  } catch(e) {
-    return null;  // caller falls back to engine
+    const r = await fetch(
+      `https://open.er-api.com/v6/latest/${fromU}`,
+      { signal: AbortSignal.timeout(2000) }
+    );
+    if (r.ok) {
+      const d = await r.json();
+      const rate = d.rates?.[toU];
+      if (rate) {
+        return `${amount} ${fromU} = ${(amount * rate).toFixed(2)} ${toU} (live rate: ${rate.toFixed(4)})`;
+      }
+    }
+  } catch(_) {}
+
+  // Static table — always available
+  const staticResult = _staticCurrency(amount, from, to);
+  if (staticResult) return staticResult;
+
+  // Cortex /pulse — exotic currencies not in static table
+  const cortexUrl = pcUrl();
+  if (cortexUrl) {
+    try {
+      const r = await fetch(`${cortexUrl}/pulse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent: `convert ${amount} ${fromU} to ${toU}`, node: 'CORTEX' }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.response && d.response.includes('=')) return d.response;
+      }
+    } catch(_) {}
   }
+
+  return null;
 }
 
 function _parseCurrency(s) {
