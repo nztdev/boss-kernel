@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#050a06">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="./bosslogo.jpg">
+<link rel="icon" type="image/jpeg" href="./bosslogo.jpg">
 <title>B.O.S.S. Kernel v0.8</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1533,51 +1536,89 @@ function _parsePercentage(s) {
   return null;
 }
 
-// Static approximate exchange rates (base: USD) — updated periodically.
-// Always available, zero network dependency. Live APIs refine this when reachable.
-const STATIC_RATES_DATE = '2026-06';
-const STATIC_RATES_USD = {
+// ── Currency rates — refreshed once per session on boot ──────────────────────
+// CURRENCY_RATES_KEY stores { base: 'USD', rates: {...}, fetchedAt: timestamp }
+// Boot fetch tries live API; falls back to hardcoded table if offline.
+const CURRENCY_RATES_KEY = 'BOSS_CURRENCY_RATES';
+
+// Hardcoded fallback — only used if no live data ever fetched (first run, offline)
+const FALLBACK_RATES_USD = {
   USD: 1,      EUR: 0.92,   GBP: 0.79,   JPY: 156.0,  CHF: 0.90,
   CAD: 1.37,   AUD: 1.52,   NZD: 1.66,   CNY: 7.25,   INR: 84.5,
   MXN: 18.2,   BRL: 5.45,   ZAR: 18.3,   SGD: 1.35,   HKD: 7.81,
   SEK: 10.6,   NOK: 10.9,   DKK: 6.86,   PLN: 4.0,    TRY: 32.5,
   AED: 3.67,   SAR: 3.75,   KRW: 1380,   THB: 36.5,   IDR: 16200,
 };
+const FALLBACK_RATES_DATE = '2026-06';
 
-function _staticCurrency(amount, from, to) {
-  const fromU = from.toUpperCase(), toU = to.toUpperCase();
-  const fromRate = STATIC_RATES_USD[fromU];
-  const toRate   = STATIC_RATES_USD[toU];
-  if (!fromRate || !toRate) return null;
-  const usd    = amount / fromRate;
-  const result = usd * toRate;
-  const rate   = toRate / fromRate;
-  return `${amount} ${fromU} = ${result.toFixed(2)} ${toU} (≈${rate.toFixed(4)}, approx. ${STATIC_RATES_DATE})`;
+let _currencyRates    = null;  // { rates, fetchedAt } — populated at boot
+let _currencyIsLive   = false; // true if fetched this session
+
+// Called once at boot — refreshes the rate table from a live source
+async function refreshCurrencyRates(clog) {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD',
+      { signal: AbortSignal.timeout(4000) });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.rates) {
+        _currencyRates  = { rates: d.rates, fetchedAt: Date.now() };
+        _currencyIsLive = true;
+        localStorage.setItem(CURRENCY_RATES_KEY, JSON.stringify(_currencyRates));
+        if (clog) clog(`💱 Currency rates refreshed (${Object.keys(d.rates).length} currencies)`, 'log-sys');
+        return;
+      }
+    }
+    throw new Error('bad response');
+  } catch(e) {
+    // Try cached rates from a previous session
+    try {
+      const cached = JSON.parse(localStorage.getItem(CURRENCY_RATES_KEY) || 'null');
+      if (cached?.rates) {
+        _currencyRates  = cached;
+        _currencyIsLive = false;
+        if (clog) {
+          const age = Math.round((Date.now() - cached.fetchedAt) / 86400000);
+          clog(`💱 Currency rates: using cached (${age}d old) — offline`, 'log-sys');
+        }
+        return;
+      }
+    } catch(_) {}
+    // No cache either — hardcoded fallback
+    _currencyRates  = { rates: FALLBACK_RATES_USD, fetchedAt: null };
+    _currencyIsLive = false;
+    if (clog) clog(`💱 Currency rates: using built-in approximate table (${FALLBACK_RATES_DATE})`, 'log-sys');
+  }
+}
+
+function _currencyLabel() {
+  if (!_currencyRates) return 'approx.';
+  if (_currencyIsLive) return 'live';
+  if (_currencyRates.fetchedAt) {
+    const days = Math.floor((Date.now() - _currencyRates.fetchedAt) / 86400000);
+    return days === 0 ? 'cached today' : `cached ${days}d ago`;
+  }
+  return `approx. ${FALLBACK_RATES_DATE}`;
 }
 
 async function _fetchCurrency(amount, from, to) {
   const fromU = from.toUpperCase(), toU = to.toUpperCase();
 
-  // Live API — short timeout, enhancement only
-  try {
-    const r = await fetch(
-      `https://open.er-api.com/v6/latest/${fromU}`,
-      { signal: AbortSignal.timeout(2000) }
-    );
-    if (r.ok) {
-      const d = await r.json();
-      const rate = d.rates?.[toU];
-      if (rate) {
-        return `${amount} ${fromU} = ${(amount * rate).toFixed(2)} ${toU} (live rate: ${rate.toFixed(4)})`;
-      }
-    }
-  } catch(_) {}
+  if (!_currencyRates) await refreshCurrencyRates();
 
-  // Static table — always available
-  const staticResult = _staticCurrency(amount, from, to);
-  if (staticResult) return staticResult;
+  const rates = _currencyRates?.rates || FALLBACK_RATES_USD;
+  const fromRate = rates[fromU];
+  const toRate   = rates[toU];
 
-  // Cortex /pulse — exotic currencies not in static table
+  if (fromRate && toRate) {
+    // Rates are USD-based: amount_from -> USD -> amount_to
+    const usd    = amount / fromRate;
+    const result = usd * toRate;
+    const rate   = toRate / fromRate;
+    return `${amount} ${fromU} = ${result.toFixed(2)} ${toU} (rate ${rate.toFixed(4)}, ${_currencyLabel()})`;
+  }
+
+  // Currency not in table — try Cortex for exotic pairs
   const cortexUrl = pcUrl();
   if (cortexUrl) {
     try {
@@ -3659,6 +3700,7 @@ enginePool = buildEnginePool();
 updateEngineStatus();
 clog(`🧬 Engine: ${engineConfigured() ? 'ready' : 'unconfigured — tap cortex pill → Engine Keys'}`, 'log-sys');
 chronosBoot(clog);  // CHRONOS: display current time and date on boot
+refreshCurrencyRates(clog);  // refresh currency rates once per session
 
 // Register engine pool save callback with Heart
 // Heart calls this on every beat — keeps engine metabolic state persistent
