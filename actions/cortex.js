@@ -167,9 +167,22 @@ async function _handleDeliberate(type, subject, intent, clog, Nervous, EVENT, en
     question: 'You are a knowledgeable assistant. Answer the question directly and accurately. Be concise and clear.',
   };
 
+  // Prepend user profile context if available — personalises engine responses
+  let systemPrompt = systemPrompts[type] || systemPrompts.question;
+  if (window.getUserProfile) {
+    const profile = window.getUserProfile();
+    const contextParts = [];
+    if (profile.name)        contextParts.push(`The user's name is ${profile.name}.`);
+    if (profile.preferences) contextParts.push(`User preferences: ${profile.preferences}.`);
+    if (profile.routines)    contextParts.push(`User routines: ${profile.routines}.`);
+    if (contextParts.length) {
+      systemPrompt = `${contextParts.join(' ')} ${systemPrompt}`;
+    }
+  }
+
   try {
     const result = await deliberateFn(subject || intent, enginePool, {
-      systemPrompt: systemPrompts[type] || systemPrompts.question,
+      systemPrompt,
     });
 
     if (result.error) {

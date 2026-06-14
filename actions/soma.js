@@ -166,15 +166,18 @@ function _buildPersonalityResponse(state, nodes, chain, Registry) {
   const lastNode   = nodes.find(n => n.id === recentNode);
 
   switch (state) {
-    case 'calm':
+    case 'calm': {
+      const profile = window.getUserProfile ? window.getUserProfile() : {};
+      const greeting = profile.name ? `The field is quiet, ${profile.name}.` : `The field is quiet.`;
       return [
-        `I am BOSS — Biological Operating System. The field is quiet.`,
+        `I am BOSS — Biological Operating System. ${greeting}`,
         `${nodes.length} nodes at rest${coldNodes.length ? `, ${coldNodes.slice(0,2).join(' and ')} fully cold` : ''}.`,
         bondCount > 0
           ? `${bondCount} synaptic bond${bondCount !== 1 ? 's' : ''} encoded from prior sessions.`
           : `No bonds formed yet — the field is fresh.`,
         `I am listening.`,
       ].join(' ');
+    }
 
     case 'active':
       return [
@@ -210,17 +213,27 @@ function _buildPersonalityResponse(state, nodes, chain, Registry) {
 function _buildIdentityResponse(nodes, Registry, cortexHandshake) {
   const regNodes  = Registry ? Registry.getAllNodes() : [];
   const nodeNames = nodes.map(n => n.name).join(', ');
-  const version   = 'v0.7';
+  const version   = 'v0.8';
   const vaultSize = cortexHandshake?.vault_size;
+  const profile   = window.getUserProfile ? window.getUserProfile() : {};
 
-  const lines = [
-    `I am BOSS — Biological Operating System, ${version}.`,
-    `I route intent through a resonant field of ${nodes.length} nodes: ${nodeNames}.`,
-    `My specialties span system health, identity, reasoning, memory, media, and time.`,
-  ];
+  const lines = [];
+
+  if (profile.name) {
+    lines.push(`I am BOSS — Biological Operating System, ${version}. Hello, ${profile.name}.`);
+  } else {
+    lines.push(`I am BOSS — Biological Operating System, ${version}.`);
+  }
+
+  lines.push(`I route intent through a resonant field of ${nodes.length} nodes: ${nodeNames}.`);
+  lines.push(`My specialties span system health, identity, reasoning, memory, media, and time.`);
 
   if (vaultSize !== undefined && vaultSize > 0) {
     lines.push(`The Cortex holds ${vaultSize} memory entries.`);
+  }
+
+  if (profile.routines) {
+    lines.push(`I know your routines: ${profile.routines}.`);
   }
 
   lines.push(`I do not call models directly. I pulse the field and let resonance decide.`);

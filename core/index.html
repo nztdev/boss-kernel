@@ -313,6 +313,66 @@ canvas {
   text-transform: uppercase;
 }
 
+/* ── PROFILE MODAL ── */
+#profile-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #ff66aa66;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 290px;
+  box-shadow: 0 0 24px #ff66aa22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#profile-modal.show { display: block; }
+.profile-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #ff66aa; opacity: 0.6; margin-bottom: 10px;
+}
+.profile-field-label {
+  font-size: 9px; color: #ff66aa;
+  opacity: 0.5; margin-bottom: 4px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.profile-input {
+  width: 100%; box-sizing: border-box;
+  background: #030508;
+  border: 1px solid #ff66aa44;
+  border-radius: 6px;
+  color: #ff66aa;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 8px 10px;
+  outline: none;
+  margin-bottom: 12px;
+  resize: vertical;
+}
+.profile-input:focus { border-color: #ff66aaaa; }
+.profile-input::placeholder { color: #ff66aa33; }
+textarea.profile-input {
+  min-height: 50px; font-family: inherit;
+}
+.profile-row { display: flex; gap: 8px; }
+.profile-btn {
+  flex: 1; background: none;
+  border: 1px solid #ff66aa66; border-radius: 6px;
+  color: #ff66aa; font-family: inherit;
+  font-size: 10px; padding: 7px 0; cursor: pointer;
+  transition: background 0.15s;
+}
+.profile-btn:hover { background: #ff66aa11; }
+.profile-btn.primary { border-color: #ff66aaaa; }
+.profile-btn.dim { border-color: #335544; color: #335544; }
+.profile-btn.dim:hover { color: #ff66aa66; }
+.profile-saved-msg {
+  font-size: 9px; color: #66ff88; opacity: 0;
+  text-align: center; margin-top: 6px;
+  transition: opacity 0.3s;
+}
+.profile-saved-msg.show { opacity: 1; }
+
 /* ── MEMORY MODALS (Vault / Notes) ── */
 .memory-modal {
   display: none;
@@ -1044,6 +1104,28 @@ canvas {
   <div id="alarm-list"></div>
 </div>
 
+<!-- PROFILE MODAL — appears near SOMA node -->
+<div id="profile-modal">
+  <div class="profile-title">SOMA · PROFILE</div>
+
+  <div class="profile-field-label">Name</div>
+  <input id="profile-name" class="profile-input" type="text" placeholder="What should I call you?">
+
+  <div class="profile-field-label">Routines</div>
+  <textarea id="profile-routines" class="profile-input" rows="2"
+    placeholder="e.g. I work mornings, exercise at 6pm, sleep around midnight"></textarea>
+
+  <div class="profile-field-label">Preferences</div>
+  <textarea id="profile-preferences" class="profile-input" rows="2"
+    placeholder="e.g. prefer concise answers, use metric units, casual tone"></textarea>
+
+  <div class="profile-row">
+    <button class="profile-btn primary" onclick="profileSave()">💾 Save</button>
+    <button class="profile-btn dim" onclick="closeProfileModal()">✕ Close</button>
+  </div>
+  <div class="profile-saved-msg" id="profile-saved-msg">Saved</div>
+</div>
+
 <!-- VAULT MODAL — appears near MEMORY node -->
 <div id="memory-vault-modal" class="memory-modal">
   <div class="memory-title">MEMORY · VAULT</div>
@@ -1530,6 +1612,70 @@ window.addAlarmFromModal = function() {
 window.removeAlarm = function(i) {
   ChronosAction.removeAlarmByIndex(i);
   _refreshAlarmList();
+};
+
+// ── Profile modal ─────────────────────────────────────────────────────────────
+const PROFILE_KEY = 'BOSS_PROFILE';
+let _profileNode = null;
+
+// Global accessor — other nodes read user profile context via this
+function getUserProfile() {
+  try {
+    return JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+  } catch(_) { return {}; }
+}
+
+function _positionProfileModal() {
+  const modal = document.getElementById('profile-modal');
+  if (!_profileNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + _profileNode.x * scaleX;
+  const py = rect.top  + _profileNode.y * scaleY;
+  const mw = 290, mh = 340;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+}
+
+function openProfileModal(node) {
+  _profileNode = node;
+  const profile = getUserProfile();
+  document.getElementById('profile-name').value        = profile.name        || '';
+  document.getElementById('profile-routines').value    = profile.routines    || '';
+  document.getElementById('profile-preferences').value = profile.preferences || '';
+  document.getElementById('profile-saved-msg').classList.remove('show');
+  _positionProfileModal();
+  document.getElementById('profile-modal').classList.add('show');
+}
+
+window.closeProfileModal = function() {
+  document.getElementById('profile-modal').classList.remove('show');
+};
+
+window.profileSave = function() {
+  const profile = {
+    name:        document.getElementById('profile-name').value.trim(),
+    routines:    document.getElementById('profile-routines').value.trim(),
+    preferences: document.getElementById('profile-preferences').value.trim(),
+    updatedAt:   Date.now(),
+  };
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+
+  const msg = document.getElementById('profile-saved-msg');
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 1500);
+
+  if (profile.name) {
+    clog(`👤 SOMA: profile saved — hello, ${profile.name}`, 'log-action');
+  } else {
+    clog(`👤 SOMA: profile saved`, 'log-action');
+  }
 };
 
 // ── MEMORY modals (Vault / Notes) ────────────────────────────────────────────
@@ -2663,6 +2809,8 @@ window.openImageModal  = openImageModal;
 window.openVideoModal  = openVideoModal;
 window.openCalcModal   = openCalcModal;
 window.openMemoryModal = openMemoryModal;
+window.openProfileModal = openProfileModal;
+window.getUserProfile   = getUserProfile;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -3958,6 +4106,9 @@ async function firePreset(preset) {
     } else if (preset._openModal === 'vault' || preset._openModal === 'notes') {
       const memoryNode = nodes.find(n => n.name === 'MEMORY');
       if (memoryNode) openMemoryModal(preset._openModal, memoryNode);
+    } else if (preset._openModal === 'profile') {
+      const somaNode = nodes.find(n => n.name === 'SOMA');
+      if (somaNode) openProfileModal(somaNode);
     } else {
       const chronosNode = nodes.find(n => n.name === 'CHRONOS');
       if (chronosNode) openChronosModal(preset._openModal, chronosNode);

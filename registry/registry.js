@@ -264,7 +264,7 @@ const DEFAULT_PRESETS = [
   },
   {
     id:         'soma_themes',
-    label:      'List themes',
+    label:      'Themes',
     icon:       '🎨',
     nodes:      ['SOMA'],
     intent:     'list themes',
@@ -273,6 +273,19 @@ const DEFAULT_PRESETS = [
     createdAt:  null,
     usageCount: 0,
     tags:       ['theme', 'appearance'],
+  },
+  {
+    id:         'soma_profile',
+    label:      'Profile',
+    icon:       '👤',
+    nodes:      ['SOMA'],
+    intent:     'profile',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['profile', 'preferences', 'identity'],
+    _openModal: 'profile',
   },
 
   // ── CORE presets ───────────────────────────────────────────────────────────
