@@ -313,6 +313,132 @@ canvas {
   text-transform: uppercase;
 }
 
+/* ── MEMORY MODALS (Vault / Notes) ── */
+.memory-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #66aaff66;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 300px;
+  box-shadow: 0 0 24px #66aaff22;
+  font-family: 'Share Tech Mono', monospace;
+  max-height: 460px;
+  overflow-y: auto;
+}
+.memory-modal.show { display: block; }
+.memory-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #66aaff; opacity: 0.6; margin-bottom: 10px;
+}
+.memory-input {
+  width: 100%; box-sizing: border-box;
+  background: #030508;
+  border: 1px solid #66aaff44;
+  border-radius: 6px;
+  color: #66aaff;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 8px 10px;
+  outline: none;
+  margin-bottom: 8px;
+}
+.memory-input:focus { border-color: #66aaffaa; }
+.memory-input::placeholder { color: #66aaff44; }
+.memory-btn {
+  background: none;
+  border: 1px solid #66aaff66;
+  border-radius: 6px;
+  color: #66aaff;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 7px 0;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+}
+.memory-btn:hover { background: #66aaff11; }
+.memory-btn.primary { border-color: #66aaffaa; }
+.memory-btn.dim { border-color: #335544; color: #335544; }
+.memory-btn.dim:hover { color: #66aaff66; }
+.memory-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.memory-row .memory-btn { flex: 1; }
+.memory-divider {
+  border: none; border-top: 1px solid #66aaff22;
+  margin: 10px 0;
+}
+.memory-section-label {
+  font-size: 9px; color: #66aaff;
+  opacity: 0.4; letter-spacing: 0.1em;
+  margin-bottom: 6px; text-transform: uppercase;
+}
+.vault-entry {
+  padding: 6px 0; border-bottom: 1px solid #66aaff11;
+  font-size: 10px; color: #66aaff; opacity: 0.8;
+  display: flex; justify-content: space-between; gap: 8px;
+}
+.vault-entry-text { flex: 1; word-break: break-word; }
+.vault-entry button {
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; color: #66aaff44; padding: 0 2px;
+  flex-shrink: 0;
+}
+.vault-entry button:hover { color: #ff4444; }
+.vault-empty, .notes-empty {
+  font-size: 10px; opacity: 0.4; color: #66aaff;
+  text-align: center; padding: 12px 0;
+}
+/* Notes list */
+.note-card {
+  border: 1px solid #66aaff22; border-radius: 8px;
+  padding: 8px 10px; margin-bottom: 6px;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.note-card:hover { border-color: #66aaff55; }
+.note-card-title {
+  font-size: 11px; color: #66aaff; font-weight: bold;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.note-card-meta {
+  font-size: 9px; color: #66aaff; opacity: 0.4; margin-top: 2px;
+}
+.note-card button {
+  background: none; border: none; cursor: pointer;
+  color: #66aaff44; font-size: 11px;
+}
+.note-card button:hover { color: #ff4444; }
+/* Note detail view */
+.note-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; font-size: 10px; color: #66aaff;
+}
+.note-item.done { opacity: 0.4; text-decoration: line-through; }
+.note-item input[type="checkbox"] { accent-color: #66aaff; }
+.note-item-text { flex: 1; }
+.note-item button {
+  background: none; border: none; cursor: pointer;
+  color: #66aaff44; font-size: 11px;
+}
+.note-item button:hover { color: #ff4444; }
+.note-back-btn {
+  font-size: 9px; color: #66aaff; opacity: 0.6;
+  cursor: pointer; margin-bottom: 8px; display: inline-block;
+}
+.note-back-btn:hover { opacity: 1; }
+.memory-close-btn {
+  width: 100%; background: none;
+  border: 1px solid #66aaff22;
+  border-radius: 6px;
+  color: #66aaff44;
+  font-family: inherit;
+  font-size: 9px;
+  padding: 6px 0;
+  cursor: pointer; margin-top: 8px;
+}
+.memory-close-btn:hover { color: #66aaff; border-color: #66aaff44; }
+
 /* ── CALCULATOR MODAL ── */
 #calc-modal {
   display: none;
@@ -918,6 +1044,55 @@ canvas {
   <div id="alarm-list"></div>
 </div>
 
+<!-- VAULT MODAL — appears near MEMORY node -->
+<div id="memory-vault-modal" class="memory-modal">
+  <div class="memory-title">MEMORY · VAULT</div>
+  <input id="vault-search" class="memory-input" type="text"
+    placeholder="Search memories…" oninput="vaultSearch(this.value)">
+  <div class="memory-row">
+    <input id="vault-new-entry" class="memory-input" style="margin-bottom:0"
+      placeholder="Add a memory…"
+      onkeydown="if(event.key==='Enter')vaultAdd()">
+    <button class="memory-btn primary" style="flex:0 0 60px" onclick="vaultAdd()">+ Add</button>
+  </div>
+  <hr class="memory-divider">
+  <div class="memory-section-label" id="vault-list-label">RECENT MEMORIES</div>
+  <div id="vault-list"></div>
+  <button class="memory-close-btn" onclick="closeMemoryModal('vault')">✕ close</button>
+</div>
+
+<!-- NOTES MODAL — appears near MEMORY node -->
+<div id="memory-notes-modal" class="memory-modal">
+  <div class="memory-title">MEMORY · NOTES</div>
+
+  <!-- List view -->
+  <div id="notes-list-view">
+    <div class="memory-row">
+      <input id="notes-new-title" class="memory-input" style="margin-bottom:0"
+        placeholder="New list name…"
+        onkeydown="if(event.key==='Enter')notesCreate()">
+      <button class="memory-btn primary" style="flex:0 0 60px" onclick="notesCreate()">+ New</button>
+    </div>
+    <hr class="memory-divider">
+    <div id="notes-list"></div>
+  </div>
+
+  <!-- Detail view -->
+  <div id="notes-detail-view" style="display:none">
+    <span class="note-back-btn" onclick="notesBackToList()">← back to lists</span>
+    <div class="memory-title" id="notes-detail-title" style="margin-bottom:8px"></div>
+    <div id="notes-items"></div>
+    <div class="memory-row" style="margin-top:8px">
+      <input id="notes-new-item" class="memory-input" style="margin-bottom:0"
+        placeholder="Add item…"
+        onkeydown="if(event.key==='Enter')notesAddItem()">
+      <button class="memory-btn primary" style="flex:0 0 60px" onclick="notesAddItem()">+ Add</button>
+    </div>
+  </div>
+
+  <button class="memory-close-btn" onclick="closeMemoryModal('notes')">✕ close</button>
+</div>
+
 <!-- CALCULATOR MODAL — appears near CORTEX node -->
 <div id="calc-modal">
   <div class="calc-title">CORTEX · CALCULATOR</div>
@@ -1355,6 +1530,228 @@ window.addAlarmFromModal = function() {
 window.removeAlarm = function(i) {
   ChronosAction.removeAlarmByIndex(i);
   _refreshAlarmList();
+};
+
+// ── MEMORY modals (Vault / Notes) ────────────────────────────────────────────
+let _memoryModalNode = null;
+const NOTES_KEY = 'BOSS_NOTES';
+
+function _positionMemoryModal(id) {
+  const modal  = document.getElementById(id);
+  if (!_memoryModalNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + _memoryModalNode.x * scaleX;
+  const py = rect.top  + _memoryModalNode.y * scaleY;
+  const mw = 300, mh = 380;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+}
+
+function openMemoryModal(type, node) {
+  _memoryModalNode = node;
+  ['vault','notes'].forEach(t =>
+    document.getElementById(`memory-${t}-modal`).classList.remove('show')
+  );
+  const id = `memory-${type}-modal`;
+  _positionMemoryModal(id);
+  document.getElementById(id).classList.add('show');
+
+  if (type === 'vault') _refreshVaultList();
+  if (type === 'notes') { _notesShowList(); _refreshNotesList(); }
+}
+
+window.closeMemoryModal = function(type) {
+  document.getElementById(`memory-${type}-modal`).classList.remove('show');
+};
+
+// ── Vault ─────────────────────────────────────────────────────────────────────
+function _getVaultEntries() {
+  try { return JSON.parse(localStorage.getItem('BOSS_VAULT') || '[]'); } catch(_) { return []; }
+}
+function _setVaultEntries(v) {
+  try { localStorage.setItem('BOSS_VAULT', JSON.stringify(v)); } catch(_) {}
+}
+
+function _refreshVaultList(query = '') {
+  const list  = document.getElementById('vault-list');
+  const label = document.getElementById('vault-list-label');
+  const vault = _getVaultEntries();
+
+  let entries = vault;
+  if (query.trim()) {
+    const q = query.toLowerCase();
+    entries = vault.filter(m => (m.content || '').toLowerCase().includes(q));
+    label.textContent = `${entries.length} MATCH${entries.length !== 1 ? 'ES' : ''}`;
+  } else {
+    entries = vault.slice(0, 10);
+    label.textContent = `RECENT MEMORIES (${vault.length} total)`;
+  }
+
+  if (!entries.length) {
+    list.innerHTML = '<div class="vault-empty">Nothing here yet</div>';
+    return;
+  }
+
+  list.innerHTML = entries.map((m, i) => {
+    const realIdx = vault.indexOf(m);
+    const preview = (m.content || '').slice(0, 70);
+    return `<div class="vault-entry">
+      <span class="vault-entry-text">${preview}${preview.length === 70 ? '…' : ''}</span>
+      <button onclick="vaultDelete(${realIdx})" title="Forget">✕</button>
+    </div>`;
+  }).join('');
+}
+
+window.vaultSearch = function(q) { _refreshVaultList(q); };
+
+window.vaultAdd = function() {
+  const input = document.getElementById('vault-new-entry');
+  const text  = input.value.trim();
+  if (!text) return;
+  const vault = _getVaultEntries();
+  vault.unshift({ content: text, time: Date.now() });
+  _setVaultEntries(vault);
+  input.value = '';
+  _refreshVaultList();
+  clog(`🧬 MEMORY: stored — "${text.slice(0,50)}"`, 'log-mem');
+};
+
+window.vaultDelete = function(idx) {
+  const vault = _getVaultEntries();
+  vault.splice(idx, 1);
+  _setVaultEntries(vault);
+  _refreshVaultList(document.getElementById('vault-search').value);
+};
+
+// ── Notes ─────────────────────────────────────────────────────────────────────
+let _activeNoteId = null;
+
+function _getNotes() {
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); } catch(_) { return []; }
+}
+function _setNotes(n) {
+  try { localStorage.setItem(NOTES_KEY, JSON.stringify(n)); } catch(_) {}
+}
+
+function _notesShowList() {
+  document.getElementById('notes-list-view').style.display   = 'block';
+  document.getElementById('notes-detail-view').style.display = 'none';
+  _activeNoteId = null;
+}
+
+function _refreshNotesList() {
+  const list  = document.getElementById('notes-list');
+  const notes = _getNotes();
+  if (!notes.length) {
+    list.innerHTML = '<div class="notes-empty">No lists yet — create one above</div>';
+    return;
+  }
+  list.innerHTML = notes.map(n => {
+    const done  = n.items.filter(i => i.done).length;
+    const total = n.items.length;
+    return `<div class="note-card" onclick="notesOpen('${n.id}')">
+      <div class="note-card-title">
+        <span>${n.title}</span>
+        <button onclick="event.stopPropagation();notesDelete('${n.id}')" title="Delete">✕</button>
+      </div>
+      <div class="note-card-meta">${total ? `${done}/${total} done` : 'empty'}</div>
+    </div>`;
+  }).join('');
+}
+
+window.notesCreate = function() {
+  const input = document.getElementById('notes-new-title');
+  const title = input.value.trim();
+  if (!title) return;
+  const notes = _getNotes();
+  const id = 'note_' + Date.now();
+  notes.unshift({ id, title, items: [], createdAt: Date.now(), updatedAt: Date.now() });
+  _setNotes(notes);
+  input.value = '';
+  _refreshNotesList();
+  notesOpen(id);
+};
+
+window.notesDelete = function(id) {
+  let notes = _getNotes();
+  notes = notes.filter(n => n.id !== id);
+  _setNotes(notes);
+  _refreshNotesList();
+};
+
+window.notesOpen = function(id) {
+  _activeNoteId = id;
+  const notes = _getNotes();
+  const note  = notes.find(n => n.id === id);
+  if (!note) return;
+
+  document.getElementById('notes-list-view').style.display   = 'none';
+  document.getElementById('notes-detail-view').style.display = 'block';
+  document.getElementById('notes-detail-title').textContent  = note.title;
+  _refreshNoteItems();
+};
+
+window.notesBackToList = function() {
+  _notesShowList();
+  _refreshNotesList();
+};
+
+function _refreshNoteItems() {
+  const notes = _getNotes();
+  const note  = notes.find(n => n.id === _activeNoteId);
+  const list  = document.getElementById('notes-items');
+  if (!note || !note.items.length) {
+    list.innerHTML = '<div class="notes-empty">No items yet</div>';
+    return;
+  }
+  list.innerHTML = note.items.map((item, i) => `
+    <div class="note-item ${item.done ? 'done' : ''}">
+      <input type="checkbox" ${item.done ? 'checked' : ''} onchange="notesToggleItem(${i})">
+      <span class="note-item-text">${item.text}</span>
+      <button onclick="notesDeleteItem(${i})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+window.notesAddItem = function() {
+  const input = document.getElementById('notes-new-item');
+  const text  = input.value.trim();
+  if (!text || !_activeNoteId) return;
+  const notes = _getNotes();
+  const note  = notes.find(n => n.id === _activeNoteId);
+  if (!note) return;
+  note.items.push({ text, done: false });
+  note.updatedAt = Date.now();
+  _setNotes(notes);
+  input.value = '';
+  _refreshNoteItems();
+};
+
+window.notesToggleItem = function(i) {
+  const notes = _getNotes();
+  const note  = notes.find(n => n.id === _activeNoteId);
+  if (!note) return;
+  note.items[i].done = !note.items[i].done;
+  note.updatedAt = Date.now();
+  _setNotes(notes);
+  _refreshNoteItems();
+};
+
+window.notesDeleteItem = function(i) {
+  const notes = _getNotes();
+  const note  = notes.find(n => n.id === _activeNoteId);
+  if (!note) return;
+  note.items.splice(i, 1);
+  note.updatedAt = Date.now();
+  _setNotes(notes);
+  _refreshNoteItems();
 };
 
 // ── Calculator modal ─────────────────────────────────────────────────────────
@@ -2265,6 +2662,7 @@ window.openMediaPlayer = openMediaPlayer;
 window.openImageModal  = openImageModal;
 window.openVideoModal  = openVideoModal;
 window.openCalcModal   = openCalcModal;
+window.openMemoryModal = openMemoryModal;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -3551,12 +3949,15 @@ async function firePreset(preset) {
     return;
   }
 
-  // Modal-opening presets — CHRONOS Timer/Stopwatch/Alarms + CORTEX Calculator
+  // Modal-opening presets — CHRONOS/CORTEX/MEMORY
   if (preset._openModal) {
     dismissOrbital();
     if (preset._openModal === 'calculator') {
       const cortexNode = nodes.find(n => n.name === 'CORTEX');
       if (cortexNode) openCalcModal(cortexNode);
+    } else if (preset._openModal === 'vault' || preset._openModal === 'notes') {
+      const memoryNode = nodes.find(n => n.name === 'MEMORY');
+      if (memoryNode) openMemoryModal(preset._openModal, memoryNode);
     } else {
       const chronosNode = nodes.find(n => n.name === 'CHRONOS');
       if (chronosNode) openChronosModal(preset._openModal, chronosNode);
