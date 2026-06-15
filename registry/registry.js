@@ -313,6 +313,19 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['battery', 'power'],
   },
+  {
+    id:         'core_network',
+    label:      'Network',
+    icon:       '📡',
+    nodes:      ['CORE'],
+    intent:     'network',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['network', 'ip', 'connectivity'],
+    _openModal: 'network',
+  },
 
   // ── MEMORY presets ─────────────────────────────────────────────────────────
   {
@@ -379,6 +392,19 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['calculation', 'convert', 'math'],
     _openModal: 'calculator',
+  },
+  {
+    id:         'cortex_texttools',
+    label:      'Text Tools',
+    icon:       '📋',
+    nodes:      ['CORTEX'],
+    intent:     'text tools',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['summarise', 'translate', 'rewrite'],
+    _openModal: 'texttools',
   },
 
   // ── Compound presets (multi-node) ──────────────────────────────────────────

@@ -313,6 +313,138 @@ canvas {
   text-transform: uppercase;
 }
 
+/* ── TEXT TOOLS MODAL ── */
+#texttools-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #cc00ff66;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 300px;
+  box-shadow: 0 0 24px #cc00ff22;
+  font-family: 'Share Tech Mono', monospace;
+  max-height: 460px;
+  overflow-y: auto;
+}
+#texttools-modal.show { display: block; }
+.tt-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #cc00ff; opacity: 0.6; margin-bottom: 10px;
+}
+.tt-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.tt-tab {
+  flex: 1; background: none;
+  border: 1px solid #cc00ff33; border-radius: 6px;
+  color: #cc00ff; font-family: inherit;
+  font-size: 10px; padding: 6px 0; cursor: pointer;
+  opacity: 0.6; transition: all 0.15s;
+}
+.tt-tab.active { opacity: 1; border-color: #cc00ffaa; background: #cc00ff11; }
+.tt-tab:hover { opacity: 1; }
+#tt-input {
+  width: 100%; box-sizing: border-box;
+  background: #030508;
+  border: 1px solid #cc00ff44;
+  border-radius: 6px;
+  color: #cc00ff;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 8px 10px;
+  outline: none;
+  margin-bottom: 8px;
+  min-height: 80px;
+  resize: vertical;
+}
+#tt-input:focus { border-color: #cc00ffaa; }
+#tt-input::placeholder { color: #cc00ff33; }
+#tt-lang-row { display: none; margin-bottom: 8px; }
+#tt-style-row { display: none; margin-bottom: 8px; }
+.tt-select {
+  width: 100%; box-sizing: border-box;
+  background: #030508;
+  border: 1px solid #cc00ff44;
+  border-radius: 6px;
+  color: #cc00ff;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 7px 10px;
+}
+.tt-run-btn {
+  width: 100%; background: #cc00ff11;
+  border: 1px solid #cc00ffaa; border-radius: 6px;
+  color: #cc00ff; font-family: inherit;
+  font-size: 11px; padding: 8px 0; cursor: pointer;
+  margin-bottom: 8px;
+}
+.tt-run-btn:hover { background: #cc00ff22; }
+#tt-result {
+  background: #030508;
+  border: 1px solid #cc00ff22;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 11px; color: #cc00ff;
+  line-height: 1.6; min-height: 40px;
+  display: none; margin-bottom: 8px;
+  word-break: break-word;
+}
+#tt-result.show { display: block; }
+.tt-close-btn {
+  width: 100%; background: none;
+  border: 1px solid #cc00ff22; border-radius: 6px;
+  color: #cc00ff44; font-family: inherit;
+  font-size: 9px; padding: 6px 0; cursor: pointer;
+}
+.tt-close-btn:hover { color: #cc00ff; border-color: #cc00ff44; }
+
+/* ── NETWORK MODAL ── */
+#network-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #00ffcc66;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 280px;
+  box-shadow: 0 0 24px #00ffcc22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#network-modal.show { display: block; }
+.net-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #00ffcc; opacity: 0.6; margin-bottom: 10px;
+}
+.net-row {
+  display: flex; justify-content: space-between;
+  padding: 5px 0; border-bottom: 1px solid #00ffcc11;
+  font-size: 10px; color: #00ffcc;
+}
+.net-row span:first-child { opacity: 0.5; }
+.net-row span:last-child { opacity: 0.9; text-align: right; }
+.net-section-label {
+  font-size: 9px; color: #00ffcc;
+  opacity: 0.4; letter-spacing: 0.1em;
+  margin: 10px 0 4px; text-transform: uppercase;
+}
+.net-btn {
+  width: 100%; background: none;
+  border: 1px solid #00ffcc55; border-radius: 6px;
+  color: #00ffcc; font-family: inherit;
+  font-size: 10px; padding: 7px 0; cursor: pointer;
+  margin-top: 8px;
+}
+.net-btn:hover { background: #00ffcc11; }
+.net-close-btn {
+  width: 100%; background: none;
+  border: 1px solid #00ffcc22; border-radius: 6px;
+  color: #00ffcc44; font-family: inherit;
+  font-size: 9px; padding: 6px 0; cursor: pointer;
+  margin-top: 8px;
+}
+.net-close-btn:hover { color: #00ffcc; border-color: #00ffcc44; }
+
 /* ── PROFILE MODAL ── */
 #profile-modal {
   display: none;
@@ -1104,6 +1236,60 @@ textarea.profile-input {
   <div id="alarm-list"></div>
 </div>
 
+<!-- TEXT TOOLS MODAL — appears near CORTEX node -->
+<div id="texttools-modal">
+  <div class="tt-title">CORTEX · TEXT TOOLS</div>
+  <div class="tt-tabs">
+    <button class="tt-tab active" id="tt-tab-summarise" onclick="ttSetMode('summarise')">📋 Summarise</button>
+    <button class="tt-tab" id="tt-tab-translate" onclick="ttSetMode('translate')">🌐 Translate</button>
+    <button class="tt-tab" id="tt-tab-rewrite" onclick="ttSetMode('rewrite')">✏️ Rewrite</button>
+  </div>
+  <textarea id="tt-input" placeholder="Paste or type text here…"></textarea>
+
+  <div id="tt-lang-row">
+    <select id="tt-lang" class="tt-select">
+      <option value="Spanish">Spanish</option>
+      <option value="French">French</option>
+      <option value="German">German</option>
+      <option value="Italian">Italian</option>
+      <option value="Portuguese">Portuguese</option>
+      <option value="Japanese">Japanese</option>
+      <option value="Mandarin Chinese">Mandarin Chinese</option>
+      <option value="Korean">Korean</option>
+      <option value="Arabic">Arabic</option>
+      <option value="Hindi">Hindi</option>
+      <option value="Russian">Russian</option>
+      <option value="Dutch">Dutch</option>
+    </select>
+  </div>
+
+  <div id="tt-style-row">
+    <select id="tt-style" class="tt-select">
+      <option value="formal">Formal</option>
+      <option value="casual">Casual</option>
+      <option value="concise">Concise</option>
+      <option value="persuasive">Persuasive</option>
+      <option value="friendly">Friendly</option>
+    </select>
+  </div>
+
+  <button class="tt-run-btn" id="tt-run-btn" onclick="ttRun()">📋 Summarise</button>
+  <div id="tt-result"></div>
+  <button class="tt-close-btn" onclick="closeTextToolsModal()">✕ close</button>
+</div>
+
+<!-- NETWORK MODAL — appears near CORE node -->
+<div id="network-modal">
+  <div class="net-title">CORE · NETWORK</div>
+  <div id="net-info"></div>
+  <div class="net-section-label">LOCAL NETWORK</div>
+  <div id="net-local-info">
+    <div class="net-row"><span>Local IP</span><span id="net-local-ip">—</span></div>
+  </div>
+  <button class="net-btn" onclick="netSpeedTest()" id="net-speed-btn">⚡ Run speed test</button>
+  <button class="net-close-btn" onclick="closeNetworkModal()">✕ close</button>
+</div>
+
 <!-- PROFILE MODAL — appears near SOMA node -->
 <div id="profile-modal">
   <div class="profile-title">SOMA · PROFILE</div>
@@ -1612,6 +1798,197 @@ window.addAlarmFromModal = function() {
 window.removeAlarm = function(i) {
   ChronosAction.removeAlarmByIndex(i);
   _refreshAlarmList();
+};
+
+// ── Text Tools modal ─────────────────────────────────────────────────────────
+let _ttNode = null;
+let _ttMode = 'summarise';
+
+function _positionTextToolsModal() {
+  const modal = document.getElementById('texttools-modal');
+  if (!_ttNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + _ttNode.x * scaleX;
+  const py = rect.top  + _ttNode.y * scaleY;
+  const mw = 310, mh = 420;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+}
+
+function openTextToolsModal(node) {
+  _ttNode = node;
+  _positionTextToolsModal();
+  document.getElementById('texttools-modal').classList.add('show');
+  ttSetMode('summarise');
+}
+
+window.closeTextToolsModal = function() {
+  document.getElementById('texttools-modal').classList.remove('show');
+};
+
+window.ttSetMode = function(mode) {
+  _ttMode = mode;
+  ['summarise','translate','rewrite'].forEach(m =>
+    document.getElementById(`tt-tab-${m}`).classList.toggle('active', m === mode)
+  );
+  document.getElementById('tt-lang-row').style.display  = mode === 'translate' ? 'block' : 'none';
+  document.getElementById('tt-style-row').style.display = mode === 'rewrite'   ? 'block' : 'none';
+
+  const btn = document.getElementById('tt-run-btn');
+  const labels = { summarise: '📋 Summarise', translate: '🌐 Translate', rewrite: '✏️ Rewrite' };
+  btn.textContent = labels[mode];
+
+  document.getElementById('tt-result').classList.remove('show');
+};
+
+window.ttRun = async function() {
+  const text = document.getElementById('tt-input').value.trim();
+  if (!text) return;
+
+  const resultEl = document.getElementById('tt-result');
+  resultEl.textContent = '⟳ thinking…';
+  resultEl.classList.add('show');
+
+  if (!enginePool || !enginePool.length || !enginePool.some(n => n.tier === 1 && n.apiKey)) {
+    resultEl.textContent = '⚠ Engine not configured — tap cortex pill → Engine Keys';
+    return;
+  }
+
+  let systemPrompt;
+  if (_ttMode === 'summarise') {
+    systemPrompt = 'Summarise the following text concisely, capturing the key points. Output only the summary.';
+  } else if (_ttMode === 'translate') {
+    const lang = document.getElementById('tt-lang').value;
+    systemPrompt = `Translate the following text into ${lang}. Output only the translation, no explanation.`;
+  } else {
+    const style = document.getElementById('tt-style').value;
+    systemPrompt = `Rewrite the following text in a ${style} tone. Preserve the meaning. Output only the rewritten text.`;
+  }
+
+  // Personalise with profile preferences if relevant
+  if (window.getUserProfile) {
+    const profile = window.getUserProfile();
+    if (profile.preferences) {
+      systemPrompt += ` User preferences: ${profile.preferences}.`;
+    }
+  }
+
+  try {
+    const result = await deliberate(text, enginePool, { systemPrompt });
+    resultEl.textContent = result.output || '⚠ No response from engine';
+  } catch(e) {
+    resultEl.textContent = `⚠ Error: ${e.message}`;
+  }
+};
+
+// ── Network modal ─────────────────────────────────────────────────────────────
+let _netNode = null;
+
+function _positionNetworkModal() {
+  const modal = document.getElementById('network-modal');
+  if (!_netNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + _netNode.x * scaleX;
+  const py = rect.top  + _netNode.y * scaleY;
+  const mw = 280, mh = 280;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+}
+
+function openNetworkModal(node) {
+  _netNode = node;
+  _positionNetworkModal();
+  document.getElementById('network-modal').classList.add('show');
+  _refreshNetworkInfo();
+  _getLocalIP();
+}
+
+window.closeNetworkModal = function() {
+  document.getElementById('network-modal').classList.remove('show');
+};
+
+function _refreshNetworkInfo() {
+  const info  = document.getElementById('net-info');
+  const online = navigator.onLine;
+  const conn   = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
+  let rows = [];
+  rows.push(`<div class="net-row"><span>Status</span><span>${online ? '🟢 Online' : '🔴 Offline'}</span></div>`);
+  if (conn) {
+    if (conn.effectiveType) rows.push(`<div class="net-row"><span>Type</span><span>${conn.effectiveType}</span></div>`);
+    if (conn.downlink)      rows.push(`<div class="net-row"><span>Downlink</span><span>${conn.downlink} Mbps</span></div>`);
+    if (conn.rtt)           rows.push(`<div class="net-row"><span>RTT</span><span>${conn.rtt} ms</span></div>`);
+    if (conn.saveData)      rows.push(`<div class="net-row"><span>Data saver</span><span>enabled</span></div>`);
+  }
+
+  const cortexUrl = pcUrl();
+  rows.push(`<div class="net-row"><span>Cortex</span><span>${cortexUrl ? '🟢 ' + cortexUrl.replace(/^https?:\/\//,'') : '⚪ offline'}</span></div>`);
+
+  info.innerHTML = rows.join('');
+}
+
+// Local IP via WebRTC STUN trick — works without any server
+function _getLocalIP() {
+  const ipEl = document.getElementById('net-local-ip');
+  ipEl.textContent = '⟳ detecting…';
+  try {
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    pc.createDataChannel('');
+    pc.createOffer().then(offer => pc.setLocalDescription(offer));
+    pc.onicecandidate = (e) => {
+      if (!e.candidate) return;
+      const match = e.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+      if (match && !match[1].startsWith('0.')) {
+        ipEl.textContent = match[1];
+        pc.close();
+      }
+    };
+    setTimeout(() => {
+      if (ipEl.textContent === '⟳ detecting…') ipEl.textContent = 'unavailable';
+    }, 2000);
+  } catch(_) {
+    ipEl.textContent = 'unavailable';
+  }
+}
+
+// Simple speed test — timed fetch of a known resource
+window.netSpeedTest = async function() {
+  const btn = document.getElementById('net-speed-btn');
+  btn.textContent = '⟳ testing…';
+  btn.disabled = true;
+
+  try {
+    const testUrl = 'https://nztdev.github.io/boss-kernel/core/index.html';
+    const sizeKB  = 140; // approx file size
+
+    const start = performance.now();
+    await fetch(testUrl, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+    const elapsed = (performance.now() - start) / 1000; // seconds
+
+    const mbps = ((sizeKB * 8) / 1024 / elapsed).toFixed(2);
+    btn.textContent = `⚡ ~${mbps} Mbps (${(elapsed*1000).toFixed(0)}ms)`;
+  } catch(e) {
+    btn.textContent = '⚠ Test failed — try again';
+  }
+
+  setTimeout(() => {
+    btn.textContent = '⚡ Run speed test';
+    btn.disabled = false;
+  }, 4000);
 };
 
 // ── Profile modal ─────────────────────────────────────────────────────────────
@@ -2811,6 +3188,8 @@ window.openCalcModal   = openCalcModal;
 window.openMemoryModal = openMemoryModal;
 window.openProfileModal = openProfileModal;
 window.getUserProfile   = getUserProfile;
+window.openTextToolsModal = openTextToolsModal;
+window.openNetworkModal   = openNetworkModal;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -4103,12 +4482,18 @@ async function firePreset(preset) {
     if (preset._openModal === 'calculator') {
       const cortexNode = nodes.find(n => n.name === 'CORTEX');
       if (cortexNode) openCalcModal(cortexNode);
+    } else if (preset._openModal === 'texttools') {
+      const cortexNode = nodes.find(n => n.name === 'CORTEX');
+      if (cortexNode) openTextToolsModal(cortexNode);
     } else if (preset._openModal === 'vault' || preset._openModal === 'notes') {
       const memoryNode = nodes.find(n => n.name === 'MEMORY');
       if (memoryNode) openMemoryModal(preset._openModal, memoryNode);
     } else if (preset._openModal === 'profile') {
       const somaNode = nodes.find(n => n.name === 'SOMA');
       if (somaNode) openProfileModal(somaNode);
+    } else if (preset._openModal === 'network') {
+      const coreNode = nodes.find(n => n.name === 'CORE');
+      if (coreNode) openNetworkModal(coreNode);
     } else {
       const chronosNode = nodes.find(n => n.name === 'CHRONOS');
       if (chronosNode) openChronosModal(preset._openModal, chronosNode);
