@@ -445,6 +445,120 @@ canvas {
 }
 .net-close-btn:hover { color: #00ffcc; border-color: #00ffcc44; }
 
+/* ── FILES MODAL ── */
+#files-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #ffcc0066;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 290px;
+  box-shadow: 0 0 24px #ffcc0022;
+  font-family: 'Share Tech Mono', monospace;
+  max-height: 400px;
+  overflow-y: auto;
+}
+#files-modal.show { display: block; }
+.files-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #ffcc00; opacity: 0.6; margin-bottom: 10px;
+}
+.files-tab-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.files-tab {
+  flex: 1; background: none;
+  border: 1px solid #ffcc0033; border-radius: 6px;
+  color: #ffcc00; font-family: inherit;
+  font-size: 9px; padding: 5px 0; cursor: pointer; opacity: 0.6;
+}
+.files-tab.active { opacity: 1; border-color: #ffcc00aa; background: #ffcc0011; }
+.files-tab:hover { opacity: 1; }
+.files-input {
+  width: 100%; box-sizing: border-box;
+  background: #030508;
+  border: 1px solid #ffcc0044; border-radius: 6px;
+  color: #ffcc00; font-family: inherit;
+  font-size: 11px; padding: 8px 10px; outline: none; margin-bottom: 8px;
+}
+.files-input:focus { border-color: #ffcc00aa; }
+.files-input::placeholder { color: #ffcc0033; }
+.files-btn {
+  width: 100%; background: none;
+  border: 1px solid #ffcc0066; border-radius: 6px;
+  color: #ffcc00; font-family: inherit;
+  font-size: 10px; padding: 7px 0; cursor: pointer; margin-bottom: 6px;
+}
+.files-btn:hover { background: #ffcc0011; }
+.files-btn.primary { border-color: #ffcc00aa; background: #ffcc0011; }
+.files-hist-item {
+  padding: 5px 0; border-bottom: 1px solid #ffcc0011;
+  font-size: 10px; color: #ffcc00; opacity: 0.8;
+  cursor: pointer; display: flex; justify-content: space-between;
+}
+.files-hist-item:hover { opacity: 1; }
+.files-hist-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-hist-age { font-size: 9px; opacity: 0.5; flex-shrink: 0; margin-left: 8px; }
+.files-empty { font-size: 10px; opacity: 0.4; color: #ffcc00; text-align: center; padding: 12px 0; }
+.files-close-btn {
+  width: 100%; background: none;
+  border: 1px solid #ffcc0022; border-radius: 6px;
+  color: #ffcc0044; font-family: inherit;
+  font-size: 9px; padding: 6px 0; cursor: pointer; margin-top: 6px;
+}
+.files-close-btn:hover { color: #ffcc00; border-color: #ffcc0044; }
+
+/* ── FILE VIEWER PANEL ── */
+#file-viewer {
+  display: none;
+  position: fixed;
+  z-index: 44;
+  background: rgba(3,8,5,0.98);
+  border: 1px solid #ffcc0044;
+  border-radius: 12px;
+  overflow: hidden;
+  width: 360px;
+  max-height: 480px;
+}
+#file-viewer.show { display: flex; flex-direction: column; }
+#file-viewer.fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  max-height: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  border: none !important;
+  z-index: 200 !important;
+}
+#fv-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; background: rgba(0,0,0,0.4);
+  border-bottom: 1px solid #ffcc0022; flex-shrink: 0;
+}
+#fv-filename {
+  font-size: 10px; color: #ffcc00; opacity: 0.8;
+  font-family: 'Share Tech Mono', monospace;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 240px;
+}
+.fv-btn {
+  background: none; border: none; cursor: pointer;
+  color: #ffcc00; font-size: 14px; opacity: 0.6;
+  padding: 0 4px;
+}
+.fv-btn:hover { opacity: 1; }
+#fv-body { flex: 1; overflow: auto; position: relative; }
+#fv-image { width: 100%; height: 100%; object-fit: contain; display: block; }
+#fv-video { width: 100%; height: 100%; display: block; }
+#fv-iframe { width: 100%; height: 100%; border: none; display: block; min-height: 300px; }
+#fv-text {
+  padding: 12px; font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; color: #ffcc00; opacity: 0.9;
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 360px; overflow-y: auto;
+}
+
 /* ── PROFILE MODAL ── */
 #profile-modal {
   display: none;
@@ -1239,10 +1353,12 @@ textarea.profile-input {
 <!-- TEXT TOOLS MODAL — appears near CORTEX node -->
 <div id="texttools-modal">
   <div class="tt-title">CORTEX · TEXT TOOLS</div>
-  <div class="tt-tabs">
-    <button class="tt-tab active" id="tt-tab-summarise" onclick="ttSetMode('summarise')">📋 Summarise</button>
-    <button class="tt-tab" id="tt-tab-translate" onclick="ttSetMode('translate')">🌐 Translate</button>
+  <div class="tt-tabs" style="flex-wrap:wrap">
+    <button class="tt-tab active" id="tt-tab-summarise" onclick="ttSetMode('summarise')">📋 Sum</button>
+    <button class="tt-tab" id="tt-tab-translate" onclick="ttSetMode('translate')">🌐 Trans</button>
     <button class="tt-tab" id="tt-tab-rewrite" onclick="ttSetMode('rewrite')">✏️ Rewrite</button>
+    <button class="tt-tab" id="tt-tab-analyse" onclick="ttSetMode('analyse')">🔬 Analyse</button>
+    <button class="tt-tab" id="tt-tab-explain" onclick="ttSetMode('explain')">💡 Explain</button>
   </div>
   <textarea id="tt-input" placeholder="Paste or type text here…"></textarea>
 
@@ -1288,6 +1404,61 @@ textarea.profile-input {
   </div>
   <button class="net-btn" onclick="netSpeedTest()" id="net-speed-btn">⚡ Run speed test</button>
   <button class="net-close-btn" onclick="closeNetworkModal()">✕ close</button>
+</div>
+
+<!-- FILES MODAL — appears near FILES node -->
+<div id="files-modal">
+  <div class="files-title">FILES · ACCESS</div>
+  <div class="files-tab-row">
+    <button class="files-tab active" id="ft-recent" onclick="filesSetTab('recent')">🗂 Recent</button>
+    <button class="files-tab" id="ft-open" onclick="filesSetTab('open')">📂 Open</button>
+    <button class="files-tab" id="ft-url" onclick="filesSetTab('url')">🔗 URL</button>
+  </div>
+
+  <!-- Recent tab -->
+  <div id="files-tab-recent">
+    <div id="files-hist-list"><div class="files-empty">No recent files</div></div>
+  </div>
+
+  <!-- Open tab -->
+  <div id="files-tab-open" style="display:none">
+    <button class="files-btn primary" onclick="filesPickFile()">📂 Pick file from device</button>
+    <div style="font-size:9px;color:#ffcc00;opacity:0.4;text-align:center;margin-bottom:8px">
+      Uses browser File System API · Works offline
+    </div>
+    <div id="files-cortex-section" style="display:none">
+      <div class="files-empty" style="padding:4px 0">— or via Cortex —</div>
+      <button class="files-btn" onclick="filesRecentDownloads()">⬇ Recent downloads</button>
+    </div>
+  </div>
+
+  <!-- URL tab -->
+  <div id="files-tab-url" style="display:none">
+    <input id="files-url-input" class="files-input" type="url"
+      placeholder="https://example.com/document.pdf"
+      onkeydown="if(event.key==='Enter')filesOpenUrl()">
+    <button class="files-btn primary" onclick="filesOpenUrl()">🔗 Open URL</button>
+  </div>
+
+  <button class="files-close-btn" onclick="closeFilesModal()">✕ close</button>
+</div>
+
+<!-- FILE VIEWER PANEL -->
+<div id="file-viewer">
+  <div id="fv-header">
+    <span id="fv-filename">file</span>
+    <div>
+      <button class="fv-btn" onclick="fvToggleFullscreen()" title="Fullscreen">⤢</button>
+      <button class="fv-btn" onclick="closeFileViewer()" title="Close">✕</button>
+    </div>
+  </div>
+  <div id="fv-body">
+    <img id="fv-image" style="display:none" alt="file viewer">
+    <video id="fv-video" controls style="display:none"></video>
+    <iframe id="fv-iframe" style="display:none" allowfullscreen
+      sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+    <div id="fv-text" style="display:none"></div>
+  </div>
 </div>
 
 <!-- PROFILE MODAL — appears near SOMA node -->
@@ -1578,6 +1749,7 @@ import { MediaAction }                                   from '../actions/media.
 import { SomaAction, restoreTheme }                      from '../actions/soma.js';
 import { MemoryAction }                                  from '../actions/memory.js';
 import { CoreAction }                                    from '../actions/core.js';
+import { FilesAction }                                   from '../actions/files.js';
 import { CortexAction }                                  from '../actions/cortex.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
@@ -1835,16 +2007,27 @@ window.closeTextToolsModal = function() {
 
 window.ttSetMode = function(mode) {
   _ttMode = mode;
-  ['summarise','translate','rewrite'].forEach(m =>
-    document.getElementById(`tt-tab-${m}`).classList.toggle('active', m === mode)
+  ['summarise','translate','rewrite','analyse','explain'].forEach(m =>
+    document.getElementById(`tt-tab-${m}`)?.classList.toggle('active', m === mode)
   );
   document.getElementById('tt-lang-row').style.display  = mode === 'translate' ? 'block' : 'none';
   document.getElementById('tt-style-row').style.display = mode === 'rewrite'   ? 'block' : 'none';
 
-  const btn = document.getElementById('tt-run-btn');
-  const labels = { summarise: '📋 Summarise', translate: '🌐 Translate', rewrite: '✏️ Rewrite' };
-  btn.textContent = labels[mode];
+  const placeholders = {
+    summarise: 'Paste or type text to summarise…',
+    translate: 'Paste or type text to translate…',
+    rewrite:   'Paste or type text to rewrite…',
+    analyse:   'Paste or type text, data, or a topic to analyse…',
+    explain:   'Paste or type a concept, text, or question to explain…',
+  };
+  document.getElementById('tt-input').placeholder = placeholders[mode] || 'Paste or type text…';
 
+  const btn = document.getElementById('tt-run-btn');
+  const labels = {
+    summarise: '📋 Summarise', translate: '🌐 Translate',
+    rewrite: '✏️ Rewrite', analyse: '🔬 Analyse', explain: '💡 Explain',
+  };
+  btn.textContent = labels[mode] || 'Run';
   document.getElementById('tt-result').classList.remove('show');
 };
 
@@ -1867,9 +2050,13 @@ window.ttRun = async function() {
   } else if (_ttMode === 'translate') {
     const lang = document.getElementById('tt-lang').value;
     systemPrompt = `Translate the following text into ${lang}. Output only the translation, no explanation.`;
-  } else {
+  } else if (_ttMode === 'rewrite') {
     const style = document.getElementById('tt-style').value;
     systemPrompt = `Rewrite the following text in a ${style} tone. Preserve the meaning. Output only the rewritten text.`;
+  } else if (_ttMode === 'analyse') {
+    systemPrompt = 'Analyse the following clearly and concisely. Identify key components, patterns, and implications. Be structured but brief.';
+  } else if (_ttMode === 'explain') {
+    systemPrompt = 'Explain the following in plain language. Be accurate, concise, and accessible. Avoid unnecessary jargon.';
   }
 
   // Personalise with profile preferences if relevant
@@ -1990,6 +2177,192 @@ window.netSpeedTest = async function() {
     btn.disabled = false;
   }, 4000);
 };
+
+// ── FILES modal and viewer ───────────────────────────────────────────────────
+let _filesNode = null;
+let _filesTab  = 'recent';
+
+function _positionFilesModal() {
+  const modal = document.getElementById('files-modal');
+  if (!_filesNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + _filesNode.x * scaleX;
+  const py = rect.top  + _filesNode.y * scaleY;
+  const mw = 290, mh = 320;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+}
+
+function openFilesModal(node, tab = 'recent') {
+  _filesNode = node;
+  _positionFilesModal();
+  document.getElementById('files-modal').classList.add('show');
+  filesSetTab(tab);
+  // Show Cortex section if online
+  const cortexSection = document.getElementById('files-cortex-section');
+  if (cortexSection) cortexSection.style.display = pcUrl() ? 'block' : 'none';
+}
+
+window.closeFilesModal = function() {
+  document.getElementById('files-modal').classList.remove('show');
+};
+
+window.filesSetTab = function(tab) {
+  _filesTab = tab;
+  ['recent','open','url'].forEach(t => {
+    document.getElementById(`ft-${t}`)?.classList.toggle('active', t === tab);
+    document.getElementById(`files-tab-${t}`).style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'recent') _refreshFilesHistory();
+};
+
+function _refreshFilesHistory() {
+  const list = document.getElementById('files-hist-list');
+  if (!window.FilesAction) { list.innerHTML = '<div class="files-empty">Loading…</div>'; return; }
+  const hist = FilesAction.getHistory();
+  if (!hist.length) { list.innerHTML = '<div class="files-empty">No recent files</div>'; return; }
+  list.innerHTML = hist.slice(0, 10).map(h => {
+    const age = Math.round((Date.now() - h.openedAt) / 60000);
+    const ageStr = age < 60 ? `${age}m ago` : `${Math.round(age/60)}h ago`;
+    return `<div class="files-hist-item" onclick="filesReopenHistEntry('${encodeURIComponent(h.url)}','${encodeURIComponent(h.name)}','${h.mime}')">
+      <span class="files-hist-name">${h.name}</span>
+      <span class="files-hist-age">${ageStr}</span>
+    </div>`;
+  }).join('');
+}
+
+window.filesReopenHistEntry = function(urlEnc, nameEnc, mime) {
+  const url  = decodeURIComponent(urlEnc);
+  const name = decodeURIComponent(nameEnc);
+  const vt   = FilesAction.viewerTypeFromMime(mime);
+  openFileViewer({ url, name, mime, viewerType: vt });
+  closeFilesModal();
+};
+
+window.filesPickFile = async function() {
+  if (window.FilesAction) {
+    await FilesAction.handle('pick file', clog, Nervous, EVENT, pcUrl(), openFileViewer);
+    closeFilesModal();
+  }
+};
+
+window.filesOpenUrl = function() {
+  const url = document.getElementById('files-url-input').value.trim();
+  if (!url) return;
+  if (window.FilesAction) {
+    FilesAction.handle(url, clog, Nervous, EVENT, pcUrl(), openFileViewer);
+    closeFilesModal();
+  }
+};
+
+window.filesRecentDownloads = async function() {
+  if (window.FilesAction) {
+    await FilesAction.handle('download', clog, Nervous, EVENT, pcUrl(), openFileViewer);
+  }
+};
+
+// ── File viewer panel ─────────────────────────────────────────────────────────
+function openFileViewer({ url, name, mime, viewerType }) {
+  const panel = document.getElementById('file-viewer');
+  document.getElementById('fv-filename').textContent = name;
+
+  // Hide all content elements
+  ['fv-image','fv-video','fv-iframe','fv-text'].forEach(id =>
+    document.getElementById(id).style.display = 'none'
+  );
+
+  if (viewerType === 'image') {
+    const img = document.getElementById('fv-image');
+    img.src   = url;
+    img.style.display = 'block';
+    panel.style.height = '320px';
+  } else if (viewerType === 'video') {
+    const vid = document.getElementById('fv-video');
+    vid.src   = url;
+    vid.style.display = 'block';
+    panel.style.height = '320px';
+  } else if (viewerType === 'audio') {
+    // Delegate to MEDIA player
+    if (window.MediaAction) {
+      MediaAction.handle(`use stream url ${url}`, clog, Nervous, EVENT, pcUrl());
+      setTimeout(() => MediaAction.handle('play music', clog, Nervous, EVENT, pcUrl()), 100);
+    }
+    return;
+  } else if (viewerType === 'pdf' || viewerType === 'external') {
+    const iframe = document.getElementById('fv-iframe');
+    iframe.src   = url;
+    iframe.style.display = 'block';
+    panel.style.height = '420px';
+  } else if (viewerType === 'text') {
+    fetch(url)
+      .then(r => r.text())
+      .then(text => {
+        const el = document.getElementById('fv-text');
+        el.textContent = text.slice(0, 10000) + (text.length > 10000 ? '\n…[truncated]' : '');
+        el.style.display = 'block';
+      })
+      .catch(() => {
+        document.getElementById('fv-text').textContent = '⚠ Could not load file content';
+        document.getElementById('fv-text').style.display = 'block';
+      });
+    panel.style.height = '380px';
+  }
+
+  // Position viewer near FILES node
+  const filesNode = nodes.find(n => n.name === 'FILES');
+  if (filesNode) {
+    const canvas = document.querySelector('canvas');
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = rect.width  / canvas.width;
+    const scaleY = rect.height / canvas.height;
+    const px = rect.left + filesNode.x * scaleX;
+    const py = rect.top  + filesNode.y * scaleY;
+    let left = px - 180;
+    let top  = py - 460;
+    left = Math.max(10, Math.min(left, window.innerWidth  - 380));
+    top  = Math.max(10, Math.min(top,  window.innerHeight - 460));
+    panel.style.left = left + 'px';
+    panel.style.top  = top  + 'px';
+  } else {
+    panel.style.left = '50%';
+    panel.style.top  = '50%';
+    panel.style.transform = 'translate(-50%, -50%)';
+  }
+
+  panel.classList.add('show');
+
+  if (window.FilesAction && url && name) {
+    FilesAction.addToHistory({ url, name, mime: mime || '', source: 'viewer' });
+  }
+}
+
+window.closeFileViewer = function() {
+  const panel = document.getElementById('file-viewer');
+  panel.classList.remove('show', 'fullscreen');
+  document.getElementById('fv-video').pause?.();
+  document.getElementById('fv-video').src = '';
+  document.getElementById('fv-iframe').src = '';
+};
+
+window.fvToggleFullscreen = function() {
+  const panel = document.getElementById('file-viewer');
+  if (panel.classList.contains('fullscreen')) {
+    panel.classList.remove('fullscreen');
+    if (document.exitFullscreen) document.exitFullscreen();
+  } else {
+    panel.classList.add('fullscreen');
+    if (panel.requestFullscreen) panel.requestFullscreen();
+  }
+};
+
+window.openFileViewer = openFileViewer;
 
 // ── Profile modal ─────────────────────────────────────────────────────────────
 const PROFILE_KEY = 'BOSS_PROFILE';
@@ -3190,6 +3563,8 @@ window.openProfileModal = openProfileModal;
 window.getUserProfile   = getUserProfile;
 window.openTextToolsModal = openTextToolsModal;
 window.openNetworkModal   = openNetworkModal;
+window.FilesAction        = FilesAction;
+window.openFilesModal     = openFilesModal;
 
 /* ══════════════════════════════════════════════════════════════════════
    B.O.S.S. KERNEL v0.6 — HEXAGONAL NEURAL REFACTOR
@@ -3274,6 +3649,7 @@ const SYNONYMS = {
   identity: ['self','id','soma','look','feel','interface','appearance','who','what','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine','open','launch','run','start','engine','model','download','chrome','spotify','notepad','app','application'],
   data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory','remember','forget','store','memorize','note'],
+  files:    ['file','document','doc','pdf','open','view','browse','pick','folder','directory','attachment','download','recent','upload'],
   media:    ['music','sound','audio','playback','play','pause','stop','mute','unmute','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery','playing','stream'],
   time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm'],
 };
@@ -4059,6 +4435,9 @@ const ACTION_MAP = {
     // Real temporal actions via ChronosAction module
     ChronosAction.handle(intent, clog, Nervous, EVENT);
   },
+  'FILES': async function(intent) {
+    await FilesAction.handle(intent, clog, Nervous, EVENT, pcUrl(), openFileViewer);
+  },
   'MEMORY': async function(intent) {
     await MemoryAction.handle(intent, clog, Nervous, EVENT, pcUrl());
   },
@@ -4491,6 +4870,9 @@ async function firePreset(preset) {
     } else if (preset._openModal === 'profile') {
       const somaNode = nodes.find(n => n.name === 'SOMA');
       if (somaNode) openProfileModal(somaNode);
+    } else if (preset._openModal === 'files') {
+      const filesNode = nodes.find(n => n.name === 'FILES');
+      if (filesNode) openFilesModal(filesNode, preset._filesTab || 'recent');
     } else if (preset._openModal === 'network') {
       const coreNode = nodes.find(n => n.name === 'CORE');
       if (coreNode) openNetworkModal(coreNode);
