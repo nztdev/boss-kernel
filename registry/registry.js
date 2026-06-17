@@ -279,11 +279,12 @@ const DEFAULT_PRESETS = [
     icon:       '🎨',
     nodes:      ['SOMA'],
     intent:     'list themes',
-    actions:    [{ node: 'SOMA', command: 'theme_list', params: {} }],
+    actions:    [],
     source:     'default',
     createdAt:  null,
     usageCount: 0,
     tags:       ['theme', 'appearance'],
+    _openModal: 'themes',
   },
   {
     id:         'soma_profile',
