@@ -120,21 +120,24 @@ function _handlePoolStatus(clog, Immune, Registry) {
 
   if (Registry) {
     const models = Registry.getAllModels();
+    let anyConfigured = false;
     models.forEach(m => {
       const { successCount, failCount, avgLatencyMs, reliability, suspended } = m.metrics;
+      const hasKey   = !!(m.apiKey);
       const total    = successCount + failCount;
       const failRate = total > 0 ? ((failCount / total) * 100).toFixed(0) : '0';
-      const status   = suspended ? '⛔ suspended' : reliability > 0.8 ? '✅ healthy' : '⚠ degraded';
+      let status;
+      if (!hasKey)            status = '⚪ unconfigured';
+      else if (suspended)     status = '⛔ suspended';
+      else if (reliability > 0.8) { status = '✅ healthy'; anyConfigured = true; }
+      else                    { status = '⚠ degraded';  anyConfigured = true; }
       clog(`   ${m.name}: ${status} | calls: ${total} | fail: ${failRate}% | avg: ${avgLatencyMs}ms`, 'log-vec');
     });
-  }
-
-  if (Immune) {
-    const report = Immune.report();
-    if (report.flags.length) {
-      clog(`   ⚠ ${report.flags.length} flag(s): ${report.summary}`, 'log-vec');
+    if (!anyConfigured) {
+      clog('   No engine keys configured — tap cortex pill → Engine Keys', 'log-vec');
     } else {
-      clog(`   All models nominal`, 'log-vec');
+      const report = Immune?.report();
+      if (!report?.flags?.length) clog('   All configured models nominal', 'log-vec');
     }
   }
 }
