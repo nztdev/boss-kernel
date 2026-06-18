@@ -1510,6 +1510,9 @@ textarea.profile-input {
     <button class="files-btn primary" onclick="filesOpenUrl()">🔗 Open URL</button>
   </div>
 
+  <!-- Hidden file input for Safari/iOS fallback -->
+  <input id="files-input-fallback" type="file" style="display:none"
+    onchange="filesHandleFallbackInput(this)">
   <button class="files-close-btn" onclick="closeFilesModal()">✕ close</button>
 </div>
 
@@ -2218,31 +2221,49 @@ window.closeNetworkModal = function() {
 };
 
 function _refreshNetworkInfo() {
-  const info  = document.getElementById('net-info');
+  const info   = document.getElementById('net-info');
   const online = navigator.onLine;
   const conn   = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 
   let rows = [];
   rows.push(`<div class="net-row"><span>Status</span><span>${online ? '🟢 Online' : '🔴 Offline'}</span></div>`);
+
   if (conn) {
-    // conn.type = physical medium (wifi/cellular/ethernet) — better supported on mobile
-    // conn.effectiveType = speed category (slow-2g/2g/3g/4g) — not physical medium
-    if (conn.type && conn.type !== 'unknown')
+    // Physical medium (wifi/cellular/ethernet) — Chrome/Android
+    if (conn.type && conn.type !== 'unknown' && conn.type !== 'other')
       rows.push(`<div class="net-row"><span>Medium</span><span>${conn.type}</span></div>`);
+    // Effective speed class
     if (conn.effectiveType)
-      rows.push(`<div class="net-row"><span>Speed class</span><span>${conn.effectiveType}</span></div>`);
+      rows.push(`<div class="net-row"><span>Speed class</span><span>${conn.effectiveType} (quality estimate)</span></div>`);
     if (conn.downlink)
-      rows.push(`<div class="net-row"><span>Downlink</span><span>${conn.downlink} Mbps</span></div>`);
+      rows.push(`<div class="net-row"><span>Downlink</span><span>~${conn.downlink} Mbps</span></div>`);
     if (conn.rtt)
       rows.push(`<div class="net-row"><span>RTT</span><span>${conn.rtt} ms</span></div>`);
     if (conn.saveData)
       rows.push(`<div class="net-row"><span>Data saver</span><span>enabled</span></div>`);
+  } else {
+    // Safari/iOS — Network Information API not supported
+    rows.push(`<div class="net-row"><span>Medium</span><span style="opacity:0.4">not available (iOS/Safari)</span></div>`);
   }
 
   const cortexUrl = pcUrl();
   rows.push(`<div class="net-row"><span>Cortex</span><span>${cortexUrl ? '🟢 ' + cortexUrl.replace(/^https?:\/\//,'') : '⚪ offline'}</span></div>`);
 
   info.innerHTML = rows.join('');
+
+  // Fetch public IP asynchronously — works on all browsers
+  if (online) {
+    fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ip) {
+          const pubRow = `<div class="net-row"><span>Public IP</span><span>${d.ip}</span></div>`;
+          // Insert after status row
+          info.innerHTML = rows[0] + pubRow + rows.slice(1).join('');
+        }
+      })
+      .catch(() => {});
+  }
 }
 
 // Local IP via WebRTC STUN trick — works without any server
@@ -2364,10 +2385,30 @@ window.filesReopenHistEntry = function(urlEnc, nameEnc, mime) {
 };
 
 window.filesPickFile = async function() {
-  if (window.FilesAction) {
-    await FilesAction.handle('pick file', clog, Nervous, EVENT, pcUrl(), openFileViewer);
-    closeFilesModal();
+  if (window.showOpenFilePicker) {
+    // Chrome/Edge — File System Access API
+    if (window.FilesAction) {
+      await FilesAction.handle('pick file', clog, Nervous, EVENT, pcUrl(), openFileViewer);
+      closeFilesModal();
+    }
+  } else {
+    // Safari/iOS/Firefox — fall back to hidden <input type="file">
+    const input = document.getElementById('files-input-fallback');
+    if (input) input.click();
   }
+};
+
+window.filesHandleFallbackInput = function(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const mime = file.type || (window.FilesAction ? FilesAction.mimeFromName(file.name) : 'application/octet-stream');
+  const viewerType = window.FilesAction ? FilesAction.viewerTypeFromMime(mime) : 'external';
+  const url = URL.createObjectURL(file);
+  clog(`📂 FILES: opened ${file.name} (${(file.size/1024).toFixed(1)} KB)`, 'log-action');
+  if (window.FilesAction) FilesAction.addToHistory({ name: file.name, url, mime, source: 'picker' });
+  openFileViewer({ url, name: file.name, mime, viewerType });
+  closeFilesModal();
+  input.value = ''; // reset so same file can be picked again
 };
 
 window.filesOpenUrl = function() {
