@@ -200,6 +200,24 @@ canvas {
 .log-err     { color: #ff6666; }
 .log-action  { color: #00F0FF; }
 
+/* ── BOTTOM UI COLLAPSE ── */
+#ui-toggle {
+  width: 100%; max-width: 440px;
+  height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; pointer-events: auto;
+  margin-bottom: -1px; position: relative; z-index: 1;
+}
+#ui-toggle-handle {
+  width: 36px; height: 3px;
+  background: var(--dim); border-radius: 2px;
+  transition: background 0.2s;
+}
+#ui-toggle:hover #ui-toggle-handle { background: var(--glow); }
+
+#ui.collapsed #console { display: none; }
+#ui.collapsed #ui-toggle-handle { background: var(--glow); opacity: 0.5; }
+
 #input-bar {
   width: 100%; max-width: 440px;
   display: flex; pointer-events: auto;
@@ -1351,6 +1369,9 @@ textarea.profile-input {
 
 <!-- BOTTOM UI -->
 <div id="ui">
+  <div id="ui-toggle" onclick="toggleBottomUI()" title="Toggle console">
+    <div id="ui-toggle-handle"></div>
+  </div>
   <div id="console">&gt; B.O.S.S. v0.8 — Biological Operating System<br>&gt; Soma sovereign. Cortex: tap status bar pill to configure.<br>&gt; Soft Arbiter active — clarification over suspension.</div>
   <div id="input-bar">
     <input id="pulse-input" placeholder="Inject intent pulse…" autocomplete="off"
@@ -4772,11 +4793,53 @@ const ctx    = canvas.getContext('2d');
 
 function resize() {
   canvas.width  = window.innerWidth;
-  // Reserve space for bottom UI (console + input bar) so nodes stay visible.
-  // On desktop the bottom UI is ~180px; on mobile ~200px due to browser chrome.
-  const bottomUI = window.innerWidth < 600 ? 200 : 180;
+  const ui = document.getElementById('ui');
+  const collapsed = ui?.classList.contains('collapsed');
+  // Reserve space for bottom UI — less when collapsed (only input bar ~52px)
+  const bottomUI = collapsed
+    ? 64
+    : (window.innerWidth < 600 ? 200 : 180);
   canvas.height = (window.visualViewport?.height || window.innerHeight) - bottomUI;
 }
+
+// ── Bottom UI collapse toggle ─────────────────────────────────────────────────
+let _uiCollapsed = false;
+
+window.toggleBottomUI = function() {
+  _uiCollapsed = !_uiCollapsed;
+  const ui = document.getElementById('ui');
+  ui.classList.toggle('collapsed', _uiCollapsed);
+  resize();
+};
+
+// Swipe gesture on bottom UI — swipe up to collapse, swipe down to expand
+(function() {
+  const ui = document.getElementById('ui');
+  let _swipeStartY = null;
+
+  ui.addEventListener('touchstart', e => {
+    _swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  ui.addEventListener('touchend', e => {
+    if (_swipeStartY === null) return;
+    const dy = _swipeStartY - e.changedTouches[0].clientY;
+    if (Math.abs(dy) > 30) {  // 30px threshold
+      if (dy > 0 && !_uiCollapsed) {
+        // Swiped up → collapse
+        _uiCollapsed = true;
+        document.getElementById('ui').classList.add('collapsed');
+        resize();
+      } else if (dy < 0 && _uiCollapsed) {
+        // Swiped down → expand
+        _uiCollapsed = false;
+        document.getElementById('ui').classList.remove('collapsed');
+        resize();
+      }
+    }
+    _swipeStartY = null;
+  }, { passive: true });
+})();
 window.addEventListener('resize', resize);
 window.visualViewport?.addEventListener('resize', resize);
 resize();
