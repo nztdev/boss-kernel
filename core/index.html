@@ -4825,13 +4825,13 @@ window.toggleBottomUI = function() {
     if (_swipeStartY === null) return;
     const dy = _swipeStartY - e.changedTouches[0].clientY;
     if (Math.abs(dy) > 30) {  // 30px threshold
-      if (dy > 0 && !_uiCollapsed) {
-        // Swiped up → collapse
+      if (dy < 0 && !_uiCollapsed) {
+        // Swiped down → collapse
         _uiCollapsed = true;
         document.getElementById('ui').classList.add('collapsed');
         resize();
-      } else if (dy < 0 && _uiCollapsed) {
-        // Swiped down → expand
+      } else if (dy > 0 && _uiCollapsed) {
+        // Swiped up → expand
         _uiCollapsed = false;
         document.getElementById('ui').classList.remove('collapsed');
         resize();
