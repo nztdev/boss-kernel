@@ -144,8 +144,9 @@ function _parseIntent(intent) {
   }
 
   // Current time/date
-  if (/\b(what(?:'s| is) (?:the )?(?:time|date|day)|current time|today)\b/.test(s) ||
-      s === 'time' || s === 'date' || s === 'what time is it') {
+  if (/\b(what(?:'s| is|\'s)?\s+(?:the\s+)?(?:time|date|day)|current time|today)\b/.test(s) ||
+      /\bwhat time\b/.test(s) || /\bwhat('s| is) the time\b/.test(s) ||
+      s === 'time' || s === 'date' || s === 'what time is it' || s === 'what time is it?') {
     return { type: 'current_time' };
   }
 
@@ -501,8 +502,10 @@ export const ChronosAction = {
   },
 
   // Expose timer state for Soma inspection
-  getTimers() { return [..._timers]; },
-  clearAll()  { _handleCancel(() => {}); },
+  getTimers()  { return [..._timers]; },
+  getLaps()    { return _laps.map((ms, i) => _formatStopwatch(ms)); },
+  isSwRunning(){ return _stopwatchRunning; },
+  clearAll()   { _handleCancel(() => {}); },
 
   // Cancel a specific timer by id — used by timer modal ✕ button
   cancelById(id) {

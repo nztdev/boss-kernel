@@ -117,7 +117,8 @@ function _classify(intent) {
 
   // ── Image / photo ─────────────────────────────────────────────────────────
   const isImageIntent = /\b(show|display|open|view|look\s+at)\b.*\b(image|photo|picture|pic)\b/.test(s) ||
-                        /\b(image|photo|picture)\b.*\b(of|from|at)\b/.test(s);
+                        /\b(image|photo|picture)\b.*\b(of|from|at)\b/.test(s) ||
+                        /^show image\b/.test(s) || /^show photo\b/.test(s);
   // URL extraction — catches http/https links
   const urlMatch = intent.match(/https?:\/\/[^\s]+/i);
 

@@ -97,7 +97,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'MEMORY',
-    specialty:    'recall retrieve stored information data records vault database archive remember forget store memorize note list memories what do you remember',
+    specialty:    'recall retrieve stored information data records vault database archive remember forget store memorize note list memories what do you remember meeting remind keep save',
     color:        '#66aaff',
     resonance:    1.5,
     tier:         'active',
@@ -129,7 +129,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'FILES',
-    specialty:    'file document open view pdf text image audio video folder directory recent download pick browse attachment',
+    specialty:    'file document pdf folder directory recent download pick browse attachment',
     color:        '#ffcc00',
     resonance:    1.4,
     tier:         'active',
@@ -140,7 +140,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'CHRONOS',
-    specialty:    'time schedule clock calendar timer alarm duration elapsed long countdown remind when set running active',
+    specialty:    'time schedule clock calendar timer alarm duration elapsed long countdown remind when stopwatch lap world timezone tokyo london paris',
     color:        '#ffaa00',
     resonance:    1.3,
     tier:         'active',

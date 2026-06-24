@@ -1990,7 +1990,7 @@ function openChronosModal(type, node) {
   _positionChronosModal(id);
   document.getElementById(id).classList.add('show');
 
-  if (type === 'timer')     _refreshTimerList();
+  if (type === 'timer')     { _refreshTimerList(); _startTimerRefresh(); }
   if (type === 'stopwatch') _startSwDisplay();
   if (type === 'alarms')    _refreshAlarmList();
 }
@@ -2040,7 +2040,27 @@ window.startTimerFromModal = function() {
 function _startSwDisplay() {
   _stopSwDisplay();
   _updateSwDisplay();
-  _swInterval = setInterval(_updateSwDisplay, 50);
+  _swInterval = setInterval(() => {
+    _updateSwDisplay();
+    // Also refresh timer list while stopwatch modal is open
+    if (document.getElementById('chronos-timer-modal').classList.contains('show')) {
+      _refreshTimerList();
+    }
+  }, 1000);
+}
+
+let _timerRefreshInterval = null;
+
+function _startTimerRefresh() {
+  if (_timerRefreshInterval) clearInterval(_timerRefreshInterval);
+  _timerRefreshInterval = setInterval(() => {
+    if (document.getElementById('chronos-timer-modal').classList.contains('show')) {
+      _refreshTimerList();
+    } else {
+      clearInterval(_timerRefreshInterval);
+      _timerRefreshInterval = null;
+    }
+  }, 1000);
 }
 
 function _stopSwDisplay() {
@@ -2053,12 +2073,13 @@ function _updateSwDisplay() {
   const btn = document.getElementById('sw-start-btn');
   if (el) el.textContent = cs.stopwatch || '00:00.00';
   if (btn) btn.textContent = cs.stopwatchRunning ? '⏸ Pause' : '▶ Start';
-  // Update laps
+  // Update laps from ChronosAction
   const laps = document.getElementById('sw-laps');
-  if (laps && window._swLaps) {
-    laps.innerHTML = window._swLaps.map((l, i) =>
-      `<div class="sw-lap">Lap ${i+1}: ${l}</div>`
-    ).join('');
+  if (laps && window.ChronosAction) {
+    const lapTimes = ChronosAction.getLaps ? ChronosAction.getLaps() : [];
+    laps.innerHTML = lapTimes.length
+      ? lapTimes.map((l, i) => `<div class="sw-lap">Lap ${i+1}: ${l}</div>`).join('')
+      : '';
   }
 }
 
@@ -3579,7 +3600,21 @@ function openMediaPlayer(node) {
   modal.classList.add('show');
   _mpUpdateTrackLabel();
   _mpStartWaveform();
-  MediaAction.registerProgressCallback(_mpOnProgress);
+  if (window.MediaAction) {
+    MediaAction.registerProgressCallback(_mpOnProgress);
+    // Trigger immediate state sync
+    const state = MediaAction.getState();
+    if (state.duration > 0) {
+      _mpOnProgress({ currentTime: state.currentTime, duration: state.duration });
+    } else if (state.isStream) {
+      _mpOnProgress({ isStream: true });
+    }
+    // Sync pause button
+    const pauseBtn  = document.getElementById('mp-pause-btn');
+    const miniPause = document.getElementById('mp-mini-pause');
+    if (pauseBtn)  pauseBtn.textContent  = state.isPaused ? '▶ resume' : '⏸ pause';
+    if (miniPause) miniPause.textContent = state.isPaused ? '▶' : '⏸';
+  }
 }
 
 function _mpToMini() {
@@ -3648,11 +3683,13 @@ function _mpOnProgress({ currentTime, duration, isStream, ended } = {}) {
     if (label) label.textContent = `${_formatTime(currentTime)} / ${_formatTime(duration)}`;
   }
 
-  // Sync pause button state
-  const state = MediaAction ? MediaAction.getState() : {};
-  const isPaused = state.isPaused;
-  if (pauseBtn)  pauseBtn.textContent = isPaused ? '▶ resume' : '⏸ pause';
-  if (miniPause) miniPause.textContent = isPaused ? '▶' : '⏸';
+  // Sync pause button state from MediaAction
+  if (window.MediaAction) {
+    const state = MediaAction.getState();
+    const isPaused = state.isPaused;
+    if (pauseBtn)  pauseBtn.textContent = isPaused ? '▶ resume' : '⏸ pause';
+    if (miniPause) miniPause.textContent = isPaused ? '▶' : '⏸';
+  }
 }
 
 window.mpSeek = function(e) {
@@ -3834,9 +3871,17 @@ window.submitMediaPrompt = function() {
   if (!url) return;
   const intent = _mediaPromptAction + url;
   closeMediaPrompt();
-  // Fire as a chat pulse
+  dismissOrbital();
   document.getElementById('pulse-input').value = intent;
   firePulse();
+  // If setting a stream URL, auto-play after a short delay
+  if (_mediaPromptAction === 'use stream url ') {
+    setTimeout(() => {
+      if (window.MediaAction) {
+        MediaAction.handle('play music', clog, Nervous, EVENT, pcUrl());
+      }
+    }, 300);
+  }
 };
 
 // Listen for Nervous System media events
@@ -3986,11 +4031,11 @@ function engineConfigured() {
 const SYNONYMS = {
   health:   ['vitality','status','wellbeing','monitor','check','diagnostics','diagnostic','condition','battery','charge','power','system','reboot','uptime','network','online','offline','memory','ram','performance','session'],
   identity: ['self','id','soma','look','feel','interface','appearance','who','what','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
-  think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine','open','launch','run','start','engine','model','download','chrome','spotify','notepad','app','application'],
-  data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory','remember','forget','store','memorize','note'],
-  files:    ['file','document','doc','pdf','open','view','browse','pick','folder','directory','attachment','download','recent','upload'],
+  think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine','launch','run','engine','model','download','chrome','spotify','notepad','app','application'],
+  data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory','remember','forget','store','memorize','note','meeting','remind','keep','save'],
+  files:    ['file','document','doc','pdf','view','browse','pick','folder','directory','attachment','download','recent','upload'],
   media:    ['music','sound','audio','playback','play','pause','stop','mute','unmute','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery','playing','stream'],
-  time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm'],
+  time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm','stopwatch','lap','elapsed','timezone','world'],
 };
 
 function ngramSim(a, b, n = 3) {
