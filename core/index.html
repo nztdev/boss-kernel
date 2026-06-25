@@ -3875,19 +3875,21 @@ window.submitMediaPrompt = function() {
   dismissOrbital();
 
   if (_mediaPromptAction === 'use stream url ') {
-    // Set URL and play directly — bypass firePulse routing delay
+    // Set URL directly via MediaAction — no routing needed
     if (window.MediaAction) {
       MediaAction.setStreamUrl(url);
+      clog(`📀 MEDIA: stream URL set → ${url.slice(0, 60)}`, 'log-action');
+      // Play immediately
       MediaAction.handle('play music', clog, Nervous, EVENT, pcUrl());
-      // Open player modal
       const mediaNode = nodes.find(n => n.name === 'MEDIA');
-      setTimeout(() => openMediaPlayer(mediaNode), 400);
+      setTimeout(() => { if (mediaNode) openMediaPlayer(mediaNode); }, 500);
     }
   } else {
-    // For video/photo — route normally
+    // For video/photo — route via MediaAction directly
     const intent = _mediaPromptAction + url;
-    document.getElementById('pulse-input').value = intent;
-    firePulse();
+    if (window.MediaAction) {
+      MediaAction.handle(intent, clog, Nervous, EVENT, pcUrl());
+    }
   }
 };
 
@@ -5360,20 +5362,29 @@ async function firePreset(preset) {
     return;
   }
 
-  // Music orbital — open player if actively playing, else always show URL prompt
+  // Music orbital flow:
+  // playing → open player modal
+  // URL set, not playing → play immediately
+  // No URL → show prompt
   if (preset._promptIfNoStream && window.MediaAction) {
     const state     = MediaAction.getState();
     const mediaNode = nodes.find(n => n.name === 'MEDIA');
     if (state.isPlaying) {
-      // Currently playing — open player modal
       dismissOrbital();
       openMediaPlayer(mediaNode);
       return;
     }
-    // Not playing — always show URL prompt so user can set/change URL
+    if (state.streamUrl) {
+      // URL already set — play immediately
+      dismissOrbital();
+      MediaAction.handle('play music', clog, Nervous, EVENT, pcUrl());
+      setTimeout(() => { if (mediaNode) openMediaPlayer(mediaNode); }, 500);
+      return;
+    }
+    // No URL set — show prompt
     if (mediaNode) openMediaPrompt(mediaNode, {
       _promptLabel:  'Stream or file URL',
-      _promptHint:   state.streamUrl || 'https://stream.example.com/radio.mp3',
+      _promptHint:   'https://stream.example.com/radio.mp3',
       _promptAction: 'use stream url ',
       icon:          '▶',
       label:         'Play music',
