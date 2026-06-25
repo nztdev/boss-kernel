@@ -3874,10 +3874,14 @@ window.submitMediaPrompt = function() {
   closeMediaPrompt();
   dismissOrbital();
 
-  const action = _mediaPromptAction.trim();
+  const action = (_mediaPromptAction || '').trim().toLowerCase();
 
-  if (action === 'use stream url' || action === 'play music') {
-    // Music — set URL and play directly
+  if (action.includes('video') || action === 'play video') {
+    if (window.MediaAction) MediaAction.handle(`play video ${url}`, clog, Nervous, EVENT, pcUrl());
+  } else if (action.includes('image') || action.includes('photo') || action === 'show image') {
+    if (window.MediaAction) MediaAction.handle(`show image ${url}`, clog, Nervous, EVENT, pcUrl());
+  } else {
+    // Default: treat as stream URL (music prompt)
     if (window.MediaAction) {
       MediaAction.setStreamUrl(url);
       clog(`📀 MEDIA: stream URL set → ${url.slice(0, 60)}`, 'log-action');
@@ -3885,13 +3889,6 @@ window.submitMediaPrompt = function() {
       const mediaNode = nodes.find(n => n.name === 'MEDIA');
       setTimeout(() => { if (mediaNode) openMediaPlayer(mediaNode); }, 500);
     }
-  } else if (action === 'play video') {
-    if (window.MediaAction) MediaAction.handle(`play video ${url}`, clog, Nervous, EVENT, pcUrl());
-  } else if (action === 'show image') {
-    if (window.MediaAction) MediaAction.handle(`show image ${url}`, clog, Nervous, EVENT, pcUrl());
-  } else {
-    // Generic fallback
-    if (window.MediaAction) MediaAction.handle(`${action} ${url}`, clog, Nervous, EVENT, pcUrl());
   }
 };
 
