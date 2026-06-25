@@ -134,8 +134,9 @@ function _parseIntent(intent) {
   }
 
   // World clock
-  const worldMatch = s.match(/(?:what(?:'s| is) (?:the )?time (?:in|at)|time (?:in|at)|clock (?:in|at))\s+(.+)/);
-  if (worldMatch) return { type: 'world_clock', place: worldMatch[1].trim() };
+  const worldMatch = s.match(/(?:what(?:'s| is| time is it| is the time)\s+(?:in|at)|time (?:in|at)|clock (?:in|at))\s+(.+)/i)
+    || s.match(/(?:what time is it in|time in|time at|clock in)\s+(.+)/i);
+  if (worldMatch) return { type: 'world_clock', place: (worldMatch[1] || worldMatch[2] || '').trim() };
 
   // Add world clock
   if (/\b(add|save|track)\b.*\b(clock|time)\b/.test(s)) {

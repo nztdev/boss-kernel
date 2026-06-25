@@ -4704,6 +4704,24 @@ async function firePulse() {
   const intent = el.value.trim();
   if (!intent) return;
   if (limpMode) { clog('🩼 LIMP MODE — tap Recover', 'log-grief'); return; }
+  // Don't pulse if a modal prompt input has focus — those have their own handlers
+  const activeEl = document.activeElement;
+  if (activeEl && activeEl !== el &&
+      (activeEl.id === 'media-prompt-input' ||
+       activeEl.id === 'files-url-input'    ||
+       activeEl.id === 'vault-new-entry'    ||
+       activeEl.id === 'notes-new-item'     ||
+       activeEl.id === 'notes-new-title'    ||
+       activeEl.id === 'timer-duration'     ||
+       activeEl.id === 'timer-label'        ||
+       activeEl.id === 'alarm-time'         ||
+       activeEl.id === 'alarm-label'        ||
+       activeEl.id === 'tt-input'           ||
+       activeEl.id === 'calc-prompt-input'  ||
+       activeEl.id === 'profile-name'       ||
+       activeEl.id === 'timezone-search')) {
+    return;
+  }
   el.value = '';
   dismissOrbital();  // clear active orbitals before new pulse
   pulseCount++;
