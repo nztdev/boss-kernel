@@ -3874,22 +3874,24 @@ window.submitMediaPrompt = function() {
   closeMediaPrompt();
   dismissOrbital();
 
-  if (_mediaPromptAction === 'use stream url ') {
-    // Set URL directly via MediaAction — no routing needed
+  const action = _mediaPromptAction.trim();
+
+  if (action === 'use stream url' || action === 'play music') {
+    // Music — set URL and play directly
     if (window.MediaAction) {
       MediaAction.setStreamUrl(url);
       clog(`📀 MEDIA: stream URL set → ${url.slice(0, 60)}`, 'log-action');
-      // Play immediately
       MediaAction.handle('play music', clog, Nervous, EVENT, pcUrl());
       const mediaNode = nodes.find(n => n.name === 'MEDIA');
       setTimeout(() => { if (mediaNode) openMediaPlayer(mediaNode); }, 500);
     }
+  } else if (action === 'play video') {
+    if (window.MediaAction) MediaAction.handle(`play video ${url}`, clog, Nervous, EVENT, pcUrl());
+  } else if (action === 'show image') {
+    if (window.MediaAction) MediaAction.handle(`show image ${url}`, clog, Nervous, EVENT, pcUrl());
   } else {
-    // For video/photo — route via MediaAction directly
-    const intent = _mediaPromptAction + url;
-    if (window.MediaAction) {
-      MediaAction.handle(intent, clog, Nervous, EVENT, pcUrl());
-    }
+    // Generic fallback
+    if (window.MediaAction) MediaAction.handle(`${action} ${url}`, clog, Nervous, EVENT, pcUrl());
   }
 };
 
