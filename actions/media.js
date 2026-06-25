@@ -386,7 +386,6 @@ function _handleImage(parsed, clog, Nervous, EVENT) {
       });
     }
     clog(`🖼 MEDIA: image → ${parsed.url.slice(0, 60)}`, 'log-action');
-    clog('   Image panel coming in Phase 7c — URL captured for when panel is built', 'log-action');
   } else {
     clog('🖼 MEDIA: image display — provide a URL', 'log-action');
     clog('   Example: "show image https://example.com/photo.jpg"', 'log-action');
@@ -405,9 +404,8 @@ function _handleVideo(parsed, clog, Nervous, EVENT) {
       });
     }
     clog(`🎬 MEDIA: video → ${parsed.url.slice(0, 60)}`, 'log-action');
-    clog('   Video panel coming in Phase 7d — URL captured for when panel is built', 'log-action');
   } else {
-    clog('🎬 MEDIA: video playback — provide a URL', 'log-action');
+    clog('🎬 MEDIA: provide a video URL', 'log-action');
     clog('   Example: "play video https://youtube.com/watch?v=…"', 'log-action');
   }
 }
