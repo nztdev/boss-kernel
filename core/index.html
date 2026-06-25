@@ -1527,7 +1527,7 @@ textarea.profile-input {
   <div id="files-tab-url" style="display:none">
     <input id="files-url-input" class="files-input" type="url"
       placeholder="https://example.com/document.pdf"
-      onkeydown="if(event.key==='Enter')filesOpenUrl()">
+      onkeydown="event.stopPropagation(); if(event.key==='Enter')filesOpenUrl()">
     <button class="files-btn primary" onclick="filesOpenUrl()">🔗 Open URL</button>
   </div>
 
@@ -1625,7 +1625,7 @@ textarea.profile-input {
   <div class="memory-row">
     <input id="vault-new-entry" class="memory-input" style="margin-bottom:0"
       placeholder="Add a memory…"
-      onkeydown="if(event.key==='Enter')vaultAdd()">
+      onkeydown="event.stopPropagation(); if(event.key==='Enter')vaultAdd()">
     <button class="memory-btn primary" style="flex:0 0 60px" onclick="vaultAdd()">+ Add</button>
   </div>
   <hr class="memory-divider">
@@ -1752,7 +1752,7 @@ textarea.profile-input {
 <div id="media-prompt">
   <div id="media-prompt-title">MEDIA · ENTER URL</div>
   <input id="media-prompt-input" type="url" placeholder="https://…"
-    onkeydown="if(event.key==='Enter')submitMediaPrompt(); if(event.key==='Escape')closeMediaPrompt()">
+    onkeydown="event.stopPropagation(); if(event.key==='Enter')submitMediaPrompt(); if(event.key==='Escape')closeMediaPrompt()">
   <div class="media-prompt-btns">
     <button onclick="submitMediaPrompt()" id="media-prompt-action-btn">▶ Play</button>
     <button class="dim" onclick="closeMediaPrompt()">✕ Cancel</button>
@@ -4344,9 +4344,14 @@ async function runArbiter(top, second, delta, intent) {
   // Hard grief only fires when BOTH nodes have external side-effect actions.
   // Read-only nodes (CORE=diagnostics, MEMORY=vault reads) are excluded —
   // their actions don't change external state so conflicts are never irreversible.
+  // CHRONOS is only a side-effect node when setting timers/alarms
+  // Pure queries (what time is it, world clock) are read-only — exclude from grief
+  const _chronosIsQuery = top.node.name === 'CHRONOS' || second.node.name === 'CHRONOS'
+    ? /\b(what time|time in|world clock|current time|date|day)\b/.test(intent.toLowerCase())
+    : false;
   const SIDE_EFFECT_NODES = new Set(['CHRONOS', 'MEDIA', 'SOMA', 'CORTEX']);
-  const topSideEffect    = !!(top.node.action    && SIDE_EFFECT_NODES.has(top.node.name));
-  const secondSideEffect = !!(second.node.action && SIDE_EFFECT_NODES.has(second.node.name));
+  const topSideEffect    = !!(top.node.action    && SIDE_EFFECT_NODES.has(top.node.name) && !_chronosIsQuery);
+  const secondSideEffect = !!(second.node.action && SIDE_EFFECT_NODES.has(second.node.name) && !_chronosIsQuery);
   const bothActive   = topSideEffect && secondSideEffect;
   const eitherActive = !!(top.node.action || second.node.action);
 
@@ -4822,9 +4827,20 @@ const ACTION_MAP = {
       Immune, Registry
     );
   },
-  'CHRONOS': function(intent) {
-    // Real temporal actions via ChronosAction module
-    ChronosAction.handle(intent, clog, Nervous, EVENT);
+  'CHRONOS': async function(intent) {
+    const result = await ChronosAction.handle(intent, clog, Nervous, EVENT);
+    // Auto-open relevant modal based on what was handled
+    const s = intent.toLowerCase();
+    const chronosNode = nodes.find(n => n.name === 'CHRONOS');
+    if (chronosNode) {
+      if (/\bstopwatch\b/.test(s)) {
+        setTimeout(() => openChronosModal('stopwatch', chronosNode), 200);
+      } else if (/\b(alarm|remind me at)\b/.test(s) && !/\bcancel\b/.test(s)) {
+        setTimeout(() => openChronosModal('alarms', chronosNode), 200);
+      } else if (/\b(timer|set a timer)\b/.test(s) && !/\bcancel\b/.test(s)) {
+        setTimeout(() => openChronosModal('timer', chronosNode), 200);
+      }
+    }
   },
   'FILES': async function(intent) {
     await FilesAction.handle(intent, clog, Nervous, EVENT, pcUrl(), openFileViewer);
