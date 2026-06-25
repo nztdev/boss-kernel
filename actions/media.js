@@ -217,6 +217,7 @@ function _playStream(url, clog) {
   _stopTone();
   if (_state.audioElement) {
     _state.audioElement.pause();
+    _state.audioElement.removeAttribute('src');
     _state.audioElement = null;
   }
 
@@ -240,8 +241,12 @@ function _playStream(url, clog) {
   });
 
   audio.addEventListener('timeupdate', () => {
-    if (_state.onProgressUpdate && !_state.isStream) {
-      _state.onProgressUpdate({ currentTime: audio.currentTime, duration: audio.duration });
+    if (_state.onProgressUpdate) {
+      if (_state.isStream) {
+        _state.onProgressUpdate({ isStream: true });
+      } else {
+        _state.onProgressUpdate({ currentTime: audio.currentTime, duration: audio.duration });
+      }
     }
   });
 

@@ -97,7 +97,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'MEMORY',
-    specialty:    'recall retrieve stored information data records vault database archive remember forget store memorize note list memories what do you remember meeting remind keep save',
+    specialty:    'recall retrieve vault archive remember forget memorize note memories meeting remind keep save store',
     color:        '#66aaff',
     resonance:    1.5,
     tier:         'active',

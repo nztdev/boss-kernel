@@ -2042,7 +2042,9 @@ function _startSwDisplay() {
   _updateSwDisplay();
   _swInterval = setInterval(() => {
     _updateSwDisplay();
-    // Also refresh timer list while stopwatch modal is open
+  }, 50);
+  // Timer list refresh separately at 1s
+  setInterval(() => {
     if (document.getElementById('chronos-timer-modal').classList.contains('show')) {
       _refreshTimerList();
     }
@@ -3869,18 +3871,23 @@ window.closeMediaPrompt = function() {
 window.submitMediaPrompt = function() {
   const url = document.getElementById('media-prompt-input').value.trim();
   if (!url) return;
-  const intent = _mediaPromptAction + url;
   closeMediaPrompt();
   dismissOrbital();
-  document.getElementById('pulse-input').value = intent;
-  firePulse();
-  // If setting a stream URL, auto-play after a short delay
+
   if (_mediaPromptAction === 'use stream url ') {
-    setTimeout(() => {
-      if (window.MediaAction) {
-        MediaAction.handle('play music', clog, Nervous, EVENT, pcUrl());
-      }
-    }, 300);
+    // Set URL and play directly — bypass firePulse routing delay
+    if (window.MediaAction) {
+      MediaAction.setStreamUrl(url);
+      MediaAction.handle('play music', clog, Nervous, EVENT, pcUrl());
+      // Open player modal
+      const mediaNode = nodes.find(n => n.name === 'MEDIA');
+      setTimeout(() => openMediaPlayer(mediaNode), 400);
+    }
+  } else {
+    // For video/photo — route normally
+    const intent = _mediaPromptAction + url;
+    document.getElementById('pulse-input').value = intent;
+    firePulse();
   }
 };
 
@@ -4032,7 +4039,7 @@ const SYNONYMS = {
   health:   ['vitality','status','wellbeing','monitor','check','diagnostics','diagnostic','condition','battery','charge','power','system','reboot','uptime','network','online','offline','memory','ram','performance','session'],
   identity: ['self','id','soma','look','feel','interface','appearance','who','what','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine','launch','run','engine','model','download','chrome','spotify','notepad','app','application'],
-  data:     ['recall','retrieve','stored','information','records','files','vault','database','archive','memory','remember','forget','store','memorize','note','meeting','remind','keep','save'],
+  data:     ['recall','retrieve','vault','archive','memory','remember','forget','memorize','note','meeting','remind','keep','save'],
   files:    ['file','document','doc','pdf','view','browse','pick','folder','directory','attachment','download','recent','upload'],
   media:    ['music','sound','audio','playback','play','pause','stop','mute','unmute','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery','playing','stream'],
   time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm','stopwatch','lap','elapsed','timezone','world'],
@@ -5319,27 +5326,25 @@ async function firePreset(preset) {
     return;
   }
 
-  // Music orbital — if showing current track, open player modal; else prompt
+  // Music orbital — open player if actively playing, else always show URL prompt
   if (preset._promptIfNoStream && window.MediaAction) {
-    const state    = MediaAction.getState();
+    const state     = MediaAction.getState();
     const mediaNode = nodes.find(n => n.name === 'MEDIA');
-    if (preset._showingTrack || state.isPlaying) {
-      // Track playing — open player modal
+    if (state.isPlaying) {
+      // Currently playing — open player modal
       dismissOrbital();
       openMediaPlayer(mediaNode);
       return;
     }
-    if (!state.streamUrl) {
-      // No stream set — prompt for URL
-      if (mediaNode) openMediaPrompt(mediaNode, {
-        _promptLabel:  'Stream URL',
-        _promptHint:   'https://stream.example.com/radio.mp3',
-        _promptAction: 'use stream url ',
-        icon:          '▶',
-        label:         'Play music',
-      });
-      return;
-    }
+    // Not playing — always show URL prompt so user can set/change URL
+    if (mediaNode) openMediaPrompt(mediaNode, {
+      _promptLabel:  'Stream or file URL',
+      _promptHint:   state.streamUrl || 'https://stream.example.com/radio.mp3',
+      _promptAction: 'use stream url ',
+      icon:          '▶',
+      label:         'Play music',
+    });
+    return;
   }
 
   clog(`◆ PRESET: "${preset.label}" (${preset.nodes.join('+')})`, 'log-sys');
