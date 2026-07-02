@@ -506,14 +506,14 @@ const DEFAULT_PRESETS = [
 const DEFAULT_MODELS = [
   {
     id:        'groq-llama',
-    name:      'Groq Llama 3.1',
+    name:      'Groq GPT-OSS 20B',
     provider:  'groq',
-    model:     'llama-3.1-8b-instant',
+    model:     'openai/gpt-oss-20b',
     specialty: 'fast factual retrieval summarisation concise answer general knowledge lookup quick response data fact',
     tier:      1,
     warmth:    0.6,
     resonance: 1.2,
-    description: 'Fast factual retrieval. T1 primary model.',
+    description: 'Fast factual retrieval. T1 primary model. (replaces llama-3.1-8b-instant)',
   },
   {
     id:        'gemini-flash',
