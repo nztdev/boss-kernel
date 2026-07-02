@@ -221,10 +221,7 @@ function _playStream(url, clog) {
     _state.audioElement = null;
   }
 
-  // Detect live stream vs file — streams have no duration or infinite duration
-  // Common stream extensions/patterns vs file extensions
-  const isLikelyStream = /\.(php|aac|ogg|opus)|\/stream|radio|live|icecast|shoutcast/i.test(url)
-    || !/\.(mp3|mp4|m4a|wav|flac|ogg|webm)/i.test(url);
+  // Stream vs file determined from actual duration in loadedmetadata below
 
   const audio = new Audio(url);
   audio.volume = _state.volume;
@@ -233,10 +230,11 @@ function _playStream(url, clog) {
   audio.crossOrigin = 'anonymous';
 
   audio.addEventListener('loadedmetadata', () => {
-    // Infinity or 0 duration = live stream
-    _state.isStream  = !isFinite(audio.duration) || audio.duration === 0 || isLikelyStream;
+    // Infinity or 0 duration = live stream. This is the only reliable signal —
+    // URL keyword matching is too prone to false positives (e.g. domain names
+    // containing "radio", "live", etc. that host ordinary files).
+    _state.isStream  = !isFinite(audio.duration) || audio.duration === 0;
     _state.duration  = isFinite(audio.duration) ? audio.duration : 0;
-    // Notify media panel of duration for progress bar
     if (_state.onProgressUpdate) _state.onProgressUpdate({ duration: _state.duration, isStream: _state.isStream });
   });
 
