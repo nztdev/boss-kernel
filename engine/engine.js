@@ -233,7 +233,7 @@ export function scorePool(intent, pool, chain = [], vectorBoosts = []) {
 
 async function callGroq(node, intent, systemPrompt) {
   const body = {
-    model: node.model || 'llama-3.1-8b-instant',
+    model: node.model || 'openai/gpt-oss-20b',
     messages: [
       { role: 'system', content: systemPrompt || defaultSystemPrompt(node) },
       { role: 'user',   content: intent },
@@ -744,7 +744,7 @@ export function buildDefaultPool(keys = {}) {
     new LLMNode({
       name:      'Groq Llama 3.1',
       provider:  'groq',
-      model:     'llama-3.1-8b-instant',
+      model:     'openai/gpt-oss-20b',
       specialty: 'fast factual retrieval summarisation concise answer general knowledge lookup quick response data fact',
       tier:      1,
       apiKey:    keys.groq || '',
