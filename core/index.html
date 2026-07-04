@@ -5499,6 +5499,18 @@ clog(`🧬 Engine: ${engineConfigured() ? 'ready' : 'unconfigured — tap cortex
 chronosBoot(clog);  // CHRONOS: display current time and date on boot
 refreshCurrencyRates(clog);  // refresh currency rates once per session
 
+// ── BOSS capability context for engine prompts ────────────────────────────────
+// Derived from the Registry so it stays accurate as nodes/capabilities change.
+// Prepended to every CORTEX engine system prompt so responses are grounded in
+// what BOSS can actually do, rather than generic.
+function _buildCapabilityContext() {
+  const defs = Registry.getAllNodes();
+  const lines = defs.map(d => `${d.name} (${d.description})`).join('; ');
+  return `You are the reasoning component of B.O.S.S., a Biological Operating System with these parts: ${lines}. ` +
+         `Keep this context in mind but only mention it if directly relevant to the question.`;
+}
+window.BOSS_CAPABILITY_CONTEXT = _buildCapabilityContext();
+
 // Register engine pool save callback with Heart
 // Heart calls this on every beat — keeps engine metabolic state persistent
 Heart.registerEngineSave(() => {
