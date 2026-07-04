@@ -170,8 +170,12 @@ async function _handleDeliberate(type, subject, intent, clog, Nervous, EVENT, en
     question: 'You are a knowledgeable assistant. Answer the question directly and accurately. Be concise and clear.',
   };
 
-  // Prepend user profile context if available — personalises engine responses
+  // Prepend BOSS capability context + user profile — grounds engine responses
+  // in what BOSS can actually do and who it's talking to.
   let systemPrompt = systemPrompts[type] || systemPrompts.question;
+  if (window.BOSS_CAPABILITY_CONTEXT) {
+    systemPrompt = `${window.BOSS_CAPABILITY_CONTEXT} ${systemPrompt}`;
+  }
   if (window.getUserProfile) {
     const profile = window.getUserProfile();
     const contextParts = [];
