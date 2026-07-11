@@ -647,6 +647,42 @@ canvas {
 }
 .themes-close-btn:hover { color: #ff66aa; border-color: #ff66aa44; }
 
+/* ── STUB NODE INFO MODAL (e.g. DEVICES) ── */
+#stub-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(10,10,14,0.97);
+  border: 1px solid #555566;
+  border-radius: 12px;
+  padding: 16px 18px;
+  width: 260px;
+  box-shadow: 0 0 24px rgba(85,85,102,0.3);
+  font-family: 'Share Tech Mono', monospace;
+  text-align: center;
+}
+#stub-modal.show { display: block; }
+.stub-icon { font-size: 22px; margin-bottom: 8px; }
+.stub-title {
+  font-size: 12px; color: #8888aa; font-weight: bold;
+  letter-spacing: 0.08em; margin-bottom: 8px;
+}
+.stub-desc {
+  font-size: 10px; color: #777788; line-height: 1.6; margin-bottom: 12px;
+}
+.stub-badge {
+  display: inline-block; font-size: 8px; color: #8888aa;
+  border: 1px solid #555566; border-radius: 10px;
+  padding: 3px 10px; margin-bottom: 14px; letter-spacing: 0.06em;
+}
+.stub-close-btn {
+  width: 100%; background: none;
+  border: 1px solid #444455; border-radius: 6px;
+  color: #666677; font-family: inherit;
+  font-size: 9px; padding: 6px 0; cursor: pointer;
+}
+.stub-close-btn:hover { color: #8888aa; border-color: #666677; }
+
 /* ── PROFILE MODAL ── */
 #profile-modal {
   display: none;
@@ -1593,6 +1629,15 @@ textarea.profile-input {
   <button class="themes-custom-btn" onclick="applyCustomTheme()">Apply custom colour</button>
   <button class="themes-reset-btn" onclick="applyThemeSwatch('default')">↺ Reset to default</button>
   <button class="themes-close-btn" onclick="closeThemesModal()">✕ close</button>
+</div>
+
+<!-- STUB NODE INFO MODAL -->
+<div id="stub-modal">
+  <div class="stub-icon">🔒</div>
+  <div class="stub-title" id="stub-modal-title">DEVICES</div>
+  <div class="stub-desc" id="stub-modal-desc"></div>
+  <div class="stub-badge">NATIVE APP ONLY</div>
+  <button class="stub-close-btn" onclick="closeStubModal()">✕ close</button>
 </div>
 
 <!-- PROFILE MODAL — appears near SOMA node -->
@@ -2723,6 +2768,35 @@ window.applyCustomTheme = function() {
   Object.keys(THEME_COLORS).forEach(k =>
     document.getElementById(`swatch-${k}`)?.classList.remove('active')
   );
+};
+
+// ── Stub node info modal (e.g. DEVICES) ───────────────────────────────────────
+function showStubInfo(node) {
+  const modal  = document.getElementById('stub-modal');
+  const regDef = Registry.getNode(node.name);
+  document.getElementById('stub-modal-title').textContent = node.name;
+  document.getElementById('stub-modal-desc').textContent  =
+    (regDef && regDef.description) ||
+    `${node.name} requires native OS-level access not available in the browser. This will be part of the BOSS native app.`;
+
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + node.x * scaleX;
+  const py = rect.top  + node.y * scaleY;
+  const mw = 260, mh = 200;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+  modal.classList.add('show');
+}
+
+window.closeStubModal = function() {
+  document.getElementById('stub-modal').classList.remove('show');
 };
 
 // ── Profile modal ─────────────────────────────────────────────────────────────
@@ -4103,7 +4177,7 @@ function searchVault(intent) {
 
 // ── Node ──────────────────────────────────────────────────────────────────────
 class Node {
-  constructor(name, specialty, x, y, color, res = 1.0, isStatic = false, action = null) {
+  constructor(name, specialty, x, y, color, res = 1.0, isStatic = false, action = null, tier = 'active') {
     this.id           = Math.random().toString(36).slice(2, 5).toUpperCase();
     this.name         = name.toUpperCase().slice(0, 10);
     this.specialty    = specialty;
@@ -4112,6 +4186,7 @@ class Node {
     this.warmth       = 0.1;
     this.resonance    = res;
     this.isStatic     = isStatic;
+    this.tier         = tier;
     this.bonds        = {};
     this.lastOutput   = null;
     this.lastT        = performance.now();
@@ -4220,6 +4295,31 @@ class Node {
   }
 
   draw(ctx, chain, now) {
+    // Stub-tier nodes (e.g. DEVICES) render distinctly muted — inert, no glow,
+    // no warmth pulse, dashed outline, lock icon. Native-only, not yet available.
+    if (this.tier === 'stub') {
+      const r = 26;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a1a22';
+      ctx.fill();
+      ctx.strokeStyle = '#555566';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([3, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#8888aa';
+      ctx.font = `700 11px 'Orbitron', monospace`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(this.name, this.x, this.y - 4);
+      ctx.font = `8px 'Share Tech Mono', monospace`;
+      ctx.fillStyle = '#666677';
+      ctx.fillText('🔒 native only', this.x, this.y + 10);
+      ctx.restore();
+      return;
+    }
+
     const flashAlpha = this.flashT > 0 ? Math.max(0, 1 - (now - this.flashT) / 600) : 0;
     const isActive   = chain.length && chain[chain.length - 1] === this.id;
     const r          = 20 + this.resonance * 3 + this.warmth * 2;
@@ -4742,9 +4842,11 @@ async function firePulse() {
   // Vector boosts (relative, defaults to [] when cortex offline)
   const boosts = await fetchVectorBoosts(intent);
 
-  // Full kernel scoring
+  // Full kernel scoring — map first to preserve boosts[] index alignment,
+  // then exclude stub-tier nodes (e.g. DEVICES, native-only) from competing
   const scored = nodes
     .map((n, i) => ({ node: n, ...n.score(intent, chain, nodes, boosts[i] || 0) }))
+    .filter(s => s.node.tier !== 'stub')
     .sort((a, b) => b.total - a.total);
 
   updateResPanel(scored, boosts);
@@ -5228,6 +5330,12 @@ function _roundRect(ctx, x, y, w, h, r) {
 function activateOrbital(node) {
   if (!node) return;
 
+  // Stub-tier nodes (e.g. DEVICES) are inert — show info modal instead of orbitals
+  if (node.tier === 'stub') {
+    showStubInfo(node);
+    return;
+  }
+
   // Base presets from Registry — filter context-sensitive ones
   let presets = Registry.getPresetsForNode(node.name).filter(p => {
     if (p._onlyWhenPlaying) {
@@ -5422,11 +5530,13 @@ function seed() {
 
   defs.forEach((d, i) => {
     const angle = (i / defs.length) * Math.PI * 2 - Math.PI / 2;
+    const isStub = d.tier === 'stub';
     nodes.push(new Node(
       d.name, d.specialty,
       cx + r * Math.cos(angle), cy + r * Math.sin(angle),
-      d.color, d.resonance, false,
-      ACTION_MAP[d.name] || null
+      d.color, d.resonance, isStub,  // stub nodes are static — no warmth drift
+      isStub ? null : (ACTION_MAP[d.name] || null),
+      d.tier || 'active'
     ));
   });
 
@@ -5455,9 +5565,12 @@ if (restored) {
     const regDef    = Registry.getNode(d.name);
     const specialty = regDef ? regDef.specialty : d.specialty;
     const color     = regDef ? regDef.color     : d.color;
+    const tier      = regDef ? (regDef.tier || 'active') : (d.tier || 'active');
+    const isStub    = tier === 'stub';
     const n = new Node(
-      d.name, specialty, d.x, d.y, color, d.resonance, d.isStatic,
-      ACTION_MAP[d.name] || null
+      d.name, specialty, d.x, d.y, color, d.resonance, isStub || d.isStatic,
+      isStub ? null : (ACTION_MAP[d.name] || null),
+      tier
     );
     n.id = d.id; n.bonds = d.bonds || {};
     return n;
@@ -5473,11 +5586,13 @@ if (restored) {
       const angle = (i / Registry.getAllNodes().length) * Math.PI * 2 - Math.PI / 2;
       const maxR  = Math.min(canvas.width, canvas.height);
       const r     = maxR * (maxR < 400 ? 0.32 : 0.28);
+      const isStub = d.tier === 'stub';
       nodes.push(new Node(
         d.name, d.specialty,
         cx + r * Math.cos(angle), cy + r * Math.sin(angle),
-        d.color, d.resonance, false,
-        ACTION_MAP[d.name] || null
+        d.color, d.resonance, isStub,
+        isStub ? null : (ACTION_MAP[d.name] || null),
+        d.tier || 'active'
       ));
       clog(`🌱 New node from Registry: ${d.name}`, 'log-sys');
     }
