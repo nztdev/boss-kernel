@@ -139,6 +139,18 @@ const DEFAULT_NODES = [
     description:  'File access, viewing, and document management across Cortex, browser, and native.',
   },
   {
+    name:         'DEVICES',
+    specialty:    'device bluetooth smart home thermostat light lock sensor iot matter appliance control automation',
+    color:        '#555566',
+    resonance:    0,
+    tier:         'stub',
+    hasAction:    false,
+    actionType:   null,
+    capabilities: [],
+    description:  'Bluetooth, Matter, and smart home device control. Native app only — not available in the browser PWA.',
+    _stubReason:  'requires native OS-level Bluetooth/Matter access unavailable to browser-based apps',
+  },
+  {
     name:         'CHRONOS',
     specialty:    'time schedule clock calendar timer alarm duration elapsed long countdown remind when stopwatch lap world timezone tokyo london paris',
     color:        '#ffaa00',
