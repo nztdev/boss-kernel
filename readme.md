@@ -1,4 +1,4 @@
-# B.O.S.S. Kernel v0.8 — Biological Operating System
+# B.O.S.S. Kernel v0.9 — Biological Operating System
 
 > *"Data is not a Resource. Data is an Experience."*
 
@@ -125,31 +125,37 @@ score = (warmth × match)                     thermal   — intent gates recent 
 
 ---
 
-## VI. The Six Nodes
+## VI. The Eight Nodes
 
 | Node | Resonance | Tier | Role | Real Actions |
 |------|-----------|------|------|-------------|
-| CORE | 2.0 | Active | System health, diagnostics, battery, network | Battery level, diagnostics, uptime, network status |
-| SOMA | 1.8 | Active | Identity, interface, personality | Theme switching (6 themes + custom), identity response, personality state |
-| CORTEX | 1.6 | Active | Reasoning, analysis, OS delegation | Deliberation engine, explain/analyse/reason, app launching via Cortex |
-| MEMORY | 1.5 | Active | Recall, storage, vault | Semantic vault search, store, forget, status, export |
-| MEDIA | 1.4 | Active | Audio, images, video | Stream playback, Web Audio, waveform, image/video panels |
-| CHRONOS | 1.3 | Active | Time, scheduling, alarms | Timers, alarms, stopwatch, world clock, timezone management |
+| CORE | 2.0 | Active | System health, diagnostics, battery, network | Battery level, diagnostics, uptime, network status, local/public IP, speed test |
+| SOMA | 1.8 | Active | Identity, interface, personality | Theme switching (6 themes + custom), identity response, personality state, user profile |
+| CORTEX | 1.6 | Active | Reasoning, analysis, computation, OS delegation | Deliberation engine (explain/analyse/reason), Text Tools (summarise/translate/rewrite), offline calculator, unit/currency/date conversion, app launching via Cortex |
+| MEMORY | 1.5 | Active | Recall, storage, structured notes | Semantic vault search, store, forget, structured lists |
+| MEDIA | 1.4 | Active | Audio, images, video | Stream playback with live progress, Web Audio waveform, mini-player, image/video viewers |
+| FILES | 1.4 | Active | File access and viewing | Recent files, native file picker (with iOS/Safari fallback), URL-based viewer, fullscreen toggle, Cortex-delegated Office/OS-app opening |
+| CHRONOS | 1.3 | Active | Time, scheduling, alarms | Timers, alarms, stopwatch, world clock, timezone management, live clock orbital |
+| DEVICES | 0 | Stub | Smart home / Bluetooth / Matter control | **Native app only** — inert in the browser PWA, reserved for Capacitor build |
 
-All six nodes are active — each carries real capabilities executed through dedicated action modules in `actions/`.
+Seven nodes are active with real capabilities executed through dedicated action modules in `actions/`. DEVICES is a structural placeholder — excluded entirely from intent routing and the Arbiter, rendered with a muted dashed outline, and only interactive via an informational tap.
 
 ### Orbital Presets
 
-Each node surfaces contextual presets on tap:
+Each active node surfaces contextual presets on tap. Presets open dedicated modals positioned near the node rather than requiring typed intents for common actions:
 
 | Node | Orbitals |
 |------|---------|
-| CORE | System status · Battery · Network · Diagnostics · Uptime |
-| SOMA | Who are you · How are you · List themes |
-| CORTEX | Analyse this · Explain this · Engine status |
-| MEMORY | What do you remember · Remember this |
-| MEDIA | Music · Video · Photo |
-| CHRONOS | 🕐 Live clock · ⏱ Timer · ⏲ Stopwatch · ⏰ Alarms |
+| CORE | System status · Battery · Network (modal: status, public/local IP, speed test) · Diagnostics · Uptime |
+| SOMA | Who are you · How are you · Themes (modal: swatches + custom colour) · Profile (modal: name, routines, preferences) |
+| CORTEX | Text Tools (modal: summarise/translate/rewrite/analyse/explain) · Calculate (modal: numeric pad + prompt calculation) · Engine status |
+| MEMORY | Vault (modal: search/add/delete) · Notes (modal: structured checklists) |
+| MEDIA | Music (URL prompt → player modal with live progress/waveform) · Video (URL prompt → embed) · Photo (URL prompt → viewer) |
+| FILES | Recent · Open (native/browser file picker) · URL |
+| CHRONOS | 🕐 Live clock (→ timezone modal) · ⏱ Timer · ⏲ Stopwatch · ⏰ Alarms |
+| DEVICES | *(inert — tap shows native-app-only info)* |
+
+Tapping a node directly activates its orbitals without needing a typed intent. The node animates — scaling up and drifting toward canvas centre — while other nodes are gently pushed outward, giving the active node visual priority.
 
 ---
 
@@ -159,7 +165,7 @@ Each node surfaces contextual presets on tap:
 ```
 python -m http.server 8080
 ```
-Open `http://localhost:8080/core/`. Full kernel physics, all six action nodes, orbital UI — no server needed.
+Open `http://localhost:8080/core/`. Full kernel physics, all seven active nodes (plus the DEVICES stub), orbital UI — no server needed.
 
 **With Cortex (local OS actions + semantic memory):**
 ```bash
@@ -182,19 +188,20 @@ Install [Tailscale](https://tailscale.com) on both devices. Use your PC's Tailsc
 
 ```
 boss-kernel/
-├── core/index.html        — Soma v0.8 (sovereign PWA)
+├── core/index.html        — Soma v0.8 (sovereign PWA, all modals + orbital UI)
 ├── heart/heart.js         — Autonomic metabolic loop
-├── registry/registry.js   — Node/model/preset catalogue v1.1
+├── registry/registry.js   — Node/model/preset catalogue v1.1 (8 nodes, 27+ presets)
 ├── nervous/nervous.js     — Typed event bus (23 event types)
 ├── immune/immune.js       — Reliability monitor
 ├── engine/engine.js       — Deliberation layer (shared with boss-deliberate)
 ├── actions/
-│   ├── chronos.js         — Timer · Alarm · Stopwatch · World clock
-│   ├── media.js           — Audio · Image · Video
-│   ├── soma.js            — Theme · Identity · Personality
-│   ├── memory.js          — Vault read/write/forget/search
-│   ├── core.js            — Diagnostics · Battery · Network · Uptime
-│   └── cortex.js          — Reasoning · OS delegation
+│   ├── chronos.js         — Timer · Alarm · Stopwatch · World clock · Timezone
+│   ├── media.js           — Audio · Image · Video · Progress tracking
+│   ├── soma.js            — Theme · Identity · Personality · Profile
+│   ├── memory.js          — Vault read/write/forget/search · Notes
+│   ├── core.js             — Diagnostics · Battery · Network · Uptime
+│   ├── cortex.js          — Reasoning · Calculator · Text Tools · OS delegation
+│   └── files.js           — File access across Cortex, browser, and native paths
 ├── cortex/cortex.py       — Semantic bridge v0.8
 ├── .env.example           — Cortex configuration template
 └── README.md
@@ -213,42 +220,61 @@ boss-kernel/
 | 4 | Semantic seed iteration | ✅ Complete |
 | 5 | Cortex hardening | ✅ Complete |
 | 6 | BOSS integration | ✅ Complete |
-| 7 | Future components — action nodes, orbital UI, modals | ✅ Complete |
-| 8 | Expanded utility — calculations, weather, notes, FILES/NETWORK nodes | 🔄 Current |
-| 9 | Native wrap (Capacitor) + Tailscale integration | Pending |
-| 10 | v1.0 stabilisation + PyInstaller + first-run setup | Pending |
+| 7 | Action nodes, orbital UI, modal suite | ✅ Complete |
+| 8 | Expanded utility — Calculator, Text Tools, MEMORY notes, FILES node, DEVICES stub, engine context grounding | ✅ Complete |
+| 9 | Tool calling — Registry → schema export, function calling in `engine.js`, Arbiter escalation via structured decisions | Pending |
+| 10 | Native wrap (Capacitor) + DEVICES node (Bluetooth/Matter) + Tailscale integration guide | Pending |
+| 11 | v1.0 stabilisation + PyInstaller + first-run setup wizard | Pending |
 
 ---
 
-## X. v0.8 Scope
+## X. v0.8 — Delivered
 
-**Priority 1 — Ambient utility (no new nodes):**
-- Calculations and unit conversions (CORTEX offline)
-- Weather via Open-Meteo API (no API key required)
-- Clipboard read/write (CORE, browser permission)
-- Text operations: summarise, translate, rewrite (CORTEX + engine)
-- Wake lock — keep screen on (CORE)
+**Ambient utility (offline-first, CORTEX):**
+- Full numeric calculator with sandboxed expression evaluation
+- Offline unit conversion — weight, length, temperature, volume, speed, data (25+ pairs, alias-aware)
+- Offline date arithmetic — "days until Christmas", date-to-date ranges
+- Currency conversion — live rate fetched once per session at boot, cached with source labelling (live / cached / approximate), Cortex-relayed fallback for exotic pairs, all without requiring engine keys
+- Text Tools — summarise, translate (12 languages), rewrite (5 tones), analyse, explain — all via the deliberation engine when configured
 
-**Priority 2 — Capability expansion:**
-- Structured notes and lists (MEMORY — "add milk to Shopping List")
-- User profile and preferences (SOMA — name, routines, context)
-- FILES node — local file search and open via Cortex
-- NETWORK node — connectivity, speed, local network info
+**Capability expansion:**
+- MEMORY — Vault modal (search/add/delete) and structured Notes (checklist-style lists with persistence)
+- SOMA — user Profile (name, routines, preferences), read by SOMA's own identity/personality responses and injected into every CORTEX engine call for personalised answers
+- FILES node — recent files, native `showOpenFilePicker` with an `<input type="file">` fallback for Safari/iOS, URL-based viewing, embedded viewer panel (image/video/PDF/text) with a fullscreen toggle, Office-format detection with Cortex-delegated open-in-app
+- DEVICES node — added as an explicit, structurally inert placeholder for native-only Bluetooth/Matter/smart-home control. Excluded from all routing and Arbiter logic; visually distinct; exists to make the roadmap tangible and to give the engine-context and gap-flagging work (Section below) something concrete to reference
 
-**Priority 3 — Proactive behaviour:**
-- Pattern detection — surface recurring intents as suggested presets
-- CHRONOS-driven proactive nudges via SSE from Cortex
-- Daily brief preset — CORE + CHRONOS + MEMORY morning summary
+**Engine grounding:**
+- `BOSS_CAPABILITY_CONTEXT` — generated at boot directly from the Registry, prepended to every CORTEX reasoning call so engine responses are aware of BOSS's actual nodes and capabilities rather than answering generically
+- Verified in practice: asking the engine "what are the main nodes?" now returns an accurate, BOSS-specific answer
 
-**Priority 4 — Polish:**
-- Bottom UI swipe-to-collapse on mobile
-- Alarm persistence across reloads (Service Worker)
-- PyInstaller bundled Cortex executable
-- First-run setup wizard
+**Model maintenance:**
+- Migrated the Groq T1 model from the deprecated `llama-3.1-8b-instant` to `openai/gpt-oss-20b` ahead of the August 2026 shutdown, across both `boss-kernel` and the standalone `boss-deliberate` PWA
+
+**UX polish:**
+- Bottom UI swipe-to-collapse (swipe down to hide the console, swipe up or tap the handle to restore) — gives mobile the full canvas when wanted
+- Full structured test pass across all seven active nodes, chat intents and orbital taps, desktop and mobile — all defects found were fixed in-session (routing collisions from overlapping specialty strings, MEDIA progress bar false-positive stream detection, CHRONOS grief on read-only time queries, modal auto-open on chat-triggered actions)
+
+**Deliberately descoped from the original v0.8 plan:**
+- **Clipboard** as a standalone CORE feature — dropped; the OS-native clipboard already covers this, and BOSS only needs clipboard *read* as an input to other operations (e.g. "summarise what I copied"), which can be added inline to Text Tools later rather than as its own capability
+- **Weather** — not built this cycle; remains a good, low-effort future addition (Open-Meteo, no API key)
+- **NETWORK as a separate node** — folded into CORE instead, since its capabilities (connectivity, local/public IP, speed test) overlapped heavily with CORE's existing diagnostics and didn't justify a standalone node
+- **Wake lock** — narrowed from a general CORE toggle to something worth tying specifically to the CHRONOS Timer modal (keep-screen-on while a countdown is visible); not yet implemented, carried forward
 
 ---
 
-## XI. Related
+## XI. v0.9 Direction — Tool Calling
+
+The next phase moves CORTEX's engine integration from *text generation compared against keywords* to genuine function calling:
+
+- Export the Registry's existing `capabilities` and `presets` data as a structured tool schema (`{name, description, parameters}` per action) — the data already exists, this is a serialisation step, not new architecture
+- Wire real function-calling support into `engine.js` for Groq, Gemini, and DeepSeek's APIs
+- Apply it first to **Arbiter escalation** — the highest-value, most bug-prone case this cycle (CHRONOS vs CORTEX, MEMORY vs CORE, and similar conflicts were repeatedly caused by inferring a routing decision from prose similarity rather than asking the model to decide directly)
+- Extend the same manifest to support **gap detection** — when a request matches no existing tool, CORTEX responds honestly and logs the gap, feeding a real backlog for what BOSS should build next. On native (Phase 10), this same signal drives DEVICES' adapter-matching logic
+- Explicitly out of scope, on any platform: letting the engine generate and self-execute arbitrary new code. New real capabilities continue to ship through normal development and review, not runtime code generation
+
+---
+
+## XII. Related
 
 **boss-deliberate** — https://github.com/nztdev/boss-deliberate
 The deliberation layer as a standalone product. Ask once, filter many — multi-model consensus with a full transparency trace.
