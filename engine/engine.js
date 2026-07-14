@@ -447,6 +447,132 @@ function formBond(prev, winner) {
   prev.bonds[winner.id] = (prev.bonds[winner.id] || 0) + 0.05;
 }
 
+// ── Tool-calling routing decision (v0.9) ──────────────────────────────────────
+/**
+ * decideNode(intent, candidates, pool) → { winner: string, raw } | null
+ *
+ * Replaces the old approach of asking the engine to answer the intent in
+ * prose, then inferring a routing decision by comparing that prose against
+ * each candidate's specialty string via semanticSim(). That approach was
+ * fragile — it asks a model to write an answer, then guesses a decision from
+ * word overlap with the answer, two lossy steps where one direct step suffices.
+ *
+ * decideNode() asks the model to make ONE direct choice via a forced function
+ * call: select_node(name). No prose is generated or parsed for the decision.
+ * candidates: [{ name, description }] — 2+ options, in priority order.
+ * Returns null on failure (provider not supported, network error, bad
+ * response) — callers should fall back to their existing resolution path.
+ */
+export async function decideNode(intent, candidates, pool) {
+  if (!candidates || candidates.length < 2) return null;
+
+  // Pick the best-available T1 model from the pool with a usable API key.
+  const scored = scorePool(intent, pool.filter(n => n.tier === 1 && n.apiKey));
+  const node   = scored[0]?.node;
+  if (!node) return null;
+
+  const names       = candidates.map(c => c.name);
+  const toolName    = 'select_node';
+  const toolDesc    = 'Select which system component should handle this user request.';
+  const paramDesc   = candidates.map(c => `${c.name}: ${c.description}`).join(' | ');
+
+  try {
+    let raw;
+    if (node.provider === 'groq' || node.provider === 'mistral') {
+      raw = await _callWithToolsOpenAIStyle(node, intent, names, toolName, toolDesc, paramDesc);
+    } else if (node.provider === 'gemini') {
+      raw = await _callWithToolsGemini(node, intent, names, toolName, toolDesc, paramDesc);
+    } else {
+      return null;  // provider doesn't have a tool-calling adapter here yet
+    }
+    if (!raw || !names.includes(raw)) return null;
+    return { winner: raw, model: node.name };
+  } catch(_) {
+    return null;
+  }
+}
+
+/** OpenAI-compatible tool calling — used by Groq and the HF/Mistral router. */
+async function _callWithToolsOpenAIStyle(node, intent, names, toolName, toolDesc, paramDesc) {
+  const url = node.provider === 'groq'
+    ? 'https://api.groq.com/openai/v1/chat/completions'
+    : 'https://router.huggingface.co/v1/chat/completions';
+
+  const body = {
+    model: node.model,
+    messages: [
+      { role: 'system', content: `You route user requests to the correct system component. Components: ${paramDesc}` },
+      { role: 'user',   content: intent },
+    ],
+    tools: [{
+      type: 'function',
+      function: {
+        name: toolName,
+        description: toolDesc,
+        parameters: {
+          type: 'object',
+          properties: { name: { type: 'string', enum: names, description: 'The chosen component name.' } },
+          required: ['name'],
+        },
+      },
+    }],
+    tool_choice: { type: 'function', function: { name: toolName } },
+    max_tokens: 100,
+    temperature: 0,
+  };
+
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${node.apiKey}` },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!r.ok) return null;
+  const d = await r.json();
+  const call = d.choices?.[0]?.message?.tool_calls?.[0];
+  if (!call) return null;
+  try {
+    const args = JSON.parse(call.function.arguments);
+    return args.name || null;
+  } catch(_) { return null; }
+}
+
+/** Gemini function calling — different request/response shape from OpenAI style. */
+async function _callWithToolsGemini(node, intent, names, toolName, toolDesc, paramDesc) {
+  const model = node.model || 'gemini-2.5-flash';
+  const url   = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${node.apiKey}`;
+
+  const body = {
+    system_instruction: { parts: [{ text: `You route user requests to the correct system component. Components: ${paramDesc}` }] },
+    contents: [{ role: 'user', parts: [{ text: intent }] }],
+    tools: [{
+      functionDeclarations: [{
+        name: toolName,
+        description: toolDesc,
+        parameters: {
+          type: 'object',
+          properties: { name: { type: 'string', enum: names, description: 'The chosen component name.' } },
+          required: ['name'],
+        },
+      }],
+    }],
+    tool_config: { function_calling_config: { mode: 'ANY', allowed_function_names: [toolName] } },
+    generationConfig: { temperature: 0 },
+  };
+
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) return null;
+  const d = await r.json();
+  const call = d.candidates?.[0]?.content?.parts?.find(p => p.functionCall)?.functionCall;
+  if (!call) return null;
+  return call.args?.name || null;
+}
+
 // ── Main deliberation pipeline ────────────────────────────────────────────────
 /**
  * deliberate(intent, pool, options?) → DelibeResult
@@ -821,6 +947,7 @@ export default {
   callModel,
   measureDissonance,
   deliberate,
+  decideNode,       // v0.9 — direct tool-calling routing decision
   buildDefaultPool,
   savePool,         // returns JSON string — caller handles storage
   loadPool,         // accepts JSON string — caller handles retrieval
