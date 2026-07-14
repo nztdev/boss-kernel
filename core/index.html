@@ -1919,7 +1919,7 @@ if ('serviceWorker' in navigator) {
 <script type="module">
 import { Heart }                                        from '../heart/heart.js';
 import { deliberate, buildDefaultPool, loadPool, savePool,
-         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN }    from '../engine/engine.js';
+         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN, decideNode } from '../engine/engine.js';
 import { Registry, INTENT_SOURCE }                       from '../registry/registry.js';
 import { Nervous, EVENT }                                from '../nervous/nervous.js';
 import { Immune }                                        from '../immune/immune.js';
@@ -4465,11 +4465,38 @@ async function runArbiter(top, second, delta, intent) {
     return null; // caller enters limp mode
   }
 
-  // Stage 3 — Engine escalation
+  // Stage 3 — Engine escalation (v0.9: direct tool-calling decision)
   if (engineConfigured() && enginePool) {
     clog(`   🧬 ENGINE ESCALATION — consulting deliberation layer…`, 'log-arbiter');
     Nervous.emit(EVENT.ENGINE_ESCALATED, { source: 'ARBITER',
       payload: { intent, nodeA: top.node.name, nodeB: second.node.name } });
+
+    // Ask the model to choose directly via a forced function call —
+    // no prose is generated or parsed for the decision itself.
+    try {
+      const decision = await decideNode(intent, [
+        { name: top.node.name,    description: top.node.specialty },
+        { name: second.node.name, description: second.node.specialty },
+      ], enginePool);
+
+      if (decision) {
+        const winner = decision.winner === top.node.name ? top.node : second.node;
+        clog(`   🧬 Engine decided: ${winner.name} (via ${decision.model} tool call)`, 'log-arbiter');
+        Nervous.emit(EVENT.ENGINE_RESOLVED, { source: 'ENGINE', node: winner.name,
+          payload: { method: 'tool_call', model: decision.model, intent } });
+        localStorage.setItem(ENGINE_POOL_KEY, savePool(enginePool));
+        // No _engineResponse set — the winning node's own action handler
+        // produces the real response, rather than reusing the routing call's
+        // (now nonexistent) prose output.
+        return winner;
+      }
+      clog(`   ⚠ Tool-calling decision unavailable — falling back to prose comparison`, 'log-arbiter');
+    } catch(e) {
+      clog(`   ⚠ Tool-calling decision failed (${e.message}) — falling back`, 'log-arbiter');
+    }
+
+    // Fallback — original prose-based approach, kept as a safety net for
+    // providers/configurations where tool calling isn't available.
     try {
       const result = await deliberate(intent, enginePool, {
         systemPrompt: `You are resolving an ambiguous intent for a routing kernel.
@@ -4480,20 +4507,16 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
       });
 
       if (result.output && !result.error) {
-        // Save engine pool metabolic state
         localStorage.setItem(ENGINE_POOL_KEY, savePool(enginePool));
-
-        // Compare engine output to each node's specialty
         const simA = semanticSim(result.output, top.node.specialty);
         const simB = semanticSim(result.output, second.node.specialty);
         const winner = simA >= simB ? top.node : second.node;
         const conf   = Math.round((result.confidence || 0) * 100);
 
-        clog(`   🧬 Engine → ${winner.name} (conf=${conf}% sim_a=${simA.toFixed(2)} sim_b=${simB.toFixed(2)})`, 'log-arbiter');
+        clog(`   🧬 Engine → ${winner.name} (fallback, conf=${conf}% sim_a=${simA.toFixed(2)} sim_b=${simB.toFixed(2)})`, 'log-arbiter');
         Nervous.emit(EVENT.ENGINE_RESOLVED, { source: 'ENGINE', node: winner.name,
-          payload: { confidence: result.confidence, simA, simB, intent } });
+          payload: { method: 'prose_fallback', confidence: result.confidence, simA, simB, intent } });
 
-        // Store engine response so firePulse can display it
         winner._engineResponse = result.output;
         return winner;
       }
