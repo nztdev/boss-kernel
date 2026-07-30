@@ -66,7 +66,11 @@ const DEFAULT_NODES = [
     name:         'CORE',
     specialty:    'health battery charge power status diagnostics system reboot uptime integrity vitals network online offline memory performance session',
     color:        '#00ffcc',
-    resonance:    2.0,
+    resonance:    1.5,  // was 2.0 — outlier value made CORE the default winner
+                        // for any low-match/failed intent, whose accumulated
+                        // warmth then out-competed genuinely relevant nodes on
+                        // subsequent turns. Aligned with the rest of the pack
+                        // (1.3–1.8) so no single node structurally dominates ties.
     tier:         'active',
     hasAction:    true,
     actionType:   'system',
