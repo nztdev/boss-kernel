@@ -81,7 +81,7 @@ const DEFAULT_NODES = [
     name:         'SOMA',
     specialty:    'identity self who what soma appearance theme colour color switch style skin palette ui somatic personality profile customise mood feeling state crimson amber violet ice solar',
     color:        '#ff66aa',
-    resonance:    1.8,
+    resonance:    1.5,  // flattened (v0.9) — see CORE note above
     tier:         'active',
     hasAction:    true,
     actionType:   'interface',
@@ -92,7 +92,7 @@ const DEFAULT_NODES = [
     name:         'CORTEX',
     specialty:    'ai logic intelligence think reason analyse explain evaluate process decide infer breakdown examine what is how does why open launch run start engine model status download chrome spotify notepad app application',
     color:        '#cc00ff',
-    resonance:    1.6,
+    resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
     hasAction:    true,
     actionType:   'reasoning',
@@ -114,7 +114,7 @@ const DEFAULT_NODES = [
     name:         'MEDIA',
     specialty:    'music sound audio playback play pause stop mute volume track song speaker listen headphones photo image picture video visual show display watch screen gallery wallpaper stream playing',
     color:        '#00F0FF',
-    resonance:    1.4,
+    resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
     hasAction:    true,
     actionType:   'sensory',
@@ -135,7 +135,7 @@ const DEFAULT_NODES = [
     name:         'FILES',
     specialty:    'file document pdf folder directory recent download pick browse attachment',
     color:        '#ffcc00',
-    resonance:    1.4,
+    resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
     hasAction:    true,
     actionType:   'files',
@@ -158,7 +158,10 @@ const DEFAULT_NODES = [
     name:         'CHRONOS',
     specialty:    'time schedule clock calendar timer alarm duration elapsed long countdown remind when stopwatch lap world timezone tokyo london paris',
     color:        '#ffaa00',
-    resonance:    1.3,
+    resonance:    1.5,  // flattened (v0.9) — was the lowest of all active nodes,
+                        // structurally disadvantaged even on intents it should
+                        // clearly own (e.g. world clock queries) whenever warmth
+                        // was low early in a session
     tier:         'active',
     hasAction:    true,
     actionType:   'temporal',
