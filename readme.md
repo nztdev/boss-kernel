@@ -1,4 +1,4 @@
-# B.O.S.S. Kernel v0.9 — Biological Operating System
+# B.O.S.S. Kernel v0.8 — Biological Operating System
 
 > *"Data is not a Resource. Data is an Experience."*
 
@@ -129,13 +129,13 @@ score = (warmth × match)                     thermal   — intent gates recent 
 
 | Node | Resonance | Tier | Role | Real Actions |
 |------|-----------|------|------|-------------|
-| CORE | 2.0 | Active | System health, diagnostics, battery, network | Battery level, diagnostics, uptime, network status, local/public IP, speed test |
-| SOMA | 1.8 | Active | Identity, interface, personality | Theme switching (6 themes + custom), identity response, personality state, user profile |
-| CORTEX | 1.6 | Active | Reasoning, analysis, computation, OS delegation | Deliberation engine (explain/analyse/reason), Text Tools (summarise/translate/rewrite), offline calculator, unit/currency/date conversion, app launching via Cortex |
+| CORE | 1.5 | Active | System health, diagnostics, battery, network | Battery level, diagnostics, uptime, network status, local/public IP, speed test |
+| SOMA | 1.5 | Active | Identity, interface, personality | Theme switching (6 themes + custom), identity response, personality state, user profile |
+| CORTEX | 1.5 | Active | Reasoning, analysis, computation, OS delegation | Deliberation engine (explain/analyse/reason), Text Tools (summarise/translate/rewrite), offline calculator, unit/currency/date conversion, app launching via Cortex |
 | MEMORY | 1.5 | Active | Recall, storage, structured notes | Semantic vault search, store, forget, structured lists |
-| MEDIA | 1.4 | Active | Audio, images, video | Stream playback with live progress, Web Audio waveform, mini-player, image/video viewers |
-| FILES | 1.4 | Active | File access and viewing | Recent files, native file picker (with iOS/Safari fallback), URL-based viewer, fullscreen toggle, Cortex-delegated Office/OS-app opening |
-| CHRONOS | 1.3 | Active | Time, scheduling, alarms | Timers, alarms, stopwatch, world clock, timezone management, live clock orbital |
+| MEDIA | 1.5 | Active | Audio, images, video | Stream playback with live progress, Web Audio waveform, mini-player, image/video viewers |
+| FILES | 1.5 | Active | File access and viewing | Recent files, native file picker (with iOS/Safari fallback), URL-based viewer, fullscreen toggle, Cortex-delegated Office/OS-app opening |
+| CHRONOS | 1.5 | Active | Time, scheduling, alarms | Timers, alarms, stopwatch, world clock, timezone management, live clock orbital |
 | DEVICES | 0 | Stub | Smart home / Bluetooth / Matter control | **Native app only** — inert in the browser PWA, reserved for Capacitor build |
 
 Seven nodes are active with real capabilities executed through dedicated action modules in `actions/`. DEVICES is a structural placeholder — excluded entirely from intent routing and the Arbiter, rendered with a muted dashed outline, and only interactive via an informational tap.
