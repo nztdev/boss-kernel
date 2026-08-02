@@ -263,9 +263,9 @@ async function callGroq(node, intent, systemPrompt) {
 }
 
 async function callGemini(node, intent, systemPrompt) {
-  // Model: 'gemini-2.5-flash' confirmed working on AI Studio free tier (2026-04-04).
+  // Model: 'gemini-3.5-flash' confirmed working on AI Studio free tier (2026-04-04).
   // If you see 404s on a different account, try 'gemini-1.5-flash' as fallback.
-  const model  = node.model || 'gemini-2.5-flash';
+  const model  = node.model || 'gemini-3.5-flash';
   const url    = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${node.apiKey}`;
   const body   = {
     system_instruction: { parts: [{ text: systemPrompt || defaultSystemPrompt(node) }] },
@@ -539,7 +539,7 @@ async function _callWithToolsOpenAIStyle(node, intent, names, toolName, toolDesc
 
 /** Gemini function calling — different request/response shape from OpenAI style. */
 async function _callWithToolsGemini(node, intent, names, toolName, toolDesc, paramDesc) {
-  const model = node.model || 'gemini-2.5-flash';
+  const model = node.model || 'gemini-3.5-flash';
   const url   = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${node.apiKey}`;
 
   const body = {
@@ -880,7 +880,7 @@ export function buildDefaultPool(keys = {}) {
     new LLMNode({
       name:      'Gemini Flash',
       provider:  'gemini',
-      model:     'gemini-2.5-flash',
+      model:     'gemini-3.5-flash',
       specialty: 'reasoning analysis explain science ethics philosophy context synthesis creative writing nuanced understanding deep explanation',
       tier:      1,
       apiKey:    keys.gemini || '',
