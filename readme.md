@@ -188,7 +188,7 @@ Install [Tailscale](https://tailscale.com) on both devices. Use your PC's Tailsc
 
 ```
 boss-kernel/
-├── core/index.html        — Soma v0.8 (sovereign PWA, all modals + orbital UI)
+├── core/index.html        — Soma v0.9 (tool-calling Arbiter, blocking clarification)
 ├── heart/heart.js         — Autonomic metabolic loop
 ├── registry/registry.js   — Node/model/preset catalogue v1.1 (8 nodes, 27+ presets)
 ├── nervous/nervous.js     — Typed event bus (23 event types)
@@ -262,19 +262,32 @@ boss-kernel/
 
 ---
 
-## XI. v0.9 Direction — Tool Calling
+## XI. v0.9 — Delivered So Far
 
-The next phase moves CORTEX's engine integration from *text generation compared against keywords* to genuine function calling:
+**Tool-calling Arbiter escalation.** `decideNode()` in `engine.js` replaces the old prose-similarity guess with a direct, forced function call (`select_node`) — the model picks one of the two conflicting nodes outright rather than answering the intent in prose that's then fuzzy-matched against specialty strings. Supported on both Groq (OpenAI-compatible tool calling) and Gemini (native function declarations), with the original prose-based method kept as an explicit fallback if tool calling is unavailable or fails. Verified in testing across both providers with correct, deterministic decisions (`temperature: 0`).
 
-- Export the Registry's existing `capabilities` and `presets` data as a structured tool schema (`{name, description, parameters}` per action) — the data already exists, this is a serialisation step, not new architecture
-- Wire real function-calling support into `engine.js` for Groq, Gemini, and DeepSeek's APIs
-- Apply it first to **Arbiter escalation** — the highest-value, most bug-prone case this cycle (CHRONOS vs CORTEX, MEMORY vs CORE, and similar conflicts were repeatedly caused by inferring a routing decision from prose similarity rather than asking the model to decide directly)
-- Extend the same manifest to support **gap detection** — when a request matches no existing tool, CORTEX responds honestly and logs the gap, feeding a real backlog for what BOSS should build next. On native (Phase 10), this same signal drives DEVICES' adapter-matching logic
+**Resonance flattening.** All seven active nodes were normalised to `resonance: 1.5`. Two of them (CORE at 2.0, then briefly the reassigned outlier) had been structural default-winners for any low-match intent purely from their static starting resonance — since `warmth` starts near zero for every node at boot, early-session routing was governed almost entirely by which node had the tallest baseline value, not by actual relevance. Flattening removes that bias; the small per-fire resonance growth (`+0.01`) is now the genuine "accumulated reliability" signal the architecture describes, rather than being drowned out by a fixed Registry number.
+
+**Amendment — risk-tiered Grief Protocol.** The original Arbiter lock specified that any conflict between two action (side-effect) nodes hard-stops the kernel, regardless of how decisive the score gap is. In practice this meant a clearly unambiguous intent (e.g. a 4x score margin) could still trigger a full-kernel suspension purely because the two nodes' *general* specialties were thematically distant — dissonance measures domain distance between specialty strings, not genuine ambiguity in what the user meant. This has been amended, deliberately and explicitly rather than silently:
+
+- Every node now carries a `riskTier` — `'standard'` (all seven current active nodes) or `'elevated'` (reserved for future high-stakes capabilities, e.g. DEVICES controlling locks or security systems)
+- **Elevated-tier conflicts** keep the original unconditional hard stop, regardless of engine availability — the safety margin stays maximal exactly where real-world consequences are highest
+- **Standard-tier conflicts** no longer hard-grieve. If the engine is configured, `decideNode()` resolves the conflict directly and fires immediately. If the engine is unavailable or fails, execution is **blocked** — a clarification toast requires the user to explicitly choose before either node fires, scoped to that one intent only, with no full-kernel suspension and no manual "Recover" step
+
+This preserves the property Grief Protocol exists for — no silent irreversible action on genuine ambiguity — while removing suspension for cases that were never actually ambiguous, just structurally flagged as dissonant. As BOSS's node count grows (more nodes means more possible dissonant pairings), this scales considerably better than the original all-or-nothing hard stop.
+
+---
+
+## XII. v0.9 Direction — Tool Calling (Remaining)
+
+- Export the Registry's existing `capabilities` and `presets` data as a general-purpose tool schema (`{name, description, parameters}` per action) — the data already exists, this is a serialisation step, not new architecture. What's built so far (`decideNode()`) is scoped narrowly to binary Arbiter decisions; this generalises it to arbitrary multi-parameter tool calls
+- Extend tool calling to general CORTEX-routed intents as a long-tail fallback beyond local regex — when no local pattern matches, the engine picks the right tool directly rather than the intent falling through to "no recognised action"
+- **Gap detection** — when a request matches no existing tool, CORTEX responds honestly and logs the gap, feeding a real backlog for what BOSS should build next. On native (Phase 10), this same signal drives DEVICES' adapter-matching logic
 - Explicitly out of scope, on any platform: letting the engine generate and self-execute arbitrary new code. New real capabilities continue to ship through normal development and review, not runtime code generation
 
 ---
 
-## XII. Related
+## XIII. Related
 
 **boss-deliberate** — https://github.com/nztdev/boss-deliberate
 The deliberation layer as a standalone product. Ask once, filter many — multi-model consensus with a full transparency trace.
