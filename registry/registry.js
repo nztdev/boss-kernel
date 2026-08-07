@@ -72,6 +72,12 @@ const DEFAULT_NODES = [
                         // subsequent turns. Aligned with the rest of the pack
                         // (1.3–1.8) so no single node structurally dominates ties.
     tier:         'active',
+    riskTier:     'standard',  // v0.9 — 'standard' | 'elevated'. Elevated nodes
+                              // (e.g. future DEVICES capabilities controlling
+                              // locks/security) always hard-grief on conflict,
+                              // regardless of engine availability. Standard
+                              // nodes resolve via engine decision or blocking
+                              // clarification instead.
     hasAction:    true,
     actionType:   'system',
     capabilities: ['system_query', 'diagnostics', 'battery_monitor', 'network_status', 'uptime'],
@@ -79,10 +85,16 @@ const DEFAULT_NODES = [
   },
   {
     name:         'SOMA',
-    specialty:    'identity self who what soma appearance theme colour color switch style skin palette ui somatic personality profile customise mood feeling state crimson amber violet ice solar',
+    specialty:    'identity self who soma appearance theme colour color switch style skin palette ui somatic personality profile customise mood feeling state crimson amber violet ice solar',
     color:        '#ff66aa',
     resonance:    1.5,  // flattened (v0.9) — see CORE note above
     tier:         'active',
+    riskTier:     'standard',  // v0.9 — 'standard' | 'elevated'. Elevated nodes
+                              // (e.g. future DEVICES capabilities controlling
+                              // locks/security) always hard-grief on conflict,
+                              // regardless of engine availability. Standard
+                              // nodes resolve via engine decision or blocking
+                              // clarification instead.
     hasAction:    true,
     actionType:   'interface',
     capabilities: ['theme_change', 'personality_response', 'identity_query', 'theme_list', 'colour_change'],
@@ -94,6 +106,12 @@ const DEFAULT_NODES = [
     color:        '#cc00ff',
     resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
+    riskTier:     'standard',  // v0.9 — 'standard' | 'elevated'. Elevated nodes
+                              // (e.g. future DEVICES capabilities controlling
+                              // locks/security) always hard-grief on conflict,
+                              // regardless of engine availability. Standard
+                              // nodes resolve via engine decision or blocking
+                              // clarification instead.
     hasAction:    true,
     actionType:   'reasoning',
     capabilities: ['reasoning', 'analysis', 'inference', 'explain', 'engine_query', 'pool_status'],
@@ -105,6 +123,12 @@ const DEFAULT_NODES = [
     color:        '#66aaff',
     resonance:    1.5,
     tier:         'active',
+    riskTier:     'standard',  // v0.9 — 'standard' | 'elevated'. Elevated nodes
+                              // (e.g. future DEVICES capabilities controlling
+                              // locks/security) always hard-grief on conflict,
+                              // regardless of engine availability. Standard
+                              // nodes resolve via engine decision or blocking
+                              // clarification instead.
     hasAction:    true,
     actionType:   'memory',
     capabilities: ['vault_read', 'vault_write', 'vault_forget', 'vault_status', 'vault_export', 'recall'],
@@ -116,6 +140,12 @@ const DEFAULT_NODES = [
     color:        '#00F0FF',
     resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
+    riskTier:     'standard',  // v0.9 — 'standard' | 'elevated'. Elevated nodes
+                              // (e.g. future DEVICES capabilities controlling
+                              // locks/security) always hard-grief on conflict,
+                              // regardless of engine availability. Standard
+                              // nodes resolve via engine decision or blocking
+                              // clarification instead.
     hasAction:    true,
     actionType:   'sensory',
     capabilities: [
@@ -137,6 +167,12 @@ const DEFAULT_NODES = [
     color:        '#ffcc00',
     resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
+    riskTier:     'standard',  // v0.9 — 'standard' | 'elevated'. Elevated nodes
+                              // (e.g. future DEVICES capabilities controlling
+                              // locks/security) always hard-grief on conflict,
+                              // regardless of engine availability. Standard
+                              // nodes resolve via engine decision or blocking
+                              // clarification instead.
     hasAction:    true,
     actionType:   'files',
     capabilities: ['recent_files', 'open_file', 'pick_and_view', 'url_view', 'fullscreen'],
@@ -163,6 +199,12 @@ const DEFAULT_NODES = [
                         // clearly own (e.g. world clock queries) whenever warmth
                         // was low early in a session
     tier:         'active',
+    riskTier:     'standard',  // v0.9 — 'standard' | 'elevated'. Elevated nodes
+                              // (e.g. future DEVICES capabilities controlling
+                              // locks/security) always hard-grief on conflict,
+                              // regardless of engine availability. Standard
+                              // nodes resolve via engine decision or blocking
+                              // clarification instead.
     hasAction:    true,
     actionType:   'temporal',
     capabilities: ['timer_set', 'alarm_set', 'schedule_query', 'countdown'],
