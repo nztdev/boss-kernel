@@ -1298,6 +1298,15 @@ textarea.profile-input {
   pointer-events: all;
 }
 #clarification-toast.show { display: block; }
+#clarification-toast.blocking {
+  border: 1px solid #ffaa00;
+  box-shadow: 0 0 16px rgba(255,170,0,0.3);
+  animation: toast-pulse 1.6s ease-in-out infinite;
+}
+@keyframes toast-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,170,0,0.25); }
+  50%      { box-shadow: 0 0 20px rgba(255,170,0,0.5); }
+}
 .toast-q { color: var(--purple); margin-bottom: 7px; }
 .toast-btn {
   display: block; width: 100%; margin-bottom: 4px;
@@ -4112,7 +4121,7 @@ function engineConfigured() {
 // ── Semantic similarity ───────────────────────────────────────────────────────
 const SYNONYMS = {
   health:   ['vitality','status','wellbeing','monitor','check','diagnostics','diagnostic','condition','battery','charge','power','system','reboot','uptime','network','online','offline','memory','ram','performance','session'],
-  identity: ['self','id','soma','look','feel','interface','appearance','who','what','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
+  identity: ['self','id','soma','look','feel','interface','appearance','who','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine','launch','run','engine','model','download','chrome','spotify','notepad','app','application'],
   data:     ['recall','retrieve','vault','archive','memory','remember','forget','memorize','note','meeting','remind','keep','save'],
   files:    ['file','document','doc','pdf','view','browse','pick','folder','directory','attachment','download','recent','upload'],
@@ -4461,12 +4470,27 @@ async function runArbiter(top, second, delta, intent) {
   const eitherActive = !!(top.node.action || second.node.action);
 
   if (bothActive) {
-    // Hard stop — both nodes have irreversible side-effect actions
-    clog(`   ⚠ OPPOSED + BOTH ACTION NODES — Grief Protocol (hard stop)`, 'log-grief');
-    top.node.grieve(); second.node.grieve();
-    clog(`   💔 ${top.node.name} res→${top.node.resonance.toFixed(3)}`, 'log-grief');
-    clog(`   💔 ${second.node.name} res→${second.node.resonance.toFixed(3)}`, 'log-grief');
-    return null; // caller enters limp mode
+    const elevated = top.node.riskTier === 'elevated' || second.node.riskTier === 'elevated';
+
+    if (elevated) {
+      // Elevated-risk nodes keep the original unconditional hard stop,
+      // regardless of engine availability — reserved for genuinely
+      // high-stakes actions (e.g. future DEVICES capabilities controlling
+      // locks or security systems), where a wrong silent action carries
+      // real-world consequences beyond "undo and retry."
+      clog(`   ⚠ OPPOSED + ELEVATED-RISK ACTION NODES — Grief Protocol (hard stop)`, 'log-grief');
+      top.node.grieve(); second.node.grieve();
+      clog(`   💔 ${top.node.name} res→${top.node.resonance.toFixed(3)}`, 'log-grief');
+      clog(`   💔 ${second.node.name} res→${second.node.resonance.toFixed(3)}`, 'log-grief');
+      return null; // caller enters full limp mode
+    }
+
+    // Standard-risk action conflict — no longer hard-grieves unconditionally.
+    // Dissonance measures domain distance between the two nodes' specialties,
+    // not genuine ambiguity in what the user meant — a confident engine
+    // decision (or, failing that, an explicit user choice) resolves this
+    // without suspending the whole kernel. Falls through to Stage 3 below.
+    clog(`   ⚠ OPPOSED (standard-risk action conflict) — resolving via engine or clarification`, 'log-arbiter');
   }
 
   // Stage 3 — Engine escalation (v0.9: direct tool-calling decision)
@@ -4529,24 +4553,42 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
     }
   }
 
-  // Stage 4 — Clarification toast (fallback when engine unavailable or failed)
+  // Stage 4 — Clarification
+  // Standard-risk action-node conflicts that the engine couldn't resolve
+  // (unconfigured or failed) block execution until the user explicitly
+  // chooses — this was flagged in Stage 2 as an action conflict specifically
+  // because letting either side fire silently on a genuine tie is exactly
+  // the risk this whole mechanism exists to avoid. Scoped to this one
+  // intent only — no full-kernel suspension, no manual "Recover" step.
+  if (bothActive) {
+    clog(`   ⚠ OPPOSED — blocking clarification (action conflict, engine unavailable)`, 'log-arbiter');
+    showClarificationToast(top.node, second.node, intent, true);
+    return { deferred: true };
+  }
+
+  // Default — non-blocking clarification toast for passive-node conflicts.
+  // The higher-scoring node fires immediately; the toast is an FYI allowing
+  // after-the-fact correction, since firing the "wrong" passive node just
+  // means a wrong answer, trivially corrected.
   clog(`   ⚠ OPPOSED — Clarification requested`, 'log-arbiter');
   showClarificationToast(top.node, second.node, intent);
   return top.node;
 }
 
 // ── Clarification toast ───────────────────────────────────────────────────────
-function showClarificationToast(topNode, secondNode, intent = '') {
-  pendingClarification = { top: topNode, second: secondNode, _intent: intent };
+function showClarificationToast(topNode, secondNode, intent = '', blocking = false) {
+  pendingClarification = { top: topNode, second: secondNode, _intent: intent, blocking };
   const toast = document.getElementById('clarification-toast');
-  document.getElementById('toast-question').textContent =
-    `Conflict: "${topNode.name}" vs "${secondNode.name}" — which did you mean?`;
+  document.getElementById('toast-question').textContent = blocking
+    ? `⚠ Action required — "${topNode.name}" vs "${secondNode.name}": which did you mean?`
+    : `Conflict: "${topNode.name}" vs "${secondNode.name}" — which did you mean?`;
   document.getElementById('toast-options').innerHTML = `
     <button class="toast-btn" onclick="clarify('${topNode.id}')">${topNode.name}<br>
       <span style="color:#335544;font-size:8px">${topNode.specialty.slice(0, 40)}…</span></button>
     <button class="toast-btn" onclick="clarify('${secondNode.id}')">${secondNode.name}<br>
       <span style="color:#335544;font-size:8px">${secondNode.specialty.slice(0, 40)}…</span></button>`;
   toast.classList.add('show');
+  if (blocking) toast.classList.add('blocking');
 }
 
 function clarify(nodeId) {
@@ -4558,7 +4600,7 @@ function clarify(nodeId) {
 }
 
 function dismissToast() {
-  document.getElementById('clarification-toast').classList.remove('show');
+  document.getElementById('clarification-toast').classList.remove('show', 'blocking');
   pendingClarification = null;
 }
 
@@ -4890,6 +4932,12 @@ async function firePulse() {
   // Three-stage Arbiter (soft/hard/engine path)
   if (second && delta < confThreshold) {
     const result = await runArbiter(top, second, delta, intent);
+    if (result && result.deferred) {
+      // Blocking clarification is pending — the toast's clarify() button
+      // will fire the chosen node once the user picks. Nothing fires now,
+      // and this is NOT a full-kernel suspension — limp mode is unaffected.
+      return;
+    }
     if (result === null) {
       limpMode = true;
       document.getElementById('grief-overlay').classList.add('show');
