@@ -35,7 +35,7 @@ const _state = {
   // Audio
   audioContext:   null,
   audioElement:   null,   // HTMLAudioElement for stream playback
-  oscillator:     null,   // Web Audio fallback tone
+  oscillators:    [],     // Web Audio fallback tone — all layered oscillators
   gainNode:       null,
   volume:         0.7,
   preMuteVolume:  0.7,  // restored on unmute
@@ -183,10 +183,13 @@ function _ensureAudioContext() {
 }
 
 function _stopTone() {
-  if (_state.oscillator) {
-    try { _state.oscillator.stop(); } catch(_) {}
-    _state.oscillator = null;
-  }
+  // Stop every layered oscillator, not just the first — the ambient tone
+  // uses three simultaneous oscillators, and only tracking one left the
+  // other two running silently in the background after "stop".
+  _state.oscillators.forEach(osc => {
+    try { osc.stop(); } catch(_) {}
+  });
+  _state.oscillators = [];
 }
 
 function _playTone(clog) {
@@ -204,7 +207,7 @@ function _playTone(clog) {
     osc.connect(gain);
     gain.connect(_state.gainNode);
     osc.start();
-    if (i === 0) _state.oscillator = osc;  // keep reference to stop later
+    _state.oscillators.push(osc);  // track every oscillator so _stopTone can reach all of them
   });
 
   _state.isPlaying  = true;
