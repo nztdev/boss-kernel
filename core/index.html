@@ -4548,6 +4548,9 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
         winner._engineResponse = result.output;
         return winner;
       }
+      // Fallback ran but produced nothing usable — say why, rather than
+      // silently dropping to blocking clarification with no explanation.
+      clog(`   ⚠ Prose fallback also failed (${result.error || 'no output returned'}) — asking user to choose`, 'log-arbiter');
     } catch(e) {
       clog(`   ⚠ Engine escalation failed: ${e.message}`, 'log-err');
     }
