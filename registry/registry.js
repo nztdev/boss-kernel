@@ -782,6 +782,30 @@ export const Registry = {
     );
   },
 
+  /**
+   * exportToolSchema() → [{ name, description, node, presetId }]
+   *
+   * Converts the existing preset catalogue into a tool-calling schema, for
+   * CORTEX's general-purpose fallback (v0.9 Direction — see README §XII).
+   * No parameter extraction — each tool maps to a pre-resolved preset whose
+   * actions are already defined, so "calling" a tool means firing that
+   * preset directly, the same mechanism the orbital UI already uses.
+   * Excludes stub-tier and DEVICES-class presets — nothing to call there yet.
+   */
+  exportToolSchema() {
+    return this.getAllPresets()
+      .filter(p => {
+        const node = this.getNode(p.nodes[0]);
+        return node && node.tier !== 'stub';
+      })
+      .map(p => ({
+        name:        p.id,
+        description: `${p.label} (${p.nodes.join('+')}) — matches requests like "${p.intent}"`,
+        node:        p.nodes[0],
+        presetId:    p.id,
+      }));
+  },
+
   getPresetsForNodes(nodeNames) {
     const sorted = [...nodeNames].map(n => n.toUpperCase()).sort().join(',');
     return Object.values(this._presets).filter(p => {
