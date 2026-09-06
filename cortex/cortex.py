@@ -1,415 +1,310 @@
-"""
-B.O.S.S. CORTEX v0.7 — THE SEMANTIC NERVOUS SYSTEM
-====================================================
-github.com/nztdev/boss-kernel
+/**
+ * B.O.S.S. CORTEX Action Module — actions/cortex.js
+ * ===================================================
+ * github.com/nztdev/boss-kernel
+ *
+ * Reasoning and deliberation actions for the CORTEX node.
+ * Calls the deliberation engine directly for analytical tasks.
+ *
+ * Interface:
+ *   CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberateFn, Immune, Registry)
+ *
+ * Capabilities (matches Registry definition):
+ *   reasoning    — analyse, explain, think through
+ *   analysis     — structured breakdown of a topic
+ *   inference    — draw conclusions from available data
+ *   engine_query — direct deliberation engine call
+ *   pool_status  — engine pool health report
+ */
 
-The Cortex is a guest, not a master.
-The Soma (index.html) is sovereign and fully functional offline.
-This server sharpens the field — it does not control it.
+// ── Intent classification ─────────────────────────────────────────────────────
+function _classify(intent) {
+  const s = intent.toLowerCase().trim();
 
-Endpoints:
-  GET  /handshake  — health check
-  POST /resonate   — relative vector boosts (mean-subtracted cosine)
-  POST /pulse      — intent routing + optional system action
-  POST /remember   — ingest text into server-side memory pool
-  GET  /stream     — SSE proactive events (file changes, alerts)
+  // OS-action intents — delegated to Python Cortex server /pulse endpoint
+  // These require local machine access that only the Python server has.
+  const osPatterns = [
+    /\b(open|launch|start|run)\b/,           // app launching
+    /\b(download|recent\s+file|what.*download)\b/, // file awareness
+    /\b(clipboard|paste|copy)\b/,             // clipboard (future)
+    /\b(notification|notify|alert)\b/,        // system notifications
+    /\b(screenshot|screen\s+capture)\b/,     // screen capture (future)
+  ];
+  if (osPatterns.some(rx => rx.test(s))) {
+    return { type: 'os_action' };
+  }
 
-Configuration (environment variables or .env file):
-  BOSS_PORT          — server port (default: 5000)
-  BOSS_CHROME        — absolute path to Chrome executable
-  BOSS_NOTEPAD       — absolute path to text editor executable
-  BOSS_SPOTIFY       — absolute path to Spotify executable
-  BOSS_RATE_LIMIT    — max requests/min on /resonate (default: 60)
+  // Engine pool status
+  if (/\b(engine|model|pool)\s*(status|health|report|info)\b/.test(s) ||
+      /\b(who|which)\s*(model|knows|is\s+best)\b/.test(s)) {
+    return { type: 'pool_status' };
+  }
 
-Requirements:
-  pip install flask flask-cors sentence-transformers torch python-dotenv
+  // Analyse
+  if (/\b(analys[ez]|breakdown|break\s+down|examine|evaluate|assess)\b/.test(s)) {
+    const subject = _extractSubject(s, ['analyse', 'analyze', 'breakdown',
+                                        'break down', 'examine', 'evaluate', 'assess']);
+    return { type: 'analyse', subject };
+  }
 
-Security:
-  - subprocess whitelist uses ABSOLUTE PATHS only, no shell=True
-  - User input never reaches Popen arguments
-  - CORS restricted to local origins
-"""
+  // Explain
+  if (/\b(explain|describe|what\s+is|what\s+are|how\s+does|how\s+do|define)\b/.test(s)) {
+    const subject = _extractSubject(s, ['explain', 'describe', 'what is',
+                                        'what are', 'how does', 'how do', 'define']);
+    return { type: 'explain', subject };
+  }
 
-import os
-import time
-import queue
-import threading
-from pathlib import Path
-from collections import deque
+  // Think through / reason
+  if (/\b(think|reason|consider|reflect|ponder|contemplate|figure\s+out)\b/.test(s)) {
+    const subject = _extractSubject(s, ['think through', 'think about', 'reason about',
+                                        'consider', 'reflect on', 'figure out', 'think']);
+    return { type: 'reason', subject };
+  }
 
-# Load .env file if present — silently ignored if python-dotenv not installed
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+  // General question — anything ending in ? or starting with question words
+  if (s.endsWith('?') || /^(what|why|how|when|where|who|which|is|are|can|should|would)\b/.test(s)) {
+    return { type: 'question', subject: intent };
+  }
 
-from heart.heart import Heart
+  return null;
+}
 
-from flask import Flask, request, jsonify, Response
-from flask_cors import CORS
-from sentence_transformers import SentenceTransformer, util
-import torch
+function _extractSubject(s, keywords) {
+  // Try longest keyword first to avoid partial matches
+  const sorted = [...keywords].sort((a, b) => b.length - a.length);
+  for (const kw of sorted) {
+    const idx = s.indexOf(kw);
+    if (idx >= 0) {
+      return s.slice(idx + kw.length).trim().replace(/^(about|on|this|that|:)\s*/i, '') || s;
+    }
+  }
+  return s;
+}
 
-app = Flask(__name__)
-# Open CORS for local development — the Cortex runs on the user's own machine.
-# Tighten to specific origins for any hosted deployment.
-CORS(app)
+// ── Handlers ──────────────────────────────────────────────────────────────────
+async function _handleOsAction(intent, clog, Nervous, EVENT, cortexUrl) {
+  if (!cortexUrl) {
+    clog('🔬 CORTEX: Python Cortex server offline — tap cortex pill to configure', 'log-vec');
+    clog('   The Cortex server provides local OS access: app launching, file awareness', 'log-vec');
+    return;
+  }
+  try {
+    const r = await fetch(`${cortexUrl}/pulse`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ intent, node: 'CORTEX' }),
+      signal:  AbortSignal.timeout(3000),
+    });
+    if (!r.ok) throw new Error(`${r.status}`);
+    const d = await r.json();
+    if (d.response) {
+      clog(`🔬 [cortex→CORTEX] ${d.response}`, 'log-action');
+    }
+    if (d.action) {
+      clog(`🔬 CORTEX: executed — ${d.action}`, 'log-action');
+      if (Nervous && EVENT) {
+        Nervous.emit('CORTEX_OS_ACTION', {
+          source:  'CORTEX',
+          payload: { intent, action: d.action, source: d.source },
+        });
+      }
+    }
+  } catch(e) {
+    clog(`🔬 CORTEX: OS action failed — ${e.message}`, 'log-err');
+    clog('   Ensure the Python Cortex server is running', 'log-err');
+  }
+}
 
-# ── VECTOR BRAIN ───────────────────────────────────────────────────────────────
-print("🧠 B.O.S.S. Cortex warming up...")
-_model_ready = False
-model = None
+function _handlePoolStatus(clog, Immune, Registry) {
+  clog('🔬 CORTEX: engine pool status', 'log-vec');
 
-def _load_model():
-    global model, _model_ready
-    try:
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        _model_ready = True
-        print("✓ Embedding model ready.")
-    except Exception as e:
-        print(f"✗ Embedding model failed to load: {e}")
+  if (Registry) {
+    const models = Registry.getAllModels();
+    let anyConfigured = false;
+    models.forEach(m => {
+      const { successCount, failCount, avgLatencyMs, reliability, suspended } = m.metrics;
+      const hasKey   = !!(m.apiKey);
+      const total    = successCount + failCount;
+      const failRate = total > 0 ? ((failCount / total) * 100).toFixed(0) : '0';
+      let status;
+      if (!hasKey)            status = '⚪ unconfigured';
+      else if (suspended)     status = '⛔ suspended';
+      else if (reliability > 0.8) { status = '✅ healthy'; anyConfigured = true; }
+      else                    { status = '⚠ degraded';  anyConfigured = true; }
+      clog(`   ${m.name}: ${status} | calls: ${total} | fail: ${failRate}% | avg: ${avgLatencyMs}ms`, 'log-vec');
+    });
+    if (!anyConfigured) {
+      clog('   No engine keys configured — tap cortex pill → Engine Keys', 'log-vec');
+    } else {
+      const report = Immune?.report();
+      if (!report?.flags?.length) clog('   All configured models nominal', 'log-vec');
+    }
+  }
+}
 
-# Load model in background thread — Cortex accepts requests immediately,
-# /resonate and /pulse return not_ready until model finishes loading.
-threading.Thread(target=_load_model, daemon=True).start()
+async function _handleDeliberate(type, subject, intent, clog, Nervous, EVENT, enginePool, deliberateFn) {
+  if (!enginePool || !deliberateFn) {
+    clog('🔬 CORTEX: engine not configured — add API keys via cortex pill', 'log-vec');
+    return;
+  }
 
-memory_pool: list[str] = []
-memory_embeddings = None
-VAULT_PATH = Path("boss_vault.json")
+  const activeTier1 = enginePool.filter(n => n.tier === 1 && n.apiKey);
+  if (!activeTier1.length) {
+    clog('🔬 CORTEX: no Tier 1 engine models configured', 'log-vec');
+    clog('   Add Groq or Gemini keys via the cortex pill → Engine Keys', 'log-vec');
+    return;
+  }
 
-def _load_vault():
-    global memory_pool
-    if VAULT_PATH.exists():
-        try:
-            import json
-            data = json.loads(VAULT_PATH.read_text())
-            memory_pool = data if isinstance(data, list) else []
-            print(f"OK Vault loaded: {len(memory_pool)} entries")
-        except Exception as e:
-            print(f"WARN Vault load failed: {e}")
-            memory_pool = []
+  const typeLabel = type === 'analyse' ? 'Analysing'
+                  : type === 'explain' ? 'Explaining'
+                  : type === 'reason'  ? 'Reasoning through'
+                  : 'Processing';
 
-def _save_vault():
-    try:
-        import json
-        VAULT_PATH.write_text(json.dumps(memory_pool, indent=2))
-    except Exception as e:
-        print(f"WARN Vault save failed: {e}")
+  clog(`🔬 CORTEX: ${typeLabel} — consulting engine…`, 'log-vec');
 
-def rebuild_embeddings():
-    global memory_embeddings
-    memory_embeddings = model.encode(memory_pool, convert_to_tensor=True) if memory_pool else None
+  // System prompt tailored to the type
+  const systemPrompts = {
+    analyse:  'You are an analytical reasoning engine. Break down the topic clearly and concisely. Identify key components, relationships, and implications. Be structured but brief.',
+    explain:  'You are a clear explainer. Explain the topic in plain language. Be accurate, concise, and accessible. Avoid jargon unless necessary.',
+    reason:   'You are a careful reasoner. Think through the topic step by step. Consider multiple angles and arrive at a well-reasoned conclusion. Be concise.',
+    question: 'You are a knowledgeable assistant. Answer the question directly and accurately. Be concise and clear.',
+  };
 
+  // Prepend BOSS capability context + user profile — grounds engine responses
+  // in what BOSS can actually do and who it's talking to.
+  let systemPrompt = systemPrompts[type] || systemPrompts.question;
+  if (window.BOSS_CAPABILITY_CONTEXT) {
+    systemPrompt = `${window.BOSS_CAPABILITY_CONTEXT} ${systemPrompt}`;
+  }
+  if (window.getUserProfile) {
+    const profile = window.getUserProfile();
+    const contextParts = [];
+    if (profile.name)        contextParts.push(`The user's name is ${profile.name}.`);
+    if (profile.preferences) contextParts.push(`User preferences: ${profile.preferences}.`);
+    if (profile.routines)    contextParts.push(`User routines: ${profile.routines}.`);
+    if (contextParts.length) {
+      systemPrompt = `${contextParts.join(' ')} ${systemPrompt}`;
+    }
+  }
 
-# ── RATE LIMITER ───────────────────────────────────────────────────────────────
-# Token bucket per remote address. No external dependency.
-# BOSS_RATE_LIMIT env var sets max requests per minute (default 60).
-_rate_limit    = int(os.environ.get("BOSS_RATE_LIMIT", "60"))
-_rate_window   = 60  # seconds
-_rate_buckets: dict[str, deque] = {}
-_rate_lock     = threading.Lock()
+  try {
+    const result = await deliberateFn(subject || intent, enginePool, {
+      systemPrompt,
+    });
 
-def _is_rate_limited(client_ip: str) -> bool:
-    """Returns True if client has exceeded the rate limit."""
-    now = time.monotonic()
-    with _rate_lock:
-        if client_ip not in _rate_buckets:
-            _rate_buckets[client_ip] = deque()
-        bucket = _rate_buckets[client_ip]
-        # Remove timestamps outside the window
-        while bucket and now - bucket[0] > _rate_window:
-            bucket.popleft()
-        if len(bucket) >= _rate_limit:
-            return True
-        bucket.append(now)
-        return False
-
-
-# ── ERROR HELPERS ──────────────────────────────────────────────────────────────
-def err(message: str, code: str, status: int = 400):
-    """Return a consistent JSON error response."""
-    return jsonify({"error": message, "code": code}), status
-
-def not_ready():
-    return err("Embedding model is still loading — retry in a moment.",
-               "not_ready", 503)
-
-
-# ── SECURE EXECUTIVE ───────────────────────────────────────────────────────────
-# Paths loaded from environment variables.
-# Set these in a .env file (see .env.example) — never hardcode paths in source.
-# Falls back to common default paths if env var not set.
-
-def _resolve_whitelist() -> dict[str, list[str]]:
-    """Build WHITELIST from environment variables with platform-aware fallbacks."""
-    home = Path.home()
-    return {
-        "chrome": [p for p in [
-            os.environ.get("BOSS_CHROME"),
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            "/usr/bin/google-chrome",
-        ] if p],
-        "notepad": [p for p in [
-            os.environ.get("BOSS_NOTEPAD"),
-            r"C:\Windows\System32\notepad.exe",
-            "/usr/bin/open",
-            "/usr/bin/gedit",
-        ] if p],
-        "spotify": [p for p in [
-            os.environ.get("BOSS_SPOTIFY"),
-            str(home / "AppData" / "Roaming" / "Spotify" / "Spotify.exe"),
-            "/Applications/Spotify.app/Contents/MacOS/Spotify",
-            "/usr/bin/spotify",
-        ] if p],
+    if (result.error) {
+      clog(`🔬 CORTEX: engine error — ${result.error}`, 'log-err');
+      return;
     }
 
-WHITELIST = _resolve_whitelist()
+    const conf    = Math.round((result.confidence || 0) * 100);
+    const winner  = result.winner?.name || 'unknown';
+    const output  = result.output || '';
 
-def secure_execute(app_name: str) -> str:
-    """Launch a whitelisted app. Tries each path in order until one works."""
-    name = app_name.strip().lower()
-    if name not in WHITELIST:
-        return f"Action blocked: '{name}' not in whitelist."
-    import subprocess
-    for path in WHITELIST[name]:
-        try:
-            subprocess.Popen([path])  # no shell=True, no user input in args
-            return f"Launched: {name} ({path})"
-        except FileNotFoundError:
-            continue
-        except Exception as e:
-            return f"Launch error: {e}"
-    return (f"Binary not found for '{name}'. "
-            f"Set BOSS_{name.upper()} in .env with the absolute path.")
+    clog(`🔬 CORTEX [${winner}, ${conf}% consensus]:`, 'log-vec');
 
+    // Split into paragraphs for readable console output
+    output.split(/\n\n+/).forEach(para => {
+      if (para.trim()) {
+        const lines = para.match(/.{1,100}(\s|$)/g) || [para];
+        lines.forEach(line => line.trim() && clog(`   ${line.trim()}`, 'log-vec'));
+      }
+    });
 
-# ── PROACTIVE EVENT BUS ────────────────────────────────────────────────────────
-_event_queue: queue.Queue = queue.Queue(maxsize=100)
+    if (result.escalated) {
+      clog(`   [tiebreaker: ${result.tiebreaker?.name || 'T2'} consulted]`, 'log-sys');
+    }
 
-def push_event(node_name: str, message: str, event_type: str = "pulse_event"):
-    try:
-        _event_queue.put_nowait(f"{event_type}|{node_name}|{message}")
-    except queue.Full:
-        pass
+    if (Nervous && EVENT) {
+      Nervous.emit('CORTEX_RESPONSE', {
+        source:  'CORTEX',
+        payload: { type, subject, confidence: result.confidence, winner },
+      });
+    }
 
+  } catch(e) {
+    clog(`🔬 CORTEX: deliberation failed — ${e.message}`, 'log-err');
+  }
+}
 
-# ── WATCHDOG ───────────────────────────────────────────────────────────────────
-WATCH_PATH  = Path.home() / "Downloads"
-URGENT_FLAG = Path("URGENT_ACTION.txt")
+// ── Screen flash ──────────────────────────────────────────────────────────────
+function _flash() {
+  const f = document.createElement('div');
+  f.className = 'action-flash';
+  f.style.background = 'rgba(204,0,255,0.06)';
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 600);
+}
 
-# Heart functionality in heart/heart.py
+// ── Public interface ──────────────────────────────────────────────────────────
+export const CortexAction = {
+  async handle(intent, clog, Nervous, EVENT, enginePool, deliberateFn, Immune, Registry,
+               cortexUrl = null, selectToolFn = null, firePresetFn = null) {
+    _flash();
 
+    const classified = _classify(intent);
 
-# ── ROUTES ─────────────────────────────────────────────────────────────────────
+    if (!classified) {
+      // Gap-filling fallback (v0.9 Direction) — before giving up entirely,
+      // let the engine check the full preset catalogue for a match beyond
+      // CORTEX's own local patterns. Only attempted if the engine is
+      // actually configured — no point spending a network call otherwise.
+      const engineReady = enginePool && enginePool.some(n => n.tier === 1 && n.apiKey);
+      if (engineReady && selectToolFn && Registry) {
+        try {
+          const tools  = Registry.exportToolSchema();
+          const result = await selectToolFn(intent, tools, enginePool);
+          if (result) {
+            const preset = Registry.getPreset(result.presetId);
+            if (preset && firePresetFn) {
+              clog(`🔬 CORTEX: gap-filled → "${preset.label}" (${result.node}, via ${result.model})`, 'log-vec');
+              firePresetFn(preset);
+              return true;  // handled — no orbitals needed
+            }
+          }
+        } catch(_) { /* falls through to the standard no-match message below */ }
+      }
 
-@app.route("/handshake", methods=["GET"])
-def handshake():
-    return jsonify({
-        "status":      "online",
-        "identity":    "BOSS-CORTEX-0.7",
-        "engine":      "Liquid-V0.7",
-        "model":       "all-MiniLM-L6-v2",
-        "model_ready": _model_ready,
-        "rate_limit":  _rate_limit,
-        "vault_size":  len(memory_pool),
-    })
+      // Genuine gap — nothing local, nothing the engine could match either.
+      // This is the signal the "gap detection" backlog (README §XII) is
+      // meant to capture once that layer exists.
+      clog(`🔬 CORTEX: no recognised action in "${intent}"`, 'log-vec');
+      clog('   Analyse: "analyse [topic]" · "break down [topic]"', 'log-vec');
+      clog('   Explain: "explain [topic]" · "what is [topic]"', 'log-vec');
+      clog('   Reason:  "think through [topic]" · "reason about [topic]"', 'log-vec');
+      clog('   Status:  "engine status" · "model health"', 'log-vec');
+      return false;
+    }
 
+    if (Nervous && EVENT) {
+      Nervous.emit('CORTEX_ACTION', {
+        source:  'CORTEX',
+        payload: { type: classified.type, intent },
+      });
+    }
 
-@app.route("/resonate", methods=["POST"])
-def resonate():
-    """
-    Returns RELATIVE vector boosts for each node specialty.
+    switch (classified.type) {
+      case 'os_action':
+        await _handleOsAction(intent, clog, Nervous, EVENT, cortexUrl);
+        break;
 
-    Subtracts the field mean so the cortex sharpens the interference
-    pattern rather than inflating all node scores uniformly.
+      case 'pool_status':
+        _handlePoolStatus(clog, Immune, Registry);
+        break;
 
-    Positive boost  = this node is more relevant than field average.
-    Negative boost  = this node is less relevant than field average.
-    Zero (offline)  = kernel uses local semanticSim only. Still correct.
-    """
-    # Rate limit check
-    client_ip = request.remote_addr or "unknown"
-    if _is_rate_limited(client_ip):
-        return err(f"Rate limit exceeded ({_rate_limit} req/min). Slow down.",
-                   "rate_limited", 429)
-
-    # Model readiness guard
-    if not _model_ready:
-        return not_ready()
-
-    try:
-        data   = request.json or {}
-        intent = data.get("intent", "")
-        specs  = data.get("specs", [])
-
-        if not intent or not specs:
-            return jsonify({"boosts": [], "raw": []})
-
-        if not isinstance(specs, list) or not all(isinstance(s, str) for s in specs):
-            return err("'specs' must be a list of strings.", "invalid_input")
-
-        intent_emb = model.encode(intent, convert_to_tensor=True)
-        spec_embs  = model.encode(specs,  convert_to_tensor=True)
-        raw_scores = util.cos_sim(intent_emb, spec_embs)[0].tolist()
-
-        mean   = sum(raw_scores) / len(raw_scores)
-        boosts = [round(s - mean, 4) for s in raw_scores]
-
-        return jsonify({"boosts": boosts, "raw": [round(s, 4) for s in raw_scores]})
-
-    except Exception as e:
-        return err(f"Resonate failed: {str(e)}", "resonate_error", 500)
-
-
-@app.route("/pulse", methods=["POST"])
-def pulse():
-    if not _model_ready:
-        return not_ready()
-
-    try:
-        data      = request.json or {}
-        intent    = data.get("intent", "")
-        node_name = data.get("node", "GENERAL")
-
-        if not intent:
-            return err("'intent' is required.", "missing_intent")
-
-        lower = intent.lower()
-
-        # System action — whitelist only
-        for app_name in WHITELIST:
-            if f"open {app_name}" in lower or f"launch {app_name}" in lower:
-                result = secure_execute(app_name)
-                return jsonify({"response": result, "action": app_name, "source": "whitelist"})
-
-        # File system awareness
-        if "download" in lower or "recent file" in lower:
-            try:
-                files = sorted(WATCH_PATH.iterdir(),
-                               key=lambda f: f.stat().st_mtime, reverse=True)
-                names = [f.name for f in files[:5]]
-                return jsonify({
-                    "response": f"Recent downloads: {', '.join(names)}",
-                    "source":   "watchdog"
-                })
-            except PermissionError:
-                return err("Downloads folder access denied.", "permission_denied", 403)
-            except Exception as e:
-                return err(f"Watchdog scan failed: {str(e)}", "watchdog_error", 500)
-
-        # Memory search
-        if memory_embeddings is not None and memory_pool:
-            intent_emb = model.encode(intent, convert_to_tensor=True)
-            sims       = util.cos_sim(intent_emb, memory_embeddings)[0]
-            best_idx   = int(torch.argmax(sims))
-            best_sim   = float(sims[best_idx])
-            if best_sim > 0.45:
-                return jsonify({
-                    "response": f"Memory match ({best_sim:.2f}): {memory_pool[best_idx]}",
-                    "source":   "vault"
-                })
-
-        return jsonify({
-            "response": f"Acknowledged via {node_name}.",
-            "source":   "cortex"
-        })
-
-    except Exception as e:
-        return err(f"Pulse failed: {str(e)}", "pulse_error", 500)
-
-
-@app.route("/remember", methods=["POST"])
-def remember():
-    try:
-        data = request.json or {}
-        text = data.get("content", "").strip()
-        if not text:
-            return jsonify({"status": "empty"})
-        if text not in memory_pool:
-            memory_pool.append(text)
-            rebuild_embeddings()
-            _save_vault()
-            return jsonify({"status": "ingested", "pool_size": len(memory_pool)})
-        return jsonify({"status": "duplicate"})
-    except Exception as e:
-        return err(f"Remember failed: {str(e)}", "remember_error", 500)
-
-
-@app.route("/vault", methods=["GET", "DELETE"])
-def vault():
-    import json
-    if request.method == "DELETE":
-        try:
-            memory_pool.clear()
-            global memory_embeddings
-            memory_embeddings = None
-            _save_vault()
-            return jsonify({"status": "cleared"})
-        except Exception as e:
-            return err(f"Vault clear failed: {str(e)}", "vault_clear_error", 500)
-    try:
-        return jsonify({
-            "entries": len(memory_pool),
-            "vault": [{"preview": e[:80], "length": len(e)} for e in memory_pool],
-        })
-    except Exception as e:
-        return err(f"Vault read failed: {str(e)}", "vault_read_error", 500)
-
-
-@app.route("/registry", methods=["GET", "POST"])
-def registry():
-    """Registry sync endpoint — GET returns snapshot, POST merges incoming nodes."""
-    import json
-    registry_path = Path("boss_registry.json")
-
-    if request.method == "GET":
-        try:
-            if registry_path.exists():
-                return jsonify(json.loads(registry_path.read_text()))
-            return jsonify({"nodes": {}, "models": {}})
-        except Exception as e:
-            return err(f"Registry read failed: {str(e)}", "registry_read_error", 500)
-
-    try:
-        incoming = request.json or {}
-        existing = {}
-        if registry_path.exists():
-            existing = json.loads(registry_path.read_text())
-        merged = {**existing, "nodes": {**existing.get("nodes", {}), **incoming.get("nodes", {})},
-                  "lastSynced": time.time()}
-        registry_path.write_text(json.dumps(merged, indent=2))
-        return jsonify({"status": "synced", "nodeCount": len(merged["nodes"])})
-    except Exception as e:
-        return err(f"Registry write failed: {str(e)}", "registry_write_error", 500)
-
-
-@app.route("/stream")
-def stream():
-    """SSE — pushes proactive events to the Soma. Browser reconnects automatically."""
-    def gen():
-        yield "data: keepalive|SYSTEM|Cortex SSE online\n\n"
-        while True:
-            try:
-                event = _event_queue.get(timeout=15)
-                yield f"data: {event}\n\n"
-            except queue.Empty:
-                yield ": keepalive\n\n"  # prevent proxy timeout
-    return Response(gen(), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
-
-
-# ── BOOT ───────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    port = int(os.environ.get("BOSS_PORT", "5000"))
-    _load_vault()
-    if memory_pool and _model_ready:
-        rebuild_embeddings()
-    Heart.start(_event_queue)
-    print(f"🔺 Cortex online — port {port}")
-    print(f"   Downloads watch: {WATCH_PATH}")
-    print(f"   Whitelist: {list(WHITELIST.keys())}")
-    print(f"   Rate limit: {_rate_limit} req/min on /resonate")
-    print(f"   Model loading in background...")
-    app.run(host="0.0.0.0", port=port, threaded=True, ssl_context='adhoc')
+      case 'analyse':
+      case 'explain':
+      case 'reason':
+      case 'question':
+        await _handleDeliberate(
+          classified.type,
+          classified.subject,
+          intent,
+          clog, Nervous, EVENT,
+          enginePool, deliberateFn
+        );
+        break;
+    }
+    return true;
+  },
+};
