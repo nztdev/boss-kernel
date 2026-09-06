@@ -263,9 +263,9 @@ async function callGroq(node, intent, systemPrompt) {
 }
 
 async function callGemini(node, intent, systemPrompt) {
-  // Model: 'gemini-3.5-flash' confirmed working on AI Studio free tier (2026-04-04).
+  // Model: 'gemini-2.5-flash' confirmed working on AI Studio free tier (2026-04-04).
   // If you see 404s on a different account, try 'gemini-1.5-flash' as fallback.
-  const model  = node.model || 'gemini-3.5-flash';
+  const model  = node.model || 'gemini-2.5-flash';
   const url    = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${node.apiKey}`;
   const body   = {
     system_instruction: { parts: [{ text: systemPrompt || defaultSystemPrompt(node) }] },
@@ -539,7 +539,7 @@ async function _callWithToolsOpenAIStyle(node, intent, names, toolName, toolDesc
 
 /** Gemini function calling — different request/response shape from OpenAI style. */
 async function _callWithToolsGemini(node, intent, names, toolName, toolDesc, paramDesc) {
-  const model = node.model || 'gemini-3.5-flash';
+  const model = node.model || 'gemini-2.5-flash';
   const url   = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${node.apiKey}`;
 
   const body = {
@@ -571,6 +571,55 @@ async function _callWithToolsGemini(node, intent, names, toolName, toolDesc, par
   const call = d.candidates?.[0]?.content?.parts?.find(p => p.functionCall)?.functionCall;
   if (!call) return null;
   return call.args?.name || null;
+}
+
+/**
+ * selectTool(intent, tools, pool) → { toolName, node, presetId, model } | null
+ *
+ * General-purpose fallback tool selection (v0.9 Direction) — extends
+ * decideNode()'s pattern from a binary Arbiter choice to the full preset
+ * catalogue. Used by CORTEX when no local regex pattern matches an intent:
+ * rather than giving up, the engine picks the best-matching capability
+ * directly via a forced function call, with an explicit "no match" option
+ * so the model can honestly decline instead of being forced into a bad
+ * guess across a much larger, more heterogeneous option set than
+ * decideNode()'s usual 2-node ties.
+ *
+ * tools: [{ name, description, node, presetId }] — from
+ * Registry.exportToolSchema(). Returns null if nothing matched, the
+ * provider isn't supported, or the call failed — callers should fall back
+ * to their existing "no recognised action" response.
+ */
+export async function selectTool(intent, tools, pool) {
+  if (!tools || !tools.length) return null;
+
+  const scored = scorePool(intent, pool.filter(n => n.tier === 1 && n.apiKey));
+  const node   = scored[0]?.node;
+  if (!node) return null;
+
+  const NO_MATCH  = 'no_match';
+  const names     = [...tools.map(t => t.name), NO_MATCH];
+  const toolName  = 'select_capability';
+  const toolDesc  = 'Select which capability best matches the user request, or no_match if none genuinely apply.';
+  const paramDesc = tools.map(t => `${t.name}: ${t.description}`).join(' | ')
+                    + ` | ${NO_MATCH}: none of the above genuinely match this request`;
+
+  try {
+    let raw;
+    if (node.provider === 'groq' || node.provider === 'mistral') {
+      raw = await _callWithToolsOpenAIStyle(node, intent, names, toolName, toolDesc, paramDesc);
+    } else if (node.provider === 'gemini') {
+      raw = await _callWithToolsGemini(node, intent, names, toolName, toolDesc, paramDesc);
+    } else {
+      return null;
+    }
+    if (!raw || raw === NO_MATCH || !names.includes(raw)) return null;
+    const tool = tools.find(t => t.name === raw);
+    if (!tool) return null;
+    return { toolName: raw, node: tool.node, presetId: tool.presetId, model: node.name };
+  } catch(_) {
+    return null;
+  }
 }
 
 // ── Main deliberation pipeline ────────────────────────────────────────────────
@@ -880,7 +929,7 @@ export function buildDefaultPool(keys = {}) {
     new LLMNode({
       name:      'Gemini Flash',
       provider:  'gemini',
-      model:     'gemini-3.5-flash',
+      model:     'gemini-2.5-flash',
       specialty: 'reasoning analysis explain science ethics philosophy context synthesis creative writing nuanced understanding deep explanation',
       tier:      1,
       apiKey:    keys.gemini || '',
@@ -948,6 +997,7 @@ export default {
   measureDissonance,
   deliberate,
   decideNode,       // v0.9 — direct tool-calling routing decision
+  selectTool,       // v0.9 — general preset-catalogue tool selection
   buildDefaultPool,
   savePool,         // returns JSON string — caller handles storage
   loadPool,         // accepts JSON string — caller handles retrieval
