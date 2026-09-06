@@ -1928,7 +1928,7 @@ if ('serviceWorker' in navigator) {
 <script type="module">
 import { Heart }                                        from '../heart/heart.js';
 import { deliberate, buildDefaultPool, loadPool, savePool,
-         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN, decideNode } from '../engine/engine.js';
+         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN, decideNode, selectTool } from '../engine/engine.js';
 import { Registry, INTENT_SOURCE }                       from '../registry/registry.js';
 import { Nervous, EVENT }                                from '../nervous/nervous.js';
 import { Immune }                                        from '../immune/immune.js';
@@ -5048,7 +5048,8 @@ const ACTION_MAP = {
     await MemoryAction.handle(intent, clog, Nervous, EVENT, pcUrl());
   },
   'CORTEX': async function(intent) {
-    await CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberate, Immune, Registry, pcUrl());
+    await CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberate, Immune, Registry,
+      pcUrl(), selectTool, firePreset);
   },
 };
 
