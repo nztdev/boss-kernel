@@ -238,18 +238,45 @@ function _flash() {
 
 // ── Public interface ──────────────────────────────────────────────────────────
 export const CortexAction = {
-  async handle(intent, clog, Nervous, EVENT, enginePool, deliberateFn, Immune, Registry, cortexUrl = null) {
+  async handle(intent, clog, Nervous, EVENT, enginePool, deliberateFn, Immune, Registry,
+               cortexUrl = null, selectToolFn = null, firePresetFn = null) {
     _flash();
 
     const classified = _classify(intent);
 
     if (!classified) {
+      // Gap-filling fallback (v0.9 Direction) — before giving up entirely,
+      // let the engine check the full preset catalogue for a match beyond
+      // CORTEX's own local patterns. Only attempted if the engine is
+      // actually configured — no point spending a network call otherwise.
+      const engineReady = enginePool && enginePool.some(n => n.tier === 1 && n.apiKey);
+      if (engineReady && selectToolFn && Registry) {
+        try {
+          const tools  = Registry.exportToolSchema();
+          const result = await selectToolFn(intent, tools, enginePool);
+          if (result) {
+            const preset = Registry.getPreset(result.presetId);
+            if (preset && firePresetFn) {
+              clog(`🔬 CORTEX: gap-filled → "${preset.label}" (${result.node}, via ${result.model})`, 'log-vec');
+              firePresetFn(preset);
+              return true;  // handled — no orbitals needed
+            }
+          }
+          clog(`🔬 CORTEX: checked ${tools.length} capabilities — none genuinely matched`, 'log-vec');
+        } catch(e) {
+          clog(`🔬 CORTEX: gap-fill lookup failed (${e.message}) — continuing`, 'log-vec');
+        }
+      }
+
+      // Genuine gap — nothing local, nothing the engine could match either.
+      // This is the signal the "gap detection" backlog (README §XII) is
+      // meant to capture once that layer exists.
       clog(`🔬 CORTEX: no recognised action in "${intent}"`, 'log-vec');
       clog('   Analyse: "analyse [topic]" · "break down [topic]"', 'log-vec');
       clog('   Explain: "explain [topic]" · "what is [topic]"', 'log-vec');
       clog('   Reason:  "think through [topic]" · "reason about [topic]"', 'log-vec');
       clog('   Status:  "engine status" · "model health"', 'log-vec');
-      return;
+      return false;
     }
 
     if (Nervous && EVENT) {
