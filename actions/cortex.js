@@ -269,8 +269,11 @@ export const CortexAction = {
       }
 
       // Genuine gap — nothing local, nothing the engine could match either.
-      // This is the signal the "gap detection" backlog (README §XII) is
-      // meant to capture once that layer exists.
+      // Recorded locally (v0.9 gap detection) so patterns in what people
+      // actually ask for can inform what BOSS builds next, rather than
+      // this signal just evaporating each time.
+      if (window.logCapabilityGap) window.logCapabilityGap(intent, engineReady);
+
       clog(`🔬 CORTEX: no recognised action in "${intent}"`, 'log-vec');
       clog('   Analyse: "analyse [topic]" · "break down [topic]"', 'log-vec');
       clog('   Explain: "explain [topic]" · "what is [topic]"', 'log-vec');
