@@ -454,6 +454,57 @@ canvas {
 }
 .net-close-btn:hover { color: #00ffcc; border-color: #00ffcc44; }
 
+/* ── GAPS MODAL ── */
+#gaps-modal {
+  display: none;
+  position: fixed;
+  z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #00ffcc66;
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 300px;
+  max-height: 380px;
+  overflow-y: auto;
+  box-shadow: 0 0 24px #00ffcc22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#gaps-modal.show { display: block; }
+.gaps-title {
+  font-size: 9px; letter-spacing: 0.12em;
+  color: #00ffcc; opacity: 0.6; margin-bottom: 4px;
+}
+.gaps-subtitle {
+  font-size: 8px; color: #00ffcc; opacity: 0.4;
+  margin-bottom: 10px; line-height: 1.5;
+}
+.gaps-empty {
+  font-size: 10px; color: #00ffcc; opacity: 0.4;
+  text-align: center; padding: 16px 0;
+}
+.gaps-entry {
+  padding: 7px 0; border-bottom: 1px solid #00ffcc11;
+  font-size: 10px; color: #00ffcc;
+}
+.gaps-entry-intent { opacity: 0.9; margin-bottom: 2px; word-break: break-word; }
+.gaps-entry-meta { font-size: 8px; opacity: 0.4; }
+.gaps-btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.gaps-btn {
+  flex: 1; background: none;
+  border: 1px solid #00ffcc55; border-radius: 6px;
+  color: #00ffcc; font-family: inherit;
+  font-size: 10px; padding: 7px 0; cursor: pointer;
+}
+.gaps-btn:hover { background: #00ffcc11; }
+.gaps-close-btn {
+  width: 100%; background: none;
+  border: 1px solid #00ffcc22; border-radius: 6px;
+  color: #00ffcc44; font-family: inherit;
+  font-size: 9px; padding: 6px 0; cursor: pointer;
+  margin-top: 8px;
+}
+.gaps-close-btn:hover { color: #00ffcc; border-color: #00ffcc44; }
+
 /* ── FILES MODAL ── */
 #files-modal {
   display: none;
@@ -1542,6 +1593,18 @@ textarea.profile-input {
   <button class="net-close-btn" onclick="closeNetworkModal()">✕ close</button>
 </div>
 
+<!-- GAPS MODAL — appears near CORE node -->
+<div id="gaps-modal">
+  <div class="gaps-title">CORE · CAPABILITY GAPS</div>
+  <div class="gaps-subtitle">Requests BOSS couldn't match to anything it can do. Nothing leaves this device — export manually to share.</div>
+  <div id="gaps-list"></div>
+  <div class="gaps-btn-row">
+    <button class="gaps-btn" onclick="exportGaps()">⬇ Export</button>
+    <button class="gaps-btn" onclick="clearGaps()">🗑 Clear</button>
+  </div>
+  <button class="gaps-close-btn" onclick="closeGapsModal()">✕ close</button>
+</div>
+
 <!-- FILES MODAL — appears near FILES node -->
 <div id="files-modal">
   <div class="files-title">FILES · ACCESS</div>
@@ -2316,6 +2379,97 @@ function openNetworkModal(node) {
 
 window.closeNetworkModal = function() {
   document.getElementById('network-modal').classList.remove('show');
+};
+
+// ── Capability gap detection ─────────────────────────────────────────────────
+// Tracks genuine "BOSS can't do this yet" moments — not per-node local
+// misses, but cases where the full catalogue was checked (via CORTEX's
+// gap-fill fallback) and nothing matched. Entirely local; nothing is sent
+// anywhere automatically. Export is manual, so sharing with devs is always
+// an explicit user choice. The JSON shape is deliberately what a future
+// opt-in remote submission would use too, so nothing here needs rebuilding
+// later — only a transport layer would need adding, once one exists.
+const GAPS_KEY = 'BOSS_GAPS';
+const MAX_GAPS = 100;
+
+function logCapabilityGap(intent, engineConfigured) {
+  try {
+    const gaps = JSON.parse(localStorage.getItem(GAPS_KEY) || '[]');
+    gaps.unshift({ intent, timestamp: Date.now(), engineConfigured: !!engineConfigured });
+    if (gaps.length > MAX_GAPS) gaps.length = MAX_GAPS;
+    localStorage.setItem(GAPS_KEY, JSON.stringify(gaps));
+  } catch(_) { /* localStorage unavailable — nothing to do, not worth surfacing */ }
+}
+window.logCapabilityGap = logCapabilityGap;
+
+let _gapsNode = null;
+
+function _positionGapsModal() {
+  const modal = document.getElementById('gaps-modal');
+  if (!_gapsNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const px = rect.left + _gapsNode.x * scaleX;
+  const py = rect.top  + _gapsNode.y * scaleY;
+  const mw = 300, mh = 320;
+  let left = px - mw / 2;
+  let top  = py - mh - 20;
+  left = Math.max(10, Math.min(left, window.innerWidth  - mw - 10));
+  top  = Math.max(10, Math.min(top,  window.innerHeight - mh - 10));
+  modal.style.left = left + 'px';
+  modal.style.top  = top  + 'px';
+}
+
+function _refreshGapsList() {
+  const list = document.getElementById('gaps-list');
+  let gaps = [];
+  try { gaps = JSON.parse(localStorage.getItem(GAPS_KEY) || '[]'); } catch(_) {}
+
+  if (!gaps.length) {
+    list.innerHTML = '<div class="gaps-empty">No unmatched requests yet</div>';
+    return;
+  }
+
+  list.innerHTML = gaps.map(g => {
+    const age  = Math.round((Date.now() - g.timestamp) / 60000);
+    const ageStr = age < 60 ? `${age}m ago` : age < 1440 ? `${Math.round(age/60)}h ago` : `${Math.round(age/1440)}d ago`;
+    const engineNote = g.engineConfigured ? '' : ' · no engine';
+    return `<div class="gaps-entry">
+      <div class="gaps-entry-intent">"${g.intent}"</div>
+      <div class="gaps-entry-meta">${ageStr}${engineNote}</div>
+    </div>`;
+  }).join('');
+}
+
+function openGapsModal(node) {
+  _gapsNode = node;
+  _positionGapsModal();
+  document.getElementById('gaps-modal').classList.add('show');
+  _refreshGapsList();
+}
+
+window.closeGapsModal = function() {
+  document.getElementById('gaps-modal').classList.remove('show');
+};
+
+window.exportGaps = function() {
+  let gaps = [];
+  try { gaps = JSON.parse(localStorage.getItem(GAPS_KEY) || '[]'); } catch(_) {}
+  if (!gaps.length) return;
+  const blob = new Blob([JSON.stringify(gaps, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `boss_gaps_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+window.clearGaps = function() {
+  localStorage.removeItem(GAPS_KEY);
+  _refreshGapsList();
 };
 
 function _refreshNetworkInfo() {
@@ -4040,6 +4194,7 @@ window.openThemesModal  = openThemesModal;
 window.getUserProfile   = getUserProfile;
 window.openTextToolsModal = openTextToolsModal;
 window.openNetworkModal   = openNetworkModal;
+window.openGapsModal      = openGapsModal;
 window.FilesAction        = FilesAction;
 window.openFilesModal     = openFilesModal;
 
@@ -5536,6 +5691,9 @@ async function firePreset(preset) {
     } else if (preset._openModal === 'network') {
       const coreNode = nodes.find(n => n.name === 'CORE');
       if (coreNode) openNetworkModal(coreNode);
+    } else if (preset._openModal === 'gaps') {
+      const coreNode = nodes.find(n => n.name === 'CORE');
+      if (coreNode) openGapsModal(coreNode);
     } else {
       const chronosNode = nodes.find(n => n.name === 'CHRONOS');
       if (chronosNode) openChronosModal(preset._openModal, chronosNode);
