@@ -399,6 +399,19 @@ const DEFAULT_PRESETS = [
     tags:       ['network', 'ip', 'connectivity'],
     _openModal: 'network',
   },
+  {
+    id:         'core_gaps',
+    label:      'Gaps',
+    icon:       '🕳',
+    nodes:      ['CORE'],
+    intent:     'gaps',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['gaps', 'backlog', 'capabilities'],
+    _openModal: 'gaps',
+  },
 
   // ── MEMORY presets ─────────────────────────────────────────────────────────
   {
