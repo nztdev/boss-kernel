@@ -5121,7 +5121,37 @@ async function firePulse() {
   // ignite returns whether action fully handled the intent
   // true = handled (no orbitals needed), false/undefined = needs follow-up
   const handled = await winner.igniteAsync(intent);
-  if (!handled) activateOrbital(winner);
+
+  // Kernel-level gap-fill fallback (v0.9). CORTEX already runs its own
+  // full-catalogue check internally when it wins — but a near-zero-match
+  // tie can land on ANY node essentially at random (Birth-Signal-level
+  // ties routinely do), and every other node's "no recognised action"
+  // path had no gap-fill or logging at all, so most genuine capability
+  // gaps were silently going uncounted. This closes that for every node
+  // except CORTEX (already covered) without duplicating its logic.
+  let stillUnhandled = !handled;
+  if (stillUnhandled && winner.name !== 'CORTEX') {
+    const engineReady = enginePool && enginePool.some(n => n.tier === 1 && n.apiKey);
+    if (engineReady) {
+      try {
+        const tools  = Registry.exportToolSchema();
+        const result = await selectTool(intent, tools, enginePool);
+        if (result) {
+          const preset = Registry.getPreset(result.presetId);
+          if (preset) {
+            clog(`🧬 gap-filled → "${preset.label}" (${result.node}, via ${result.model})`, 'log-win');
+            await firePreset(preset);
+            stillUnhandled = false;
+          }
+        }
+      } catch(_) { /* falls through to logging below */ }
+    }
+    if (stillUnhandled && window.logCapabilityGap) {
+      window.logCapabilityGap(intent, engineReady);
+    }
+  }
+
+  if (stillUnhandled) activateOrbital(winner);
   clog(`📡 ${winner.name} | freq=${top.total.toFixed(3)} Δ=${delta===Infinity?'∞':delta.toFixed(3)}`, 'log-win');
 
   // Engine response takes priority — set by Arbiter engine escalation path
