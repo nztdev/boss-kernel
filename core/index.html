@@ -5198,16 +5198,22 @@ function recover() {
 // ── Action callbacks — one module per active node ───────────────────────────
 // Each callback receives the user's intent string so it can parse what to do.
 // New action modules: import at top of file, register here.
+// Every wrapper MUST await and return its module's handle() result — the
+// kernel relies on this boolean to know whether an intent was genuinely
+// handled (skip orbitals/gap-fill) or not (show orbitals, or — since v0.9 —
+// try the cross-catalogue engine fallback and, failing that, log a gap).
+// A wrapper that swallows this value makes every successful action look
+// like a failure to the kernel, which is exactly what six of these seven
+// entries were silently doing until this fix.
 const ACTION_MAP = {
   'CORE': async function(intent) {
-    await CoreAction.handle(intent, clog, Nervous, EVENT, systemVitals, () => nodes, Immune);
+    return await CoreAction.handle(intent, clog, Nervous, EVENT, systemVitals, () => nodes, Immune);
   },
-  'MEDIA': function(intent) {
-    // Real sensory actions via MediaAction module
-    MediaAction.handle(intent, clog, Nervous, EVENT, pcUrl());
+  'MEDIA': async function(intent) {
+    return await MediaAction.handle(intent, clog, Nervous, EVENT, pcUrl());
   },
-  'SOMA': function(intent) {
-    SomaAction.handle(
+  'SOMA': async function(intent) {
+    return await SomaAction.handle(
       intent, clog, Nervous, EVENT,
       () => nodes, () => chain,
       Immune, Registry
@@ -5227,15 +5233,16 @@ const ACTION_MAP = {
         setTimeout(() => openChronosModal('timer', chronosNode), 200);
       }
     }
+    return result;
   },
   'FILES': async function(intent) {
-    await FilesAction.handle(intent, clog, Nervous, EVENT, pcUrl(), openFileViewer);
+    return await FilesAction.handle(intent, clog, Nervous, EVENT, pcUrl(), openFileViewer);
   },
   'MEMORY': async function(intent) {
-    await MemoryAction.handle(intent, clog, Nervous, EVENT, pcUrl());
+    return await MemoryAction.handle(intent, clog, Nervous, EVENT, pcUrl());
   },
   'CORTEX': async function(intent) {
-    await CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberate, Immune, Registry,
+    return await CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberate, Immune, Registry,
       pcUrl(), selectTool, firePreset);
   },
 };
