@@ -213,7 +213,7 @@ function _buildPersonalityResponse(state, nodes, chain, Registry) {
 function _buildIdentityResponse(nodes, Registry, cortexHandshake) {
   const regNodes  = Registry ? Registry.getAllNodes() : [];
   const nodeNames = nodes.map(n => n.name).join(', ');
-  const version   = 'v0.8';
+  const version   = 'v0.9';
   const vaultSize = cortexHandshake?.vault_size;
   const profile   = window.getUserProfile ? window.getUserProfile() : {};
 
