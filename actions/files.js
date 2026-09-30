@@ -180,9 +180,14 @@ export const FilesAction = {
       if (openFileViewer) openFileViewer({ url, name: file.name, mime, viewerType });
       return true;
     } catch(e) {
-      if (e.name !== 'AbortError') {
-        clog(`📂 FILES: picker error — ${e.message}`, 'log-err');
+      if (e.name === 'AbortError') {
+        // User deliberately cancelled the picker — this is a complete
+        // interaction, not a failure. Returning true prevents the kernel's
+        // gap-fill fallback from firing an unnecessary engine call over
+        // what was actually just a "never mind."
+        return true;
       }
+      clog(`📂 FILES: picker error — ${e.message}`, 'log-err');
       return false;
     }
   },
