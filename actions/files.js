@@ -81,6 +81,10 @@ function _viewerTypeFromMime(mime) {
 function _classify(intent) {
   const s = intent.toLowerCase().trim();
 
+  // Explicit PC reference → that's a Cortex (remote PC) request, not a device pick
+  if (/\b(pc|computer|desktop|laptop)\b/.test(s))
+    return { type: 'pc_file' };
+
   if (/\b(recent|history|last|opened)\b/.test(s))
     return { type: 'recent' };
 
@@ -132,6 +136,9 @@ export const FilesAction = {
 
       case 'url':
         return this._handleUrl(classified.url, clog, openFileViewer);
+
+      case 'pc_file':
+        return this._handlePcFile(intent, cortexUrl, clog);
 
       case 'cortex_recent':
         return this._handleCortexRecent(cortexUrl, clog, openFileViewer);
@@ -206,6 +213,29 @@ export const FilesAction = {
     _addToHistory({ name, url, mime, source: 'url' });
 
     if (openFileViewer) openFileViewer({ url, name, mime, viewerType });
+    return true;
+  },
+
+  // ── File on the PC via Cortex (explicit PC reference) ───────────────────────
+  async _handlePcFile(intent, cortexUrl, clog) {
+    if (!cortexUrl) {
+      clog('📂 FILES: that sounds like a file on your PC — Cortex is not connected', 'log-action');
+      clog('   Tap the cortex pill to connect, or say "open a file" for this device', 'log-action');
+      return true;  // answered honestly; not a gap
+    }
+    try {
+      const r = await fetch(`${cortexUrl}/pulse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent, node: 'CORTEX' }),
+        signal: AbortSignal.timeout(4000),
+      });
+      if (!r.ok) throw new Error(`${r.status}`);
+      const d = await r.json();
+      if (d.response) clog(`📂 [cortex→PC] ${d.response}`, 'log-action');
+    } catch(e) {
+      clog(`📂 FILES: Cortex unreachable — ${e.message}`, 'log-err');
+    }
     return true;
   },
 
