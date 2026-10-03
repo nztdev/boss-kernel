@@ -30,7 +30,12 @@ function _classify(intent) {
     /\b(notification|notify|alert)\b/,        // system notifications
     /\b(screenshot|screen\s+capture)\b/,     // screen capture (future)
   ];
-  if (osPatterns.some(rx => rx.test(s))) {
+  // Bare "open a file/document" is a device-file request (FILES picker), not a
+  // PC action — it is an OS action only if the intent names the PC explicitly.
+  const _fileNoun = /\b(file|files|document|doc|pdf|image|photo|picture|video)\b/.test(s);
+  const _pcRef    = /\b(pc|computer|desktop|laptop|cortex)\b/.test(s);
+  const _bareFileOpen = /\b(open|view|show)\b/.test(s) && _fileNoun && !_pcRef;
+  if (!_bareFileOpen && osPatterns.some(rx => rx.test(s))) {
     return { type: 'os_action' };
   }
 
