@@ -163,7 +163,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'FILES',
-    specialty:    'file document pdf folder directory recent download pick browse attachment',
+    specialty:    'file document pdf folder directory recent download pick browse attachment device phone local picker upload',
     color:        '#ffcc00',
     resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
