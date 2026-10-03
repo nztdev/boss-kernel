@@ -250,6 +250,20 @@ export const CortexAction = {
     const classified = _classify(intent);
 
     if (!classified) {
+      // Deterministic hand-off (no engine needed): a bare device-file request
+      // that routing happened to give to CORTEX belongs to FILES. Specialty
+      // overlap makes this a near-tie, so don't depend on who wins it.
+      const _s = intent.toLowerCase();
+      if (/\b(open|view|show|pick|choose|select|browse)\b/.test(_s) &&
+          /\b(file|files|document|doc|pdf|image|photo|picture|video)\b/.test(_s) &&
+          !/\b(pc|computer|desktop|laptop|cortex)\b/.test(_s) && Registry && firePresetFn) {
+        const p = Registry.getPreset('files_open');
+        if (p) {
+          clog('🔬 CORTEX: device file request → handing off to FILES', 'log-vec');
+          firePresetFn(p);
+          return true;
+        }
+      }
       // Gap-filling fallback (v0.9 Direction) — before giving up entirely,
       // let the engine check the full preset catalogue for a match beyond
       // CORTEX's own local patterns. Only attempted if the engine is
