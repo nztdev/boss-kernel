@@ -222,8 +222,8 @@ boss-kernel/
 | 6 | BOSS integration | ✅ Complete |
 | 7 | Action nodes, orbital UI, modal suite | ✅ Complete |
 | 8 | Expanded utility — Calculator, Text Tools, MEMORY notes, FILES node, DEVICES stub, engine context grounding | ✅ Complete |
-| 9 | Tool calling — Registry → schema export, function calling in `engine.js`, Arbiter escalation via structured decisions | Pending |
-| 10 | Native wrap (Capacitor) + DEVICES node (Bluetooth/Matter) + Tailscale integration guide | Pending |
+| 9 | Tool calling, gap detection, risk-tiered Grief | ✅ Complete (pending final retest) |
+| 10 | Native wrap (Capacitor) + DEVICES node + BOSS Browser stub + local app launching + Tailscale guide | Pending |
 | 11 | v1.0 stabilisation + PyInstaller + first-run setup wizard | Pending |
 
 ---
@@ -278,12 +278,21 @@ This preserves the property Grief Protocol exists for — no silent irreversible
 
 ---
 
-## XII. v0.9 Direction — Tool Calling (Remaining)
+## XII. v0.9 — Delivered (Tool Calling & Gap Detection)
 
-- Export the Registry's existing `capabilities` and `presets` data as a general-purpose tool schema (`{name, description, parameters}` per action) — the data already exists, this is a serialisation step, not new architecture. What's built so far (`decideNode()`) is scoped narrowly to binary Arbiter decisions; this generalises it to arbitrary multi-parameter tool calls
-- Extend tool calling to general CORTEX-routed intents as a long-tail fallback beyond local regex — when no local pattern matches, the engine picks the right tool directly rather than the intent falling through to "no recognised action"
-- **Gap detection** — when a request matches no existing tool, CORTEX responds honestly and logs the gap, feeding a real backlog for what BOSS should build next. On native (Phase 10), this same signal drives DEVICES' adapter-matching logic
-- Explicitly out of scope, on any platform: letting the engine generate and self-execute arbitrary new code. New real capabilities continue to ship through normal development and review, not runtime code generation
+- **Registry → tool schema:** `Registry.exportToolSchema()` serialises capabilities and presets; `selectTool()` in `engine.js` lets the engine pick a preset (or `no_match`) when local regex finds nothing.
+- **Kernel-level gap-fill:** any non-CORTEX winner that returns `false` triggers `selectTool` → `firePreset`; with no engine, the gap is logged.
+- **Gap detection:** unmet requests are logged locally (`BOSS_GAPS`), viewable in the CORE `🕳 Gaps` modal with manual Export/Clear. No automatic telemetry.
+- **ACTION_MAP contract:** every wrapper must `return await Module.handle(...)`; `true` = handled, `false` = needs follow-up. A picker the user cancels counts as handled.
+- **FILES vs CORTEX:** bare "open a file/document" routes to FILES (device picker). CORTEX treats it as an OS action only when the intent names the PC/computer/desktop. App launching ("open Chrome") and downloads stay with CORTEX. Typed intent on iOS may be blocked by Safari's user-activation rule; the console then points the user to tap the FILES node.
+- Out of scope on any platform: engine-generated, self-executed code.
+
+---
+
+## XII-b. Phase 10 Scoping Notes (Not Started)
+
+- **BOSS Browser (stub):** native-only node (WKWebView / Android WebView). PWAs cannot embed most sites in iframes. Handoffs: CORTEX summarise, MEMORY remember, MEDIA/FILES viewer. Needs a dominant non-modal UI surface. Registered as an inert stub like DEVICES.
+- **Local app launching:** an extension of CORTEX `os_action`, not a new node. Mobile via URL schemes / Android Intents, desktop via Cortex subprocess. Designed as a pluggable launcher table (app name → scheme/intent/command) so entries can be added without touching routing; remote PC launching stays a separate path.
 
 ---
 
