@@ -158,8 +158,12 @@ export const FilesAction = {
   // ── File System Access API picker (Path B) ──────────────────────────────────
   async _handlePick(clog, openFileViewer) {
     if (!window.showOpenFilePicker) {
-      clog('📂 FILES: file picker not available in this browser', 'log-action');
-      clog('   Try Chrome or Edge, or use "open [url]" to load a file by URL', 'log-action');
+      if (window.triggerFileInputFallback) {
+        clog('📂 FILES: opening file picker…', 'log-action');
+        if (window.triggerFileInputFallback()) return true;
+      }
+      clog('📂 FILES: picker not available via typed intent on this browser', 'log-action');
+      clog('   Tap the FILES node directly instead — works reliably on iOS Safari', 'log-action');
       return false;
     }
     try {
