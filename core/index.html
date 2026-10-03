@@ -2672,6 +2672,12 @@ window.filesPickFile = async function() {
   }
 };
 
+window.triggerFileInputFallback = function() {
+  const input = document.getElementById('files-input-fallback');
+  if (!input) return false;
+  input.click();
+  return true;
+};
 window.filesHandleFallbackInput = function(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -4281,7 +4287,7 @@ const SYNONYMS = {
   identity: ['self','id','soma','look','feel','interface','appearance','who','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine','launch','run','engine','model','download','chrome','spotify','notepad','app','application'],
   data:     ['recall','retrieve','vault','archive','memory','remember','forget','memorize','note','meeting','remind','keep','save'],
-  files:    ['file','document','doc','pdf','view','browse','pick','folder','directory','attachment','download','recent','upload'],
+  files:    ['file','document','doc','pdf','view','browse','pick','folder','directory','attachment','download','recent','upload','picker','device','phone','local'],
   media:    ['music','sound','audio','playback','play','pause','stop','mute','unmute','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery','playing','stream'],
   time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm','stopwatch','lap','elapsed','timezone','world'],
 };
