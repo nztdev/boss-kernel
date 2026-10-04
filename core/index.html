@@ -2680,7 +2680,7 @@ window.ttFromClipboard = async function(mode, autorun) {
 // whichever of them wins a clearly-vision request hands it to the Look panel.
 function visionHandoff(intent) {
   clog('📷 Handing off to CORTEX · Look', 'log-vec');
-  openLookModal(visionMode(intent));
+  openLookModal(visionMode(intent), null, { camera: /\btake (a |an )?(photo|picture|pic|snap|snapshot)\b/i.test(intent) });
   return true;
 }
 let _lookNode = null, _lookImage = null, _lookText = '';
@@ -2710,15 +2710,19 @@ window.lookSetMode = function(mode) {
   document.getElementById('look-run-btn').textContent = VISION_MODES[mode].label;
 };
 
-function openLookModal(mode, node) {
+function openLookModal(mode, node, opts = {}) {
   _lookNode = node || nodes.find(n => n.name === 'CORTEX');
   document.getElementById('look-result').classList.remove('show');
   document.getElementById('look-result-actions').style.display = 'none';
   lookSetMode(mode && VISION_MODES[mode] ? mode : 'describe');
   _positionLookModal();
   document.getElementById('look-modal').classList.add('show');
+  // "take a photo": try to open the camera straight away. Browsers only allow
+  // this shortly after a tap/Enter, so it may be refused (notably iOS after
+  // async routing) — the panel's 📷 button is the fallback either way.
+  if (opts.camera) { try { document.getElementById('look-cam').click(); } catch (_) {} }
 }
-window.openLookModal = (mode) => openLookModal(mode);
+window.openLookModal = (mode, opts) => openLookModal(mode, null, opts || {});
 window.closeLookModal = function() { document.getElementById('look-modal').classList.remove('show'); };
 
 async function _lookSetImage(file) {
@@ -5628,6 +5632,16 @@ window.dismissBirth = function() {
 };
 
 // ── FIRE PULSE ────────────────────────────────────────────────────────────────
+// ── Deterministic intent claims ───────────────────────────────────────────────
+const INTENT_CLAIMS = [
+  { node: 'CORTEX', reason: 'vision',    test: i => isVisionIntent(i) },
+  { node: 'CORTEX', reason: 'clipboard', test: i => /\bclipboard\b/i.test(i) && !/\b(pc|computer|desktop|laptop)\b/i.test(i) },
+];
+function claimIntent(intent) {
+  const c = INTENT_CLAIMS.find(c => c.test(intent));
+  return c ? { node: c.node, reason: c.reason } : null;
+}
+
 async function firePulse() {
   const el     = document.getElementById('pulse-input');
   const intent = el.value.trim();
@@ -5679,7 +5693,14 @@ async function firePulse() {
     .sort((a, b) => b.total - a.total);
 
   updateResPanel(scored, boosts);
-  checkBirthProtocol(scored, intent);
+
+  // Deterministic claims (v0.9 amendment): a few narrow, high-precision
+  // recognisers pre-empt Birth + Arbiter for unmistakable requests whose
+  // vocabulary the scoring physics can't separate (e.g. "describe this
+  // photo": CORTEX vs MEDIA tie on the word "photo"). Scoring itself is
+  // untouched — a claim only chooses the winner and skips conflict handling.
+  const claim = claimIntent(intent);
+  if (!claim) checkBirthProtocol(scored, intent);
 
   const top    = scored[0];
   const second = scored.length > 1 ? scored[1] : null;
@@ -5689,8 +5710,11 @@ async function firePulse() {
 
   let winner = top.node;
 
-  // Three-stage Arbiter (soft/hard/engine path)
-  if (second && delta < confThreshold) {
+  if (claim) {
+    winner = nodes.find(n => n.name === claim.node) || winner;
+    clog(`   ◎ claimed by ${winner.name} (${claim.reason})`, 'log-sys');
+  } else if (second && delta < confThreshold) {
+    // Three-stage Arbiter (soft/hard/engine path)
     const result = await runArbiter(top, second, delta, intent);
     if (result && result.deferred) {
       // Blocking clarification is pending — the toast's clarify() button
