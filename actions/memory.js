@@ -18,10 +18,24 @@
  */
 
 import { semanticSim } from '../engine/engine.js';
+import { SecureStore } from './secure.js';
 
 // ── Intent classification ─────────────────────────────────────────────────────
 function _classify(intent) {
   const s = intent.toLowerCase().trim();
+
+  // Explicitly reject intents that belong to other nodes
+  // Time/CHRONOS intents
+  if (/\b(what time|what('s| is) the time|time in|clock in|stopwatch|timer|alarm|countdown|elapsed|timezone|world clock)\b/.test(s)) return null;
+  // System/CORE intents
+  if (/\b(system status|battery|diagnostics|uptime|network|cpu|memory usage|ram)\b/.test(s)) return null;
+
+  // Security (encryption / lock)
+  if (/\b(lock|unlock|encrypt|decrypt|passphrase|biometric)\b.*\b(vault|notes?|memor|data)\b/.test(s) ||
+      /\b(vault|notes?|memor\w*)\b.*\b(lock|unlock|encrypt|passphrase|security)\b/.test(s) ||
+      /^(lock|unlock|security)$/.test(s)) {
+    return { type: 'security' };
+  }
 
   // Status / inspection
   if (/\b(vault|memory)\s*(status|size|count|info|stats)\b/.test(s) ||
@@ -88,11 +102,11 @@ function _extractQuery(s) {
 
 // ── Vault helpers ─────────────────────────────────────────────────────────────
 function _getVault() {
-  try { return JSON.parse(localStorage.getItem('BOSS_VAULT') || '[]'); } catch(_) { return []; }
+  return SecureStore.read('BOSS_VAULT', []);
 }
 
 function _setVault(vault) {
-  try { localStorage.setItem('BOSS_VAULT', JSON.stringify(vault)); } catch(_) {}
+  return SecureStore.write('BOSS_VAULT', vault);
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
@@ -245,6 +259,16 @@ export const MemoryAction = {
         source:  'MEMORY',
         payload: { type: classified.type, intent },
       });
+    }
+
+    if (classified.type === 'security') {
+      if (window.openSecurityModal) { window.openSecurityModal(); clog('🔐 MEMORY: Security', 'log-mem'); return true; }
+      return false;
+    }
+    if (SecureStore.isLocked()) {
+      clog('🔐 MEMORY: vault is locked — unlock it to continue', 'log-mem');
+      if (window.openSecurityModal) window.openSecurityModal();
+      return true;   // answered honestly; not a capability gap
     }
 
     switch (classified.type) {
