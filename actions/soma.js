@@ -244,6 +244,14 @@ function _buildIdentityResponse(nodes, Registry, cortexHandshake) {
 function _classify(intent) {
   const s = intent.toLowerCase().trim();
 
+  // Voice (spoken replies / dictation settings)
+  if (/\b(voice|speak|speech|aloud|dictat\w*)\b/.test(s) || /\bread (it |this |replies )?(out )?loud\b/.test(s) ||
+      /\b(stop|quiet|mute)\b.*\b(talking|speaking)\b/.test(s)) {
+    const off = /\b(off|stop|mute|quiet|disable|silence)\b/.test(s);
+    const on  = /\b(on|enable|start|unmute)\b/.test(s);
+    return { type: 'voice', mode: off ? 'off' : on ? 'on' : 'open' };
+  }
+
   // Identity
   if (/\b(who|what)\b.*\b(are you|is this|is boss)\b/.test(s) ||
       /\b(describe yourself|introduce yourself|about you)\b/.test(s) ||
@@ -326,6 +334,17 @@ export const SomaAction = {
     const chain = getChain ? getChain() : [];
 
     switch (classified.type) {
+
+      case 'voice': {
+        const V = window.BOSS_voice;
+        if (!V || !V.supportsOutput()) {
+          clog('🎙 SOMA: spoken replies are not supported on this browser', 'log-action');
+          break;
+        }
+        if (classified.mode === 'open') { if (window.openVoiceModal) window.openVoiceModal(); break; }
+        if (window.setVoiceOutput) window.setVoiceOutput(classified.mode === 'on');
+        break;
+      }
 
       case 'identity': {
         const response = _buildIdentityResponse(nodes, Registry, this._lastHandshake);
