@@ -591,7 +591,10 @@ export async function callVision(prompt, imageBase64, mime, pool) {
       { text: prompt },
       { inline_data: { mime_type: mime || 'image/jpeg', data: imageBase64 } },
     ]}],
-    generationConfig: { maxOutputTokens: 1024, temperature: 0.2 },
+    // Gemini 2.5 "thinking" tokens count against maxOutputTokens, which can
+    // truncate the visible answer. Describing/reading an image needs no
+    // deliberation, so thinking is off and the cap is generous.
+    generationConfig: { maxOutputTokens: 2048, temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } },
   };
   try {
     const r = await fetch(url, {
@@ -609,7 +612,8 @@ export async function callVision(prompt, imageBase64, mime, pool) {
     if (reason && reason !== 'STOP' && reason !== 'MAX_TOKENS')
       return { error: `Gemini blocked the image (${reason})` };
     const text = d.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
-    return text ? { text, model: node.name } : { error: 'Gemini returned no text' };
+    if (!text) return { error: 'Gemini returned no text' };
+    return { text: reason === 'MAX_TOKENS' ? text + ' …(cut off — ask again for a shorter answer)' : text, model: node.name };
   } catch (e) {
     return { error: e.message };
   }
