@@ -21,6 +21,8 @@
  *   cancel         — "cancel timer" / "stop timer"
  */
 
+import { Weather } from './weather.js';
+
 // ── Timer state ───────────────────────────────────────────────────────────────
 const _timers = [];       // [{ id, label, fireAt, timeoutId }]
 let   _notificationPermission = null;
@@ -468,6 +470,10 @@ export const ChronosAction = {
   async handle(intent, clog, Nervous, EVENT) {
     _elapsedStart = Date.now();
     _flash();
+
+    // Weather is a read-only CHRONOS query — handle before the notification
+    // permission prompt, which is only relevant to timers/alarms.
+    if (Weather.isWeatherIntent(intent)) return await Weather.handle(intent, clog);
 
     // Request notification permission on first real timer use
     if (!_notificationPermission) {
