@@ -48,8 +48,14 @@ function _stripFileUrls(raw) {
   } catch (_) { return raw; }
 }
 
+// Biometric wrap is bound to this device's authenticator — useless elsewhere.
+function _stripBio(raw) {
+  try { const m = JSON.parse(raw); delete m.bio; return JSON.stringify(m); } catch (_) { return raw; }
+}
+
 [
   { key: 'BOSS_VAULT',         label: 'Vault' },
+  { key: 'BOSS_SECURE_META',   label: 'Encryption settings', transform: _stripBio },
   { key: 'BOSS_NOTES',         label: 'Notes' },
   { key: 'BOSS_PROFILE',       label: 'Profile' },
   { key: 'BOSS_SOMA_CONFIG',   label: 'Theme & identity' },
@@ -114,6 +120,7 @@ export const BackupManager = {
    * Throws if includeKeys without passphrase.
    */
   async buildExport({ includeKeys = false, passphrase = '' } = {}) {
+    if (globalThis.SecureStore) await globalThis.SecureStore.flush();   // pending encrypted writes
     if (includeKeys && !passphrase) throw new Error('A passphrase is required to include engine keys');
     const sections = {};
     let encryptedKeys = null;
