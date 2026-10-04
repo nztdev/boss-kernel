@@ -63,6 +63,7 @@ function _stripBio(raw) {
   { key: 'BOSS_MEDIA_CONFIG',  label: 'Media settings' },
   { key: 'BOSS_FILES_HISTORY', label: 'Recent files (names only)', transform: _stripFileUrls },
   { key: 'BOSS_GAPS',          label: 'Capability gap log' },
+  { key: 'BOSS_VOICE',         label: 'Voice settings' },
   { key: 'BOSS_ENGINE_KEYS',   label: 'Engine API keys', sensitive: true },
 ].forEach(register);
 
