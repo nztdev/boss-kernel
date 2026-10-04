@@ -56,11 +56,27 @@ function _parse(intent) {
 }
 
 // ── Network ───────────────────────────────────────────────────────────────────
+// Free public APIs occasionally return a transient 5xx/429 — retry once.
+async function _fetchJson(url, timeoutMs, label) {
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      if (r.ok) return await r.json();
+      lastErr = new Error(`${label} ${r.status}`);
+      if (r.status < 500 && r.status !== 429) throw lastErr;   // client error: don't retry
+    } catch (e) {
+      lastErr = e;
+      if (e === lastErr && /\b4\d\d\b/.test(e.message) && !/429/.test(e.message)) throw e;
+    }
+    if (attempt === 0) await new Promise(res => setTimeout(res, 800));
+  }
+  throw lastErr;
+}
+
 async function _geocode(name) {
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
-  const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
-  if (!r.ok) throw new Error(`geocoding ${r.status}`);
-  const d = await r.json();
+  const d = await _fetchJson(url, 6000, 'geocoding');
   const hit = d.results && d.results[0];
   if (!hit) return null;
   return { lat: hit.latitude, lon: hit.longitude,
@@ -76,9 +92,7 @@ async function _forecast(lat, lon) {
     wind_speed_unit:  IMPERIAL ? 'mph' : 'kmh',
     precipitation_unit: IMPERIAL ? 'inch' : 'mm',
   });
-  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${q}`, { signal: AbortSignal.timeout(8000) });
-  if (!r.ok) throw new Error(`forecast ${r.status}`);
-  return r.json();
+  return _fetchJson(`https://api.open-meteo.com/v1/forecast?${q}`, 8000, 'forecast');
 }
 
 // ── Public interface ──────────────────────────────────────────────────────────
@@ -138,7 +152,7 @@ export const Weather = {
       }
       clog('   data: Open-Meteo.com', 'log-action');
     } catch (e) {
-      clog(`🌤 CHRONOS: couldn't fetch the forecast — ${e.message}`, 'log-err');
+      clog(`🌤 CHRONOS: the weather service didn't answer (${e.message}) — try again in a moment`, 'log-err');
     }
     return true;
   },
