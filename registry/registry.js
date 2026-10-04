@@ -102,7 +102,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'CORTEX',
-    specialty:    'ai logic intelligence think reason analyse explain evaluate process decide infer breakdown examine what is how does why open launch run start engine model status download chrome spotify notepad app application',
+    specialty:    'ai logic intelligence think reason analyse explain evaluate process decide infer breakdown examine what is how does why open launch run start engine model status download chrome spotify notepad app application camera scan ocr describe clipboard summarise paste translate rewrite',
     color:        '#cc00ff',
     resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
@@ -531,6 +531,19 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['calculation', 'convert', 'math'],
     _openModal: 'calculator',
+  },
+  {
+    id:         'cortex_look',
+    label:      'Look',
+    icon:       '📷',
+    nodes:      ['CORTEX'],
+    intent:     'look at this photo',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['camera', 'photo', 'vision', 'ocr', 'scan', 'describe'],
+    _openModal: 'look',
   },
   {
     id:         'cortex_engine_status',
