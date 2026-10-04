@@ -2638,7 +2638,7 @@ function _renderVoice() {
     return;
   }
   const voices = Voice.voices();
-  const opts = ['<option value="">System default</option>']
+  const opts = ['<option value="">BOSS default (Zarvox if available)</option>', `<option value="__system__" ${st.voiceURI === '__system__' ? 'selected' : ''}>System default</option>`]
     .concat(voices.map(v => `<option value="${v.voiceURI}" ${v.voiceURI === st.voiceURI ? 'selected' : ''}>${v.name} (${v.lang})</option>`)).join('');
   body.innerHTML = `
     <div class="gaps-subtitle">Talk to BOSS and have it talk back. Spoken output stays on this device.</div>
