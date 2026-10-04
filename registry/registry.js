@@ -85,7 +85,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'SOMA',
-    specialty:    'identity self who soma appearance theme colour color switch style skin palette ui somatic personality profile customise mood feeling state crimson amber violet ice solar',
+    specialty:    'identity self who soma appearance theme colour color switch style skin palette ui somatic personality profile customise mood feeling state crimson amber violet ice solar voice speak speech aloud',
     color:        '#ff66aa',
     resonance:    1.5,  // flattened (v0.9) — see CORE note above
     tier:         'active',
@@ -371,6 +371,19 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['profile', 'preferences', 'identity'],
     _openModal: 'profile',
+  },
+  {
+    id:         'soma_voice',
+    label:      'Voice',
+    icon:       '🎙',
+    nodes:      ['SOMA'],
+    intent:     'voice settings',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['voice', 'speech', 'dictation', 'speak'],
+    _openModal: 'voice',
   },
 
   // ── CORE presets ───────────────────────────────────────────────────────────
