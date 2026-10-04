@@ -323,7 +323,12 @@ export const CortexAction = {
 
     switch (classified.type) {
       case 'vision':
-        if (window.openLookModal) { window.openLookModal(classified.mode); clog('📷 CORTEX: Look', 'log-vec'); return true; }
+        if (window.openLookModal) {
+          const camera = /\btake (a |an )?(photo|picture|pic|snap|snapshot)\b/i.test(intent);
+          window.openLookModal(classified.mode, { camera });
+          clog('📷 CORTEX: Look', 'log-vec');
+          return true;
+        }
         return false;
 
       case 'clipboard':
