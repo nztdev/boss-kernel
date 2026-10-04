@@ -29,6 +29,11 @@ const _sessionStart = Date.now();
 function _classify(intent) {
   const s = intent.toLowerCase().trim();
 
+  // Backup / restore (opens the Backup modal)
+  if (/\b(backup|back\s+up|restore|export\s+(my\s+)?(data|state)|import\s+(my\s+)?(data|state))\b/.test(s)) {
+    return { type: 'backup' };
+  }
+
   // Battery
   if (/\b(battery|charge|charging|power|plugged)\b/.test(s)) {
     return { type: 'battery' };
@@ -248,6 +253,9 @@ export const CoreAction = {
     const nodes = getNodes ? getNodes() : [];
 
     switch (classified.type) {
+      case 'backup':
+        if (window.openBackupModal) { window.openBackupModal(); clog('💾 CORE: Backup & Restore', 'log-action'); return true; }
+        return false;
       case 'battery':     await _handleBattery(clog);                                      break;
       case 'network':     _handleNetwork(clog);                                             break;
       case 'diagnostics': _handleDiagnostics(clog);                                        break;
