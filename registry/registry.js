@@ -119,7 +119,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'MEMORY',
-    specialty:    'recall retrieve vault archive remember forget memorize note memories meeting remind keep save store',
+    specialty:    'recall retrieve vault archive remember forget memorize note memories meeting remind keep save store lock unlock encrypt',
     color:        '#66aaff',
     resonance:    1.5,
     tier:         'active',
@@ -452,6 +452,19 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['memory', 'notes', 'lists'],
     _openModal: 'notes',
+  },
+  {
+    id:         'memory_security',
+    label:      'Security',
+    icon:       '🔐',
+    nodes:      ['MEMORY'],
+    intent:     'lock vault encrypt security',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['security', 'encrypt', 'lock', 'passphrase', 'biometric'],
+    _openModal: 'security',
   },
 
   // ── CORTEX presets ─────────────────────────────────────────────────────────
