@@ -64,7 +64,7 @@ export const INTENT_SOURCE = {
 const DEFAULT_NODES = [
   {
     name:         'CORE',
-    specialty:    'health battery charge power status diagnostics system reboot uptime integrity vitals network online offline memory performance session backup restore location gps coordinates',
+    specialty:    'health battery charge power status diagnostics system reboot uptime integrity vitals network online offline memory performance session backup restore location gps coordinates where am i whereabouts',
     color:        '#00ffcc',
     resonance:    1.5,  // was 2.0 — outlier value made CORE the default winner
                         // for any low-match/failed intent, whose accumulated
