@@ -574,6 +574,48 @@ async function _callWithToolsGemini(node, intent, names, toolName, toolDesc, par
 }
 
 /**
+ * Vision call (v0.9) — image + prompt to a vision-capable model.
+ * Today that is Gemini only (Groq's current model is text-only).
+ * Returns { text, model } or { error }.
+ */
+export async function callVision(prompt, imageBase64, mime, pool) {
+  const node = (pool || [])
+    .filter(n => n.provider === 'gemini' && n.apiKey)
+    .sort((a, b) => (b.warmth || 0) - (a.warmth || 0))[0];
+  if (!node) return { error: 'No vision-capable engine configured (needs a Gemini key)' };
+
+  const model = node.model || 'gemini-2.5-flash';
+  const url   = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${node.apiKey}`;
+  const body  = {
+    contents: [{ role: 'user', parts: [
+      { text: prompt },
+      { inline_data: { mime_type: mime || 'image/jpeg', data: imageBase64 } },
+    ]}],
+    generationConfig: { maxOutputTokens: 1024, temperature: 0.2 },
+  };
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      return { error: `Gemini ${r.status}: ${err?.error?.message || r.statusText}` };
+    }
+    const d = await r.json();
+    const reason = d.candidates?.[0]?.finishReason;
+    if (reason && reason !== 'STOP' && reason !== 'MAX_TOKENS')
+      return { error: `Gemini blocked the image (${reason})` };
+    const text = d.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
+    return text ? { text, model: node.name } : { error: 'Gemini returned no text' };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
  * selectTool(intent, tools, pool) → { toolName, node, presetId, model } | null
  *
  * General-purpose fallback tool selection (v0.9 Direction) — extends
@@ -998,6 +1040,7 @@ export default {
   deliberate,
   decideNode,       // v0.9 — direct tool-calling routing decision
   selectTool,       // v0.9 — general preset-catalogue tool selection
+  callVision,       // v0.9 — image + prompt to a vision-capable model
   buildDefaultPool,
   savePool,         // returns JSON string — caller handles storage
   loadPool,         // accepts JSON string — caller handles retrieval
