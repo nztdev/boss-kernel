@@ -22,6 +22,8 @@
  *   uptime            — session uptime since page load
  */
 
+import { getLocation, reverseGeocode, LocationError } from './location.js';
+
 // ── Session start time ────────────────────────────────────────────────────────
 const _sessionStart = Date.now();
 
@@ -32,6 +34,11 @@ function _classify(intent) {
   // Backup / restore (opens the Backup modal)
   if (/\b(backup|back\s+up|restore|export\s+(my\s+)?(data|state)|import\s+(my\s+)?(data|state))\b/.test(s)) {
     return { type: 'backup' };
+  }
+
+  // Location
+  if (/\b(where am i|my location|current location|location|gps|coordinates)\b/.test(s)) {
+    return { type: 'location' };
   }
 
   // Battery
@@ -104,6 +111,21 @@ async function _handleBattery(clog) {
     }
   } catch(e) {
     clog(`💻 CORE: battery read failed — ${e.message}`, 'log-err');
+  }
+}
+
+async function _handleLocation(clog) {
+  clog('📍 CORE: locating…', 'log-action');
+  try {
+    const loc = await getLocation({ force: true });
+    const place = await reverseGeocode(loc.lat, loc.lon);
+    clog(`📍 CORE: ${place || 'Location found'}`, 'log-action');
+    clog(`   ${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)} · ±${Math.round(loc.accuracy)} m`, 'log-action');
+    clog('   kept in memory only — never stored or backed up', 'log-action');
+  } catch (e) {
+    clog(`📍 CORE: ${e.message}`, 'log-action');
+    if (e instanceof LocationError && e.code === 'denied')
+      clog('   Allow location for this site in your browser settings, then try again', 'log-action');
   }
 }
 
@@ -256,6 +278,7 @@ export const CoreAction = {
       case 'backup':
         if (window.openBackupModal) { window.openBackupModal(); clog('💾 CORE: Backup & Restore', 'log-action'); return true; }
         return false;
+      case 'location':    await _handleLocation(clog);                                     break;
       case 'battery':     await _handleBattery(clog);                                      break;
       case 'network':     _handleNetwork(clog);                                             break;
       case 'diagnostics': _handleDiagnostics(clog);                                        break;
