@@ -64,7 +64,7 @@ export const INTENT_SOURCE = {
 const DEFAULT_NODES = [
   {
     name:         'CORE',
-    specialty:    'health battery charge power status diagnostics system reboot uptime integrity vitals network online offline memory performance session backup restore',
+    specialty:    'health battery charge power status diagnostics system reboot uptime integrity vitals network online offline memory performance session backup restore location gps coordinates',
     color:        '#00ffcc',
     resonance:    1.5,  // was 2.0 — outlier value made CORE the default winner
                         // for any low-match/failed intent, whose accumulated
@@ -192,7 +192,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'CHRONOS',
-    specialty:    'time schedule clock calendar timer alarm duration elapsed long countdown remind when stopwatch lap world timezone tokyo london paris',
+    specialty:    'time schedule clock calendar timer alarm duration elapsed long countdown remind when stopwatch lap world timezone tokyo london paris weather forecast rain temperature',
     color:        '#ffaa00',
     resonance:    1.5,  // flattened (v0.9) — was the lowest of all active nodes,
                         // structurally disadvantaged even on intents it should
@@ -220,6 +220,18 @@ const DEFAULT_NODES = [
 
 const DEFAULT_PRESETS = [
   // ── CHRONOS presets ────────────────────────────────────────────────────────
+  {
+    id:         'chronos_weather',
+    label:      'Weather',
+    icon:       '🌤',
+    nodes:      ['CHRONOS'],
+    intent:     'weather',
+    actions:    [{ node: 'CHRONOS', command: 'weather', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['weather', 'forecast', 'rain', 'temperature'],
+  },
   {
     id:         'chronos_timer',
     label:      'Timer',
@@ -424,6 +436,19 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['backup', 'restore', 'export', 'import', 'migrate'],
     _openModal: 'backup',
+  },
+
+  {
+    id:         'core_location',
+    label:      'Location',
+    icon:       '📍',
+    nodes:      ['CORE'],
+    intent:     'where am i',
+    actions:    [{ node: 'CORE', command: 'location', params: {} }],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['location', 'gps', 'position', 'coordinates'],
   },
 
   // ── MEMORY presets ─────────────────────────────────────────────────────────
