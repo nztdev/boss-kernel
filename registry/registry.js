@@ -64,7 +64,7 @@ export const INTENT_SOURCE = {
 const DEFAULT_NODES = [
   {
     name:         'CORE',
-    specialty:    'health battery charge power status diagnostics system reboot uptime integrity vitals network online offline memory performance session',
+    specialty:    'health battery charge power status diagnostics system reboot uptime integrity vitals network online offline memory performance session backup restore',
     color:        '#00ffcc',
     resonance:    1.5,  // was 2.0 — outlier value made CORE the default winner
                         // for any low-match/failed intent, whose accumulated
@@ -411,6 +411,19 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['gaps', 'backlog', 'capabilities'],
     _openModal: 'gaps',
+  },
+  {
+    id:         'core_backup',
+    label:      'Backup',
+    icon:       '💾',
+    nodes:      ['CORE'],
+    intent:     'backup restore',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['backup', 'restore', 'export', 'import', 'migrate'],
+    _openModal: 'backup',
   },
 
   // ── MEMORY presets ─────────────────────────────────────────────────────────
