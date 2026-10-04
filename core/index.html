@@ -239,6 +239,30 @@ canvas {
   white-space: nowrap; touch-action: manipulation; transition: background .15s;
 }
 #pulse-btn:active { background: #004433; }
+.vbtn {
+  background: #000; border: 1px solid var(--glow); border-right: none;
+  color: var(--glow); font-size: 14px; padding: 0 10px; cursor: pointer;
+  touch-action: manipulation; opacity: 0.75;
+}
+.vbtn.on { background: #003322; opacity: 1; }
+#mic-btn { display: none; }
+#mic-btn.listening { background: #330011; border-color: #ff3366; color: #ff3366; animation: micpulse 1s infinite; }
+@keyframes micpulse { 50% { opacity: 0.45; } }
+
+/* ── VOICE MODAL (reuses .gaps-* / .backup-* look) ── */
+#voice-modal {
+  display: none; position: fixed; z-index: 46;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #ff66aa77; border-radius: 12px;
+  padding: 14px 16px; width: 300px; max-height: 440px; overflow-y: auto;
+  box-shadow: 0 0 24px #ff66aa22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#voice-modal.show { display: block; }
+#voice-modal .gaps-title, #voice-modal .gaps-subtitle, #voice-modal .backup-check, #voice-modal .backup-status { color: #ff66aa; }
+#voice-modal .gaps-btn { border-color: #ff66aa55; color: #ff66aa; }
+#voice-modal .sec-select { color: #ff66aa; border-color: #ff66aa33; width: 100%; margin: 6px 0; }
+#voice-modal input[type=range] { width: 100%; accent-color: #ff66aa; }
 
 /* media panel removed — replaced by media player modal */
 
@@ -1510,6 +1534,8 @@ textarea.profile-input {
   <div id="input-bar">
     <input id="pulse-input" placeholder="Inject intent pulse…" autocomplete="off"
       onkeydown="if(event.key==='Enter'){firePulse();this.blur();setTimeout(()=>this.focus(),80)}">
+    <button id="mic-btn" class="vbtn" onclick="micToggle()" title="Dictate">🎤</button>
+    <button id="speak-btn" class="vbtn" onclick="setVoiceOutput(!BOSS_voice.settings().out)" title="Speak replies">🔊</button>
     <button id="pulse-btn" onclick="firePulse()">PULSE ⚡</button>
   </div>
 </div>
@@ -1641,6 +1667,14 @@ textarea.profile-input {
     <button class="gaps-btn" onclick="clearGaps()">🗑 Clear</button>
   </div>
   <button class="gaps-close-btn" onclick="closeGapsModal()">✕ close</button>
+</div>
+
+<!-- VOICE MODAL — appears near SOMA node -->
+<div id="voice-modal">
+  <div class="gaps-title">SOMA · VOICE</div>
+  <div id="voice-body"></div>
+  <div class="backup-status" id="voice-status"></div>
+  <button class="gaps-close-btn" onclick="closeVoiceModal()">✕ close</button>
 </div>
 
 <!-- SECURITY MODAL — appears near MEMORY node -->
@@ -2071,6 +2105,7 @@ import { FilesAction }                                   from '../actions/files.
 import { CortexAction }                                  from '../actions/cortex.js';
 import { BackupManager }                                from '../actions/backup.js';
 import { SecureStore }                                  from '../actions/secure.js';
+import { Voice }                                        from '../actions/voice.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse       = firePulse;
@@ -2542,6 +2577,93 @@ window.clearGaps = function() {
 };
 
 
+
+
+// ── VOICE (SOMA) — dictation in, spoken replies out ───────────────────────────
+let _voiceNode = null;
+
+function _voiceSyncButtons() {
+  const st = Voice.settings();
+  const mic = document.getElementById('mic-btn');
+  const spk = document.getElementById('speak-btn');
+  mic.style.display = Voice.supportsInput() ? 'block' : 'none';
+  mic.classList.toggle('listening', Voice.isListening());
+  spk.style.display = Voice.supportsOutput() ? 'block' : 'none';
+  spk.classList.toggle('on', !!st.out);
+  spk.textContent = st.out ? '🔊' : '🔈';
+}
+Voice.onChange(() => { _voiceSyncButtons(); if (document.getElementById('voice-modal').classList.contains('show')) _renderVoice(); });
+
+window.setVoiceOutput = function(on) {
+  if (!Voice.supportsOutput()) { clog('🎙 SOMA: spoken replies are not supported on this browser', 'log-action'); return; }
+  Voice.set({ out: !!on });
+  if (on) { Voice.say('Voice on'); clog('🔊 SOMA: spoken replies on', 'log-sys'); }
+  else    { Voice.cancel(); clog('🔈 SOMA: spoken replies off', 'log-sys'); }
+};
+
+window.micToggle = function() {
+  if (Voice.isListening()) { Voice.stopListening(); return; }
+  if (!Voice.settings().seenNotice) {
+    clog("🎤 Note: dictation uses your browser's speech service (Google on Chrome, Apple on Safari) — audio leaves this device. Typed intents don't.", 'log-sys');
+    Voice.set({ seenNotice: true });
+  }
+  if (Voice.settings().out && Voice.supportsOutput()) {
+    try { speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch (_) {}   // iOS gesture unlock
+  }
+  const input = document.getElementById('pulse-input');
+  Voice.startListening({
+    onInterim: t => { input.value = t; },
+    onFinal:   t => { input.value = t; if (Voice.settings().autoSend) firePulse(); },
+    onError:   (_c, msg) => clog('🎤 ' + msg, 'log-err'),
+  });
+};
+
+function _positionVoiceModal() {
+  const modal = document.getElementById('voice-modal');
+  if (!_voiceNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const px = rect.left + _voiceNode.x * (rect.width  / canvas.width);
+  const py = rect.top  + _voiceNode.y * (rect.height / canvas.height);
+  const mw = 300, mh = 380;
+  modal.style.left = Math.max(10, Math.min(px - mw / 2, window.innerWidth  - mw - 10)) + 'px';
+  modal.style.top  = Math.max(10, Math.min(py - mh - 20, window.innerHeight - mh - 10)) + 'px';
+}
+
+function _renderVoice() {
+  const st = Voice.settings();
+  const body = document.getElementById('voice-body');
+  if (!Voice.supportsOutput() && !Voice.supportsInput()) {
+    body.innerHTML = '<div class="gaps-subtitle">This browser supports neither dictation nor spoken replies.</div>';
+    return;
+  }
+  const voices = Voice.voices();
+  const opts = ['<option value="">System default</option>']
+    .concat(voices.map(v => `<option value="${v.voiceURI}" ${v.voiceURI === st.voiceURI ? 'selected' : ''}>${v.name} (${v.lang})</option>`)).join('');
+  body.innerHTML = `
+    <div class="gaps-subtitle">Talk to BOSS and have it talk back. Spoken output stays on this device.</div>
+    ${Voice.supportsOutput() ? `
+      <label class="backup-check"><input type="checkbox" ${st.out ? 'checked' : ''} onchange="setVoiceOutput(this.checked)"> speak replies</label>
+      <select class="sec-select" onchange="Voice_set({voiceURI:this.value})">${opts}</select>
+      <label class="backup-check" style="margin:4px 0">speed ${st.rate.toFixed(1)}×</label>
+      <input type="range" min="0.7" max="1.4" step="0.1" value="${st.rate}" oninput="Voice_set({rate:parseFloat(this.value)})">
+      <div class="gaps-btn-row"><button class="gaps-btn" onclick="BOSS_voice.say('Hello. This is how I sound.')">▶ Test voice</button></div>` : ''}
+    ${Voice.supportsInput() ? `
+      <label class="backup-check"><input type="checkbox" ${st.autoSend ? 'checked' : ''} onchange="Voice_set({autoSend:this.checked})"> send automatically after dictation</label>
+      <div class="gaps-subtitle">🎤 Dictation uses your browser's speech service (Google on Chrome, Apple on Safari), so audio leaves this device and it needs a connection.</div>`
+      : '<div class="gaps-subtitle">Dictation is not available in this browser (try Chrome, Edge or Safari).</div>'}`;
+}
+window.Voice_set = patch => Voice.set(patch);
+
+function openVoiceModal(node) {
+  _voiceNode = node || nodes.find(n => n.name === 'SOMA');
+  _renderVoice();
+  _positionVoiceModal();
+  document.getElementById('voice-modal').classList.add('show');
+}
+window.openVoiceModal = () => openVoiceModal();
+window.closeVoiceModal = function() { document.getElementById('voice-modal').classList.remove('show'); };
+_voiceSyncButtons();
 
 // ── SECURITY (MEMORY) — vault & notes encryption ──────────────────────────────
 let _securityNode = null;
@@ -5322,6 +5444,7 @@ async function firePulse() {
   const intent = el.value.trim();
   if (!intent) return;
   if (limpMode) { clog('🩼 LIMP MODE — tap Recover', 'log-grief'); return; }
+  Voice.cancel();   // a new intent interrupts any reply still being spoken
   // Don't pulse if a modal prompt input has focus — those have their own handlers
   const activeEl = document.activeElement;
   if (activeEl && activeEl !== el &&
@@ -5795,6 +5918,7 @@ function clog(msg, cls = 'log-sys') {
   const t   = new Date().toLocaleTimeString('en', { hour12: false });
   con.innerHTML += `<br><span class="${cls}"><span style="color:#1a3a28">${t}</span> ${msg}</span>`;
   con.scrollTop  = con.scrollHeight;
+  if (cls === 'log-action' || cls === 'log-vec' || cls === 'log-mem') Voice.enqueue(msg);
 }
 
 function updateHeader() { document.getElementById('h-nodes').textContent = nodes.length; }
@@ -6019,6 +6143,9 @@ async function firePreset(preset) {
     } else if (preset._openModal === 'gaps') {
       const coreNode = nodes.find(n => n.name === 'CORE');
       if (coreNode) openGapsModal(coreNode);
+    } else if (preset._openModal === 'voice') {
+      const somaNode = nodes.find(n => n.name === 'SOMA');
+      if (somaNode) openVoiceModal(somaNode);
     } else if (preset._openModal === 'security') {
       const memNode = nodes.find(n => n.name === 'MEMORY');
       if (memNode) openSecurityModal(memNode);
