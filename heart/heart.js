@@ -148,9 +148,11 @@ export const Heart = {
    */
   maintainVault() {
     try {
-      const raw = localStorage.getItem('BOSS_VAULT');
-      if (!raw) return;
-      let vault = JSON.parse(raw);
+      // Read via SecureStore when present (handles encrypted vaults);
+      // skip maintenance while locked.
+      const SS = globalThis.SecureStore;
+      if (SS && SS.isLocked()) return;
+      let vault = SS ? SS.read('BOSS_VAULT', null) : JSON.parse(localStorage.getItem('BOSS_VAULT') || 'null');
       if (!Array.isArray(vault) || !vault.length) return;
 
       const now     = Date.now();
@@ -164,7 +166,8 @@ export const Heart = {
         vault = vault.slice(0, this.VAULT_MAX_SIZE);
       }
 
-      localStorage.setItem('BOSS_VAULT', JSON.stringify(vault));
+      if (SS) SS.write('BOSS_VAULT', vault);
+      else localStorage.setItem('BOSS_VAULT', JSON.stringify(vault));
     } catch(_) {}
   },
 
