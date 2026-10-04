@@ -18,8 +18,21 @@
  */
 
 // ── Intent classification ─────────────────────────────────────────────────────
+import { isVisionIntent, visionMode } from './vision.js';
+
 function _classify(intent) {
   const s = intent.toLowerCase().trim();
+
+  // Vision: camera / read / describe an image → the Look panel
+  if (isVisionIntent(s)) return { type: 'vision', mode: visionMode(s) };
+
+  // Clipboard → Text Tools (device clipboard; PC clipboard needs an explicit PC word)
+  if (/\bclipboard\b/.test(s) && !/\b(pc|computer|desktop|laptop)\b/.test(s)) {
+    const mode = /\btranslate\b/.test(s) ? 'translate' : /\brewrite\b/.test(s) ? 'rewrite'
+               : /\banaly[sz]e\b/.test(s) ? 'analyse' : /\bexplain\b/.test(s) ? 'explain' : 'summarise';
+    const autorun = /\b(summari[sz]e|summary|translate|rewrite|analy[sz]e|explain)\b/.test(s);
+    return { type: 'clipboard', mode, autorun };
+  }
 
   // OS-action intents — delegated to Python Cortex server /pulse endpoint
   // These require local machine access that only the Python server has.
@@ -309,6 +322,14 @@ export const CortexAction = {
     }
 
     switch (classified.type) {
+      case 'vision':
+        if (window.openLookModal) { window.openLookModal(classified.mode); clog('📷 CORTEX: Look', 'log-vec'); return true; }
+        return false;
+
+      case 'clipboard':
+        if (window.ttFromClipboard) return await window.ttFromClipboard(classified.mode, classified.autorun);
+        return false;
+
       case 'os_action':
         await _handleOsAction(intent, clog, Nervous, EVENT, cortexUrl);
         break;
