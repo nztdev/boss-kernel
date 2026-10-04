@@ -431,6 +431,37 @@ canvas {
 }
 .tt-close-btn:hover { color: #cc00ff; border-color: #cc00ff44; }
 
+/* ── LOOK (VISION) MODAL — shares the Text Tools look ── */
+#look-modal {
+  display: none; position: fixed; z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #cc00ff66; border-radius: 12px;
+  padding: 14px 16px; width: 300px; max-height: 470px; overflow-y: auto;
+  box-shadow: 0 0 24px #cc00ff22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#look-modal.show { display: block; }
+.look-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.look-btn {
+  flex: 1; background: none; border: 1px solid #cc00ff55; border-radius: 6px;
+  color: #cc00ff; font-family: inherit; font-size: 10px; padding: 8px 0; cursor: pointer;
+}
+.look-btn:hover { background: #cc00ff11; }
+#look-preview { display: none; width: 100%; max-height: 130px; object-fit: contain;
+  border: 1px solid #cc00ff22; border-radius: 6px; margin-bottom: 8px; background: #030508; }
+#look-ask { display: none; width: 100%; box-sizing: border-box; background: #030508;
+  border: 1px solid #cc00ff44; border-radius: 6px; color: #cc00ff; font-family: inherit;
+  font-size: 11px; padding: 7px 10px; margin-bottom: 8px; }
+.look-note { font-size: 8px; color: #cc00ff; opacity: 0.45; line-height: 1.5; margin-bottom: 8px; }
+.tt-result-box { display: none; background: #030508; border: 1px solid #cc00ff22; border-radius: 6px;
+  padding: 10px; font-size: 11px; color: #cc00ff; line-height: 1.6; min-height: 40px;
+  margin-bottom: 8px; word-break: break-word; white-space: pre-wrap; }
+.tt-result-box.show { display: block; }
+.tt-mini-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.tt-mini-btn { flex: 1; background: none; border: 1px solid #cc00ff33; border-radius: 6px;
+  color: #cc00ff; font-family: inherit; font-size: 9px; padding: 5px 0; cursor: pointer; opacity: 0.8; }
+.tt-mini-btn:hover { background: #cc00ff11; }
+
 /* ── NETWORK MODAL ── */
 #network-modal {
   display: none;
@@ -1611,6 +1642,7 @@ textarea.profile-input {
     <option value="analyse">🔬 Analyse</option>
     <option value="explain">💡 Explain</option>
   </select>
+  <div class="tt-mini-row" style="margin-bottom:6px"><button class="tt-mini-btn" onclick="ttPaste()">📋 Paste</button><button class="tt-mini-btn" onclick="document.getElementById('tt-input').value='';document.getElementById('tt-result').classList.remove('show')">✕ Clear</button></div>
   <textarea id="tt-input" placeholder="Paste or type text here…"></textarea>
 
   <div id="tt-lang-row">
@@ -1642,7 +1674,42 @@ textarea.profile-input {
 
   <button class="tt-run-btn" id="tt-run-btn" onclick="ttRun()">📋 Summarise</button>
   <div id="tt-result"></div>
+  <div class="tt-mini-row"><button class="tt-mini-btn" onclick="ttCopy()">📋 Copy result</button></div>
   <button class="tt-close-btn" onclick="closeTextToolsModal()">✕ close</button>
+</div>
+
+<!-- LOOK MODAL — appears near CORTEX node -->
+<div id="look-modal">
+  <div class="tt-title">CORTEX · LOOK</div>
+  <div class="look-row">
+    <button class="look-btn" onclick="document.getElementById('look-cam').click()">📷 Take photo</button>
+    <button class="look-btn" onclick="document.getElementById('look-file').click()">🖼 Choose</button>
+    <button class="look-btn" onclick="lookPaste()">📋 Paste</button>
+  </div>
+  <input type="file" id="look-cam"  accept="image/*" capture="environment" style="display:none" onchange="lookPicked(this)">
+  <input type="file" id="look-file" accept="image/*" style="display:none" onchange="lookPicked(this)">
+  <img id="look-preview" alt="selected image">
+  <select id="look-mode" class="tt-select" style="margin-bottom:8px" onchange="lookSetMode(this.value)">
+    <option value="describe">👁 Describe</option>
+    <option value="ocr">🔤 Read text</option>
+    <option value="translate">🌐 Translate text</option>
+    <option value="ask">❓ Ask a question</option>
+  </select>
+  <select id="look-lang" class="tt-select" style="display:none;margin-bottom:8px">
+    <option>English</option><option>Spanish</option><option>French</option><option>German</option>
+    <option>Italian</option><option>Portuguese</option><option>Japanese</option>
+    <option>Mandarin Chinese</option><option>Korean</option><option>Arabic</option>
+  </select>
+  <input id="look-ask" type="text" placeholder="What do you want to know about it?"
+    onkeydown="event.stopPropagation(); if(event.key==='Enter')lookRun()">
+  <div class="look-note">The photo is shrunk on this device (location data removed) and sent to Gemini. Nothing is stored.</div>
+  <button class="tt-run-btn" id="look-run-btn" onclick="lookRun()">👁 Describe</button>
+  <div id="look-result" class="tt-result-box"></div>
+  <div class="tt-mini-row" id="look-result-actions" style="display:none">
+    <button class="tt-mini-btn" onclick="lookCopy()">📋 Copy</button>
+    <button class="tt-mini-btn" onclick="lookToTextTools()">→ Text Tools</button>
+  </div>
+  <button class="tt-close-btn" onclick="closeLookModal()">✕ close</button>
 </div>
 
 <!-- NETWORK MODAL — appears near CORE node -->
@@ -2092,7 +2159,7 @@ if ('serviceWorker' in navigator) {
 <script type="module">
 import { Heart }                                        from '../heart/heart.js';
 import { deliberate, buildDefaultPool, loadPool, savePool,
-         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN, decideNode, selectTool } from '../engine/engine.js';
+         LLMNode, DISSONANCE_AGREE, DISSONANCE_WARN, decideNode, selectTool, callVision } from '../engine/engine.js';
 import { Registry, INTENT_SOURCE }                       from '../registry/registry.js';
 import { Nervous, EVENT }                                from '../nervous/nervous.js';
 import { Immune }                                        from '../immune/immune.js';
@@ -2106,6 +2173,8 @@ import { CortexAction }                                  from '../actions/cortex
 import { BackupManager }                                from '../actions/backup.js';
 import { SecureStore }                                  from '../actions/secure.js';
 import { Voice }                                        from '../actions/voice.js';
+import { Clipboard }                                    from '../actions/clipboard.js';
+import { prepareImage, runVision, VISION_MODES, isVisionIntent, visionMode } from '../actions/vision.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse       = firePulse;
@@ -2578,6 +2647,126 @@ window.clearGaps = function() {
 
 
 
+
+
+// ── CLIPBOARD for Text Tools ──────────────────────────────────────────────────
+window.ttPaste = async function() {
+  const r = await Clipboard.readText();
+  if (!r.ok) { const el = document.getElementById('tt-result'); el.textContent = '⚠ ' + r.error; el.classList.add('show'); return; }
+  document.getElementById('tt-input').value = r.text;
+};
+window.ttCopy = async function() {
+  const el = document.getElementById('tt-result');
+  const t = el.classList.contains('show') ? el.textContent : '';
+  if (!t || t.startsWith('⟳') || t.startsWith('⚠')) return;
+  const r = await Clipboard.copyText(t);
+  clog(r.ok ? '📋 CORTEX: result copied' : '📋 CORTEX: ' + r.error, r.ok ? 'log-vec' : 'log-err');
+};
+
+/** Typed "summarise my clipboard" etc. — pulls the clipboard into Text Tools and runs it. */
+window.ttFromClipboard = async function(mode, autorun) {
+  const r = await Clipboard.readText();
+  const cortexNode = nodes.find(n => n.name === 'CORTEX');
+  if (cortexNode) openTextToolsModal(cortexNode);
+  ttSetMode(mode || 'summarise');
+  if (!r.ok) { clog('📋 CORTEX: ' + r.error, 'log-vec'); return false; }
+  document.getElementById('tt-input').value = r.text;
+  if (autorun) ttRun();
+  return true;
+};
+
+// ── LOOK (vision) ─────────────────────────────────────────────────────────────
+// Words like "photo"/"image" tie MEDIA/SOMA/FILES with CORTEX in scoring, so
+// whichever of them wins a clearly-vision request hands it to the Look panel.
+function visionHandoff(intent) {
+  clog('📷 Handing off to CORTEX · Look', 'log-vec');
+  openLookModal(visionMode(intent));
+  return true;
+}
+let _lookNode = null, _lookImage = null, _lookText = '';
+
+function _positionLookModal() {
+  const modal = document.getElementById('look-modal');
+  if (!_lookNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const px = rect.left + _lookNode.x * (rect.width  / canvas.width);
+  const py = rect.top  + _lookNode.y * (rect.height / canvas.height);
+  const mw = 300, mh = 440;
+  modal.style.left = Math.max(10, Math.min(px - mw / 2, window.innerWidth  - mw - 10)) + 'px';
+  modal.style.top  = Math.max(10, Math.min(py - mh - 20, window.innerHeight - mh - 10)) + 'px';
+}
+
+function _lookShow(msg) {
+  const el = document.getElementById('look-result');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('look-result-actions').style.display = 'none';
+}
+
+window.lookSetMode = function(mode) {
+  document.getElementById('look-mode').value = mode;
+  document.getElementById('look-lang').style.display = mode === 'translate' ? 'block' : 'none';
+  document.getElementById('look-ask').style.display  = mode === 'ask' ? 'block' : 'none';
+  document.getElementById('look-run-btn').textContent = VISION_MODES[mode].label;
+};
+
+function openLookModal(mode, node) {
+  _lookNode = node || nodes.find(n => n.name === 'CORTEX');
+  document.getElementById('look-result').classList.remove('show');
+  document.getElementById('look-result-actions').style.display = 'none';
+  lookSetMode(mode && VISION_MODES[mode] ? mode : 'describe');
+  _positionLookModal();
+  document.getElementById('look-modal').classList.add('show');
+}
+window.openLookModal = (mode) => openLookModal(mode);
+window.closeLookModal = function() { document.getElementById('look-modal').classList.remove('show'); };
+
+async function _lookSetImage(file) {
+  try {
+    _lookShow('⟳ preparing image…');
+    _lookImage = await prepareImage(file);
+    const prev = document.getElementById('look-preview');
+    prev.src = _lookImage.dataUrl; prev.style.display = 'block';
+    _lookShow(`Ready — ${_lookImage.width}×${_lookImage.height}, ${Math.round(_lookImage.bytes / 1024)} KB. Choose what to do and run it.`);
+  } catch (e) { _lookImage = null; _lookShow('⚠ ' + e.message); }
+}
+window.lookPicked = async function(input) {
+  const f = input.files && input.files[0]; input.value = '';
+  if (f) await _lookSetImage(f);
+};
+window.lookPaste = async function() {
+  const r = await Clipboard.readImage();
+  if (!r.ok) { _lookShow('⚠ ' + r.error); return; }
+  await _lookSetImage(r.file);
+};
+
+window.lookRun = async function() {
+  if (!_lookImage) { _lookShow('⚠ Take or choose a photo first'); return; }
+  const mode = document.getElementById('look-mode').value;
+  _lookShow('⟳ looking…');
+  try {
+    const res = await runVision({
+      image: _lookImage, mode, pool: enginePool, callVision,
+      lang: document.getElementById('look-lang').value,
+      question: document.getElementById('look-ask').value,
+    });
+    _lookText = res.text;
+    const el = document.getElementById('look-result');
+    el.textContent = res.text; el.classList.add('show');
+    document.getElementById('look-result-actions').style.display = 'flex';
+    clog(`👁 CORTEX: ${VISION_MODES[mode].label.replace(/^\S+\s/, '')} done (${res.model})`, 'log-vec');
+  } catch (e) { _lookShow('⚠ ' + e.message); }
+};
+window.lookCopy = async function() {
+  const r = await Clipboard.copyText(_lookText);
+  clog(r.ok ? '📋 CORTEX: copied' : '📋 CORTEX: ' + r.error, r.ok ? 'log-vec' : 'log-err');
+};
+window.lookToTextTools = function() {
+  closeLookModal();
+  const cortexNode = nodes.find(n => n.name === 'CORTEX');
+  if (cortexNode) openTextToolsModal(cortexNode);
+  document.getElementById('tt-input').value = _lookText;
+};
 
 // ── VOICE (SOMA) — dictation in, spoken replies out ───────────────────────────
 let _voiceNode = null;
@@ -5621,9 +5810,11 @@ const ACTION_MAP = {
     return await CoreAction.handle(intent, clog, Nervous, EVENT, systemVitals, () => nodes, Immune);
   },
   'MEDIA': async function(intent) {
+    if (isVisionIntent(intent)) return visionHandoff(intent);
     return await MediaAction.handle(intent, clog, Nervous, EVENT, pcUrl());
   },
   'SOMA': async function(intent) {
+    if (isVisionIntent(intent)) return visionHandoff(intent);
     return await SomaAction.handle(
       intent, clog, Nervous, EVENT,
       () => nodes, () => chain,
@@ -5647,6 +5838,7 @@ const ACTION_MAP = {
     return result;
   },
   'FILES': async function(intent) {
+    if (isVisionIntent(intent)) return visionHandoff(intent);
     return await FilesAction.handle(intent, clog, Nervous, EVENT, pcUrl(), openFileViewer);
   },
   'MEMORY': async function(intent) {
@@ -6143,6 +6335,9 @@ async function firePreset(preset) {
     } else if (preset._openModal === 'gaps') {
       const coreNode = nodes.find(n => n.name === 'CORE');
       if (coreNode) openGapsModal(coreNode);
+    } else if (preset._openModal === 'look') {
+      const cortexNode = nodes.find(n => n.name === 'CORTEX');
+      if (cortexNode) openLookModal(preset._lookMode, cortexNode);
     } else if (preset._openModal === 'voice') {
       const somaNode = nodes.find(n => n.name === 'SOMA');
       if (somaNode) openVoiceModal(somaNode);
