@@ -505,6 +505,23 @@ canvas {
 }
 .gaps-close-btn:hover { color: #00ffcc; border-color: #00ffcc44; }
 
+/* ── SECURITY MODAL (reuses .gaps-* / .backup-* look) ── */
+#security-modal {
+  display: none; position: fixed; z-index: 46;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #66aaff77; border-radius: 12px;
+  padding: 14px 16px; width: 300px; max-height: 440px; overflow-y: auto;
+  box-shadow: 0 0 24px #66aaff22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#security-modal.show { display: block; }
+#security-modal .gaps-title, #security-modal .gaps-subtitle, #security-modal .backup-status, #security-modal .backup-check { color: #66aaff; }
+#security-modal .gaps-btn { border-color: #66aaff55; color: #66aaff; }
+#security-modal .backup-input { border-color: #66aaff33; color: #66aaff; }
+.sec-warn { font-size: 9px; color: #ffcc00; opacity: 0.85; line-height: 1.5; margin: 6px 0 8px; }
+.sec-sep { border-top: 1px solid #66aaff22; margin: 10px 0; }
+.sec-select { background: #030508; color: #66aaff; border: 1px solid #66aaff33; border-radius: 6px; font-family: inherit; font-size: 10px; padding: 4px; }
+
 /* ── BACKUP MODAL (reuses .gaps-* look) ── */
 #backup-modal {
   display: none; position: fixed; z-index: 45;
@@ -1626,6 +1643,14 @@ textarea.profile-input {
   <button class="gaps-close-btn" onclick="closeGapsModal()">✕ close</button>
 </div>
 
+<!-- SECURITY MODAL — appears near MEMORY node -->
+<div id="security-modal">
+  <div class="gaps-title">MEMORY · SECURITY</div>
+  <div id="security-body"></div>
+  <div class="backup-status" id="security-status"></div>
+  <button class="gaps-close-btn" onclick="closeSecurityModal()">✕ close</button>
+</div>
+
 <!-- BACKUP MODAL — appears near CORE node -->
 <div id="backup-modal">
   <div class="gaps-title">CORE · BACKUP &amp; RESTORE</div>
@@ -2045,6 +2070,7 @@ import { CoreAction }                                    from '../actions/core.j
 import { FilesAction }                                   from '../actions/files.js';
 import { CortexAction }                                  from '../actions/cortex.js';
 import { BackupManager }                                from '../actions/backup.js';
+import { SecureStore }                                  from '../actions/secure.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse       = firePulse;
@@ -2515,6 +2541,129 @@ window.clearGaps = function() {
   _refreshGapsList();
 };
 
+
+
+// ── SECURITY (MEMORY) — vault & notes encryption ──────────────────────────────
+let _securityNode = null;
+
+function _positionSecurityModal() {
+  const modal = document.getElementById('security-modal');
+  if (!_securityNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const px = rect.left + _securityNode.x * (rect.width  / canvas.width);
+  const py = rect.top  + _securityNode.y * (rect.height / canvas.height);
+  const mw = 300, mh = 380;
+  modal.style.left = Math.max(10, Math.min(px - mw / 2, window.innerWidth  - mw - 10)) + 'px';
+  modal.style.top  = Math.max(10, Math.min(py - mh - 20, window.innerHeight - mh - 10)) + 'px';
+}
+
+function _secStatus(msg, isErr) {
+  const el = document.getElementById('security-status');
+  el.textContent = msg || '';
+  el.className = 'backup-status' + (isErr ? ' err' : '');
+}
+
+async function _renderSecurity() {
+  const st = SecureStore.status();
+  const body = document.getElementById('security-body');
+  const inp = (id, ph) => `<input class="backup-input" id="${id}" type="password" placeholder="${ph}" autocomplete="off">`;
+  if (!st.enabled) {
+    body.innerHTML = `
+      <div class="gaps-subtitle">Encrypt your Vault and Notes on this device with a passphrase. Off by default.</div>
+      <div class="sec-warn">⚠ There is no recovery. If you forget the passphrase, the encrypted data cannot be read — by anyone, including BOSS. Keep an exported backup.</div>
+      ${inp('sec-new', 'new passphrase (8+ characters)')}
+      ${inp('sec-new2', 'repeat passphrase')}
+      <div class="gaps-btn-row"><button class="gaps-btn" onclick="secEnable()">🔐 Turn on encryption</button></div>`;
+  } else if (st.locked) {
+    body.innerHTML = `
+      <div class="gaps-subtitle">🔒 Locked. Unlock to use Vault and Notes.</div>
+      ${inp('sec-pass', 'passphrase')}
+      <div class="gaps-btn-row">
+        <button class="gaps-btn" onclick="secUnlock()">🔓 Unlock</button>
+        ${st.biometric ? '<button class="gaps-btn" onclick="secUnlockBio()">👆 Biometric</button>' : ''}
+      </div>`;
+  } else {
+    const bioOk = await SecureStore.biometricSupported();
+    body.innerHTML = `
+      <div class="gaps-subtitle">🔓 Unlocked. Locks automatically when idle or when BOSS is in the background.</div>
+      <div class="gaps-btn-row"><button class="gaps-btn" onclick="secLock()">🔒 Lock now</button></div>
+      <div class="sec-sep"></div>
+      <label class="backup-check" style="margin-top:0">auto-lock after
+        <select class="sec-select" onchange="secAutoLock(this.value)">
+          ${[[1,'1 min'],[5,'5 min'],[15,'15 min'],[0,'never']].map(([v,l]) => `<option value="${v}" ${st.autoLockMin===v?'selected':''}>${l}</option>`).join('')}
+        </select></label>
+      <div class="sec-sep"></div>
+      ${st.biometric
+        ? `<div class="gaps-subtitle">👆 Biometric unlock is on.</div>
+           <div class="gaps-btn-row"><button class="gaps-btn" onclick="secBioOff()">Turn off biometric</button></div>`
+        : bioOk
+          ? `<div class="gaps-subtitle">Optional: unlock with Face ID / fingerprint / device PIN (needs a browser that supports it).</div>
+             ${inp('sec-bio-pass', 'passphrase to confirm')}
+             <div class="gaps-btn-row"><button class="gaps-btn" onclick="secBioOn()">👆 Turn on biometric</button></div>`
+          : '<div class="gaps-subtitle">Biometric unlock is not available on this device — passphrase only.</div>'}
+      <div class="sec-sep"></div>
+      ${inp('sec-old', 'current passphrase')}
+      ${inp('sec-chg', 'new passphrase (8+)')}
+      <div class="gaps-btn-row"><button class="gaps-btn" onclick="secChange()">Change passphrase</button></div>
+      <div class="sec-sep"></div>
+      <div class="gaps-btn-row"><button class="gaps-btn" onclick="secDisable()">Turn encryption off</button></div>`;
+  }
+}
+
+function openSecurityModal(node) {
+  _securityNode = node || nodes.find(n => n.name === 'MEMORY');
+  ['vault','notes'].forEach(t => document.getElementById(`memory-${t}-modal`).classList.remove('show'));
+  _secStatus('');
+  _renderSecurity();
+  _positionSecurityModal();
+  document.getElementById('security-modal').classList.add('show');
+}
+window.openSecurityModal = () => openSecurityModal();
+window.closeSecurityModal = function() { document.getElementById('security-modal').classList.remove('show'); };
+
+const _secVal = id => (document.getElementById(id) || {}).value || '';
+
+window.secEnable = async function() {
+  const a = _secVal('sec-new'), b = _secVal('sec-new2');
+  if (a !== b) { _secStatus('Passphrases do not match', true); return; }
+  try { await SecureStore.enable(a); _secStatus('Encryption is on'); clog('🔐 MEMORY: vault & notes encrypted', 'log-mem'); _renderSecurity(); }
+  catch (e) { _secStatus(e.message, true); }
+};
+window.secUnlock = async function() {
+  const ok = await SecureStore.unlock(_secVal('sec-pass'));
+  if (!ok) { _secStatus('Wrong passphrase', true); return; }
+  clog('🔓 MEMORY: unlocked', 'log-mem'); closeSecurityModal();
+};
+window.secUnlockBio = async function() {
+  try { await SecureStore.unlockBiometric(); clog('🔓 MEMORY: unlocked (biometric)', 'log-mem'); closeSecurityModal(); }
+  catch (e) { _secStatus('Biometric failed — use your passphrase', true); }
+};
+window.secLock = function() { SecureStore.lock(); clog('🔒 MEMORY: locked', 'log-mem'); };
+window.secAutoLock = v => SecureStore.setAutoLock(parseInt(v, 10));
+window.secBioOn = async function() {
+  try { await SecureStore.enableBiometric(_secVal('sec-bio-pass')); _secStatus('Biometric unlock is on'); }
+  catch (e) { _secStatus(e.message, true); }
+};
+window.secBioOff = function() { SecureStore.disableBiometric(); _renderSecurity(); };
+window.secChange = async function() {
+  try { await SecureStore.changePassphrase(_secVal('sec-old'), _secVal('sec-chg')); _secStatus('Passphrase changed'); _renderSecurity(); }
+  catch (e) { _secStatus(e.message, true); }
+};
+window.secDisable = async function() {
+  if (!confirm('Turn encryption off? Vault and Notes will be stored unencrypted on this device.')) return;
+  try { await SecureStore.disable(); clog('🔐 MEMORY: encryption off', 'log-mem'); _renderSecurity(); }
+  catch (e) { _secStatus(e.message, true); }
+};
+
+// Keep UI honest when the store locks itself (idle / backgrounded)
+SecureStore.onChange(st => {
+  if (st.locked) {
+    ['vault','notes'].forEach(t => document.getElementById(`memory-${t}-modal`).classList.remove('show'));
+    clog('🔒 MEMORY: locked', 'log-mem');
+  }
+  if (document.getElementById('security-modal').classList.contains('show')) _renderSecurity();
+});
 
 // ── BACKUP & RESTORE (CORE) ───────────────────────────────────────────────────
 let _backupNode = null, _backupPending = null;
@@ -3189,6 +3338,7 @@ function _positionMemoryModal(id) {
 
 function openMemoryModal(type, node) {
   _memoryModalNode = node;
+  if (SecureStore.isLocked()) { openSecurityModal(node); return; }
   ['vault','notes'].forEach(t =>
     document.getElementById(`memory-${t}-modal`).classList.remove('show')
   );
@@ -3205,11 +3355,10 @@ window.closeMemoryModal = function(type) {
 };
 
 // ── Vault ─────────────────────────────────────────────────────────────────────
-function _getVaultEntries() {
-  try { return JSON.parse(localStorage.getItem('BOSS_VAULT') || '[]'); } catch(_) { return []; }
-}
+function _getVaultEntries() { return SecureStore.read('BOSS_VAULT', []); }
 function _setVaultEntries(v) {
-  try { localStorage.setItem('BOSS_VAULT', JSON.stringify(v)); } catch(_) {}
+  if (!SecureStore.write('BOSS_VAULT', v)) { clog('🔐 MEMORY: vault is locked', 'log-mem'); openSecurityModal(); return false; }
+  return true;
 }
 
 function _refreshVaultList(query = '') {
@@ -3266,11 +3415,10 @@ window.vaultDelete = function(idx) {
 // ── Notes ─────────────────────────────────────────────────────────────────────
 let _activeNoteId = null;
 
-function _getNotes() {
-  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); } catch(_) { return []; }
-}
+function _getNotes() { return SecureStore.read(NOTES_KEY, []); }
 function _setNotes(n) {
-  try { localStorage.setItem(NOTES_KEY, JSON.stringify(n)); } catch(_) {}
+  if (!SecureStore.write(NOTES_KEY, n)) { clog('🔐 MEMORY: notes are locked', 'log-mem'); openSecurityModal(); return false; }
+  return true;
 }
 
 function _notesShowList() {
@@ -4454,11 +4602,12 @@ function semanticSim(a, b) {
 }
 
 // ── Memory vault ──────────────────────────────────────────────────────────────
-function vaultGet()  { return JSON.parse(localStorage.getItem('BOSS_VAULT') || '[]'); }
-function vaultSet(v) { localStorage.setItem('BOSS_VAULT', JSON.stringify(v)); }
+function vaultGet()  { return SecureStore.read('BOSS_VAULT', []); }
+function vaultSet(v) { return SecureStore.write('BOSS_VAULT', v); }   // false while locked — auto-saves are skipped
 
 function vaultRemember(text) {
   if (!text || text.length < 4) return;
+  if (SecureStore.isLocked()) return;   // locked: never overwrite, never leak
   const vault = vaultGet();
   if (vault.some(m => semanticSim(m.content, text) > 0.85)) return;
   vault.unshift({ content: text, time: Date.now() });
@@ -5870,6 +6019,9 @@ async function firePreset(preset) {
     } else if (preset._openModal === 'gaps') {
       const coreNode = nodes.find(n => n.name === 'CORE');
       if (coreNode) openGapsModal(coreNode);
+    } else if (preset._openModal === 'security') {
+      const memNode = nodes.find(n => n.name === 'MEMORY');
+      if (memNode) openSecurityModal(memNode);
     } else if (preset._openModal === 'backup') {
       const coreNode = nodes.find(n => n.name === 'CORE');
       if (coreNode) openBackupModal(coreNode);
