@@ -4564,13 +4564,13 @@ function engineConfigured() {
 
 // ── Semantic similarity ───────────────────────────────────────────────────────
 const SYNONYMS = {
-  health:   ['vitality','status','wellbeing','monitor','check','diagnostics','diagnostic','condition','battery','charge','power','system','reboot','uptime','network','online','offline','memory','ram','performance','session'],
+  health:   ['vitality','status','wellbeing','monitor','check','diagnostics','diagnostic','condition','battery','charge','power','system','reboot','uptime','network','online','offline','memory','ram','performance','session','location','gps','coordinates'],
   identity: ['self','id','soma','look','feel','interface','appearance','who','name','describe','about','you','mood','theme','colour','color','switch','crimson','amber','violet','ice','solar','skin','palette','style'],
   think:    ['reason','analyze','analyse','process','evaluate','decide','infer','logic','intelligence','cortex','ai','explain','think','understand','breakdown','examine','launch','run','engine','model','download','chrome','spotify','notepad','app','application'],
   data:     ['recall','retrieve','vault','archive','memory','remember','forget','memorize','note','meeting','remind','keep','save'],
   files:    ['file','document','doc','pdf','view','browse','pick','folder','directory','attachment','download','recent','upload','picker','device','phone','local'],
   media:    ['music','sound','audio','playback','play','pause','stop','mute','unmute','volume','track','song','speaker','listen','headphones','photo','image','picture','video','visual','show','display','watch','screen','gallery','playing','stream'],
-  time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm','stopwatch','lap','elapsed','timezone','world'],
+  time:     ['schedule','routine','history','clock','calendar','when','last','long','timer','sequence','duration','chronos','remind','countdown','alarm','stopwatch','lap','elapsed','timezone','world','weather','forecast','rain','temperature','umbrella'],
 };
 
 function ngramSim(a, b, n = 3) {
@@ -4906,7 +4906,7 @@ async function runArbiter(top, second, delta, intent) {
   // CHRONOS is only a side-effect node when setting timers/alarms
   // Pure queries (what time is it, world clock) are read-only — exclude from grief
   const _chronosIsQuery = top.node.name === 'CHRONOS' || second.node.name === 'CHRONOS'
-    ? /\b(what time|time in|world clock|current time|date|day)\b/.test(intent.toLowerCase())
+    ? /\b(what time|time in|world clock|current time|date|day|weather|forecast|rain|raining|snow|temperature|umbrella|sunny|windy)\b/.test(intent.toLowerCase())
     : false;
   const SIDE_EFFECT_NODES = new Set(['CHRONOS', 'MEDIA', 'SOMA', 'CORTEX']);
   const topSideEffect    = !!(top.node.action    && SIDE_EFFECT_NODES.has(top.node.name) && !_chronosIsQuery);
