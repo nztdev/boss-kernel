@@ -505,6 +505,27 @@ canvas {
 }
 .gaps-close-btn:hover { color: #00ffcc; border-color: #00ffcc44; }
 
+/* ── BACKUP MODAL (reuses .gaps-* look) ── */
+#backup-modal {
+  display: none; position: fixed; z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #00ffcc66; border-radius: 12px;
+  padding: 14px 16px; width: 300px; max-height: 420px; overflow-y: auto;
+  box-shadow: 0 0 24px #00ffcc22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#backup-modal.show { display: block; }
+.backup-row { display: flex; justify-content: space-between; font-size: 10px; color: #00ffcc; padding: 3px 0; opacity: 0.8; }
+.backup-row span:last-child { opacity: 0.5; }
+.backup-check { display: flex; gap: 6px; align-items: center; font-size: 10px; color: #00ffcc; margin: 10px 0 6px; cursor: pointer; }
+.backup-input {
+  width: 100%; box-sizing: border-box; background: #030508;
+  border: 1px solid #00ffcc33; border-radius: 6px; color: #00ffcc;
+  font-family: inherit; font-size: 11px; padding: 7px 8px; margin-bottom: 8px;
+}
+.backup-status { font-size: 9px; color: #00ffcc; opacity: 0.7; margin-top: 8px; line-height: 1.5; word-break: break-word; }
+.backup-status.err { color: #ff6666; opacity: 1; }
+
 /* ── FILES MODAL ── */
 #files-modal {
   display: none;
@@ -1605,6 +1626,27 @@ textarea.profile-input {
   <button class="gaps-close-btn" onclick="closeGapsModal()">✕ close</button>
 </div>
 
+<!-- BACKUP MODAL — appears near CORE node -->
+<div id="backup-modal">
+  <div class="gaps-title">CORE · BACKUP &amp; RESTORE</div>
+  <div class="gaps-subtitle">One file holds your data. Use it to move to another device or the native app. Nothing leaves this device unless you share the file.</div>
+  <div id="backup-list"></div>
+  <label class="backup-check"><input type="checkbox" id="backup-keys" onchange="backupToggleKeys()"> include engine API keys (encrypted)</label>
+  <input class="backup-input" id="backup-pass" type="password" placeholder="passphrase" autocomplete="off" style="display:none">
+  <div class="gaps-btn-row">
+    <button class="gaps-btn" onclick="backupExport()">⬇ Export</button>
+    <button class="gaps-btn" onclick="document.getElementById('backup-file').click()">⬆ Import</button>
+  </div>
+  <input type="file" id="backup-file" accept=".json,application/json" style="display:none" onchange="backupFileChosen(this)">
+  <div id="backup-import-box" style="display:none">
+    <div class="backup-status" id="backup-import-info"></div>
+    <input class="backup-input" id="backup-import-pass" type="password" placeholder="passphrase for keys in file" autocomplete="off" style="display:none;margin-top:8px">
+    <div class="gaps-btn-row"><button class="gaps-btn" onclick="backupApply()">✔ Restore &amp; reload</button></div>
+  </div>
+  <div class="backup-status" id="backup-status"></div>
+  <button class="gaps-close-btn" onclick="closeBackupModal()">✕ close</button>
+</div>
+
 <!-- FILES MODAL — appears near FILES node -->
 <div id="files-modal">
   <div class="files-title">FILES · ACCESS</div>
@@ -2002,6 +2044,7 @@ import { MemoryAction }                                  from '../actions/memory
 import { CoreAction }                                    from '../actions/core.js';
 import { FilesAction }                                   from '../actions/files.js';
 import { CortexAction }                                  from '../actions/cortex.js';
+import { BackupManager }                                from '../actions/backup.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
 window.firePulse       = firePulse;
@@ -2471,6 +2514,96 @@ window.clearGaps = function() {
   localStorage.removeItem(GAPS_KEY);
   _refreshGapsList();
 };
+
+
+// ── BACKUP & RESTORE (CORE) ───────────────────────────────────────────────────
+let _backupNode = null, _backupPending = null;
+
+function _positionBackupModal() {
+  const modal = document.getElementById('backup-modal');
+  if (!_backupNode) return;
+  const canvas = document.querySelector('canvas');
+  const rect   = canvas.getBoundingClientRect();
+  const px = rect.left + _backupNode.x * (rect.width  / canvas.width);
+  const py = rect.top  + _backupNode.y * (rect.height / canvas.height);
+  const mw = 300, mh = 360;
+  modal.style.left = Math.max(10, Math.min(px - mw / 2, window.innerWidth  - mw - 10)) + 'px';
+  modal.style.top  = Math.max(10, Math.min(py - mh - 20, window.innerHeight - mh - 10)) + 'px';
+}
+
+function _backupSetStatus(msg, isErr) {
+  const el = document.getElementById('backup-status');
+  el.textContent = msg || '';
+  el.className = 'backup-status' + (isErr ? ' err' : '');
+}
+
+function _backupRefresh() {
+  const rows = BackupManager.describe().filter(e => !e.sensitive);
+  const kb = b => b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB';
+  document.getElementById('backup-list').innerHTML = rows.length
+    ? rows.map(e => `<div class="backup-row"><span>${e.label}</span><span>${kb(e.bytes)}</span></div>`).join('')
+    : '<div class="gaps-empty">Nothing stored yet</div>';
+}
+
+function openBackupModal(node) {
+  _backupNode = node || nodes.find(n => n.name === 'CORE');
+  _backupPending = null;
+  document.getElementById('backup-import-box').style.display = 'none';
+  _backupSetStatus('');
+  _backupRefresh();
+  _positionBackupModal();
+  document.getElementById('backup-modal').classList.add('show');
+}
+window.openBackupModal = () => openBackupModal();
+window.closeBackupModal = function() {
+  document.getElementById('backup-modal').classList.remove('show');
+};
+
+window.backupToggleKeys = function() {
+  const on = document.getElementById('backup-keys').checked;
+  document.getElementById('backup-pass').style.display = on ? 'block' : 'none';
+};
+
+window.backupExport = async function() {
+  const includeKeys = document.getElementById('backup-keys').checked;
+  const passphrase  = document.getElementById('backup-pass').value;
+  if (includeKeys && passphrase.length < 6) { _backupSetStatus('Passphrase must be at least 6 characters', true); return; }
+  try {
+    const r = await BackupManager.downloadExport({ includeKeys, passphrase });
+    _backupSetStatus(`Saved ${r.name} — ${r.sections} sections${r.keys ? ' + encrypted keys' : ''}`);
+    clog(`💾 CORE: exported ${r.name}`, 'log-action');
+  } catch (e) { _backupSetStatus('Export failed: ' + e.message, true); }
+};
+
+window.backupFileChosen = async function(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  const res = await BackupManager.inspect(await file.text());
+  if (!res.ok) { _backupPending = null; document.getElementById('backup-import-box').style.display = 'none'; _backupSetStatus(res.error, true); return; }
+  _backupPending = res;
+  const when = res.exportedAt ? new Date(res.exportedAt).toLocaleString() : 'unknown date';
+  document.getElementById('backup-import-info').textContent =
+    `${file.name}: ${res.summary.length} sections, BOSS ${res.appVersion || '?'}, exported ${when}. ` +
+    `Restoring overwrites the matching data on this device.`;
+  document.getElementById('backup-import-pass').style.display = res.hasKeys ? 'block' : 'none';
+  document.getElementById('backup-import-box').style.display = 'block';
+  _backupSetStatus('');
+};
+
+window.backupApply = async function() {
+  if (!_backupPending) return;
+  const passphrase = document.getElementById('backup-import-pass').value;
+  if (_backupPending.hasKeys && !passphrase && !confirm('Skip the encrypted engine keys and restore the rest?')) return;
+  try {
+    const r = await BackupManager.apply(_backupPending.doc, { passphrase });
+    _backupSetStatus(`Restored ${r.written} sections${r.keysRestored ? ' + keys' : ''}. Reloading…`);
+    setTimeout(() => location.reload(), 900);
+  } catch (e) {
+    _backupSetStatus('Restore failed — wrong passphrase? Nothing was changed.', true);
+  }
+};
+window.BackupManager = BackupManager;
 
 function _refreshNetworkInfo() {
   const info   = document.getElementById('net-info');
@@ -5737,6 +5870,9 @@ async function firePreset(preset) {
     } else if (preset._openModal === 'gaps') {
       const coreNode = nodes.find(n => n.name === 'CORE');
       if (coreNode) openGapsModal(coreNode);
+    } else if (preset._openModal === 'backup') {
+      const coreNode = nodes.find(n => n.name === 'CORE');
+      if (coreNode) openBackupModal(coreNode);
     } else {
       const chronosNode = nodes.find(n => n.name === 'CHRONOS');
       if (chronosNode) openChronosModal(preset._openModal, chronosNode);
