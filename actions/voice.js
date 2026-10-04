@@ -111,10 +111,13 @@ export const Voice = {
     const u = new SpeechSynthesisUtterance(text.slice(0, 600));
     u.rate = s.rate;
     u.lang = navigator.language || 'en-US';
-    if (s.voiceURI) {
-      const v = this.voices().find(v => v.voiceURI === s.voiceURI);
-      if (v) { u.voice = v; u.lang = v.lang; }
-    }
+    // '' = BOSS default → Zarvox where the platform has it (macOS / iOS
+    // novelty voice), otherwise the system default. '__system__' = user
+    // explicitly chose the system default.
+    let v = null;
+    if (s.voiceURI && s.voiceURI !== '__system__') v = this.voices().find(x => x.voiceURI === s.voiceURI);
+    else if (!s.voiceURI) v = this.voices().find(x => /zarvox/i.test(x.name));
+    if (v) { u.voice = v; u.lang = v.lang; }
     window.speechSynthesis.speak(u);
     return true;
   },
@@ -140,14 +143,20 @@ export const Voice = {
     _recog.continuous = false;
     _recog.maxAlternatives = 1;
 
+    // Some browsers (notably iOS Safari / mobile Chrome) end a session without
+    // ever flagging a result as "final", so track the latest full transcript
+    // too and fall back to it when the session ends.
     let finalText = '';
+    let lastText  = '';
     _recog.onresult = e => {
-      let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
+      let fin = '', interim = '';
+      for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript;
+        if (r.isFinal) fin += r[0].transcript; else interim += r[0].transcript;
       }
-      if (interim && onInterim) onInterim(interim);
+      finalText = fin;
+      lastText  = (fin + interim).trim();
+      if (onInterim && lastText) onInterim(lastText);
     };
     _recog.onerror = e => {
       const msg = {
@@ -162,7 +171,8 @@ export const Voice = {
     };
     _recog.onend = () => {
       _listening = false; _emit();
-      if (finalText.trim() && onFinal) onFinal(finalText.trim());
+      const text = (finalText.trim() || lastText).trim();
+      if (text && onFinal) onFinal(text);
       if (onEnd) onEnd();
     };
 
