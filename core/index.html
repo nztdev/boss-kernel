@@ -2708,6 +2708,13 @@ window.ttCopy = async function() {
   clog(r.ok ? '📋 CORTEX: result copied' : '📋 CORTEX: ' + r.error, r.ok ? 'log-vec' : 'log-err');
 };
 
+window.openTextToolsMode = function(mode) {
+  const cortexNode = nodes.find(n => n.name === 'CORTEX');
+  if (cortexNode) openTextToolsModal(cortexNode);
+  ttSetMode(mode || 'summarise');
+  const el = document.getElementById('tt-input'); if (el) el.focus();
+};
+
 /** Typed "summarise my clipboard" etc. — pulls the clipboard into Text Tools and runs it. */
 window.ttFromClipboard = async function(mode, autorun) {
   const r = await Clipboard.readText();
@@ -5731,6 +5738,7 @@ window.dismissBirth = function() {
 const INTENT_CLAIMS = [
   { node: 'CORTEX', reason: 'vision',    test: i => isVisionIntent(i) },
   { node: 'CORTEX', reason: 'launcher',  test: i => Launcher.claims(i) },
+  { node: 'CORTEX', reason: 'text-mode',  test: i => /^(summari[sz]e|translate|rewrite|paraphrase)\s+(?:this|the|my|some|a)?\s*text$/i.test(i.trim().replace(/[.!?]+$/,'')) },
   { node: 'CORTEX', reason: 'text-tools', test: i => /^(?:open\s+|show\s+|launch\s+)?(?:the\s+|my\s+)?text\s*tools?$/i.test(i.trim()) },
   { node: 'COMMS',  reason: 'phone',     test: i => Comms.claims(i) },
   { node: 'CORTEX', reason: 'clipboard', test: i => /\bclipboard\b/i.test(i) && !/\b(pc|computer|desktop|laptop)\b/i.test(i) },
