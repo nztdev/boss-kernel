@@ -180,7 +180,7 @@ export function parse(intent) {
 
 // Names that overlap another node's domain (calendar→CHRONOS, music→MEDIA …).
 // These are NOT claimed: normal scoring + the Arbiter decide them.
-const _CONTESTED = new Set(['calendar','photos','gallery','music','apple music','podcasts','files','notes','reminders','maps','map','phone','dialer','dialpad','messages','sms','texts','mail','email','e-mail']);
+const _CONTESTED = new Set(['photos','gallery','music','apple music','podcasts','files','notes','reminders','maps','map','phone','dialer','dialpad','messages','sms','texts','mail','email','e-mail']);
 
 /** True when the launcher should deterministically own this intent (see INTENT_CLAIMS). */
 export function claims(intent) {
