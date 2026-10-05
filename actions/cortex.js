@@ -19,6 +19,7 @@
 
 // ── Intent classification ─────────────────────────────────────────────────────
 import { isVisionIntent, visionMode } from './vision.js';
+import { Launcher } from './launch.js';
 
 function _classify(intent) {
   const s = intent.toLowerCase().trim();
@@ -33,6 +34,11 @@ function _classify(intent) {
     const autorun = /\b(summari[sz]e|summary|translate|rewrite|analy[sz]e|explain)\b/.test(s);
     return { type: 'clipboard', mode, autorun };
   }
+
+  // Local app launching / iOS Shortcuts (this device). "on my pc" is excluded
+  // inside parse() and falls through to the PC server below.
+  const _l = Launcher.parse(intent);
+  if (_l) return { type: 'launch', launch: _l };
 
   // OS-action intents — delegated to Python Cortex server /pulse endpoint
   // These require local machine access that only the Python server has.
@@ -334,6 +340,15 @@ export const CortexAction = {
       case 'clipboard':
         if (window.ttFromClipboard) return await window.ttFromClipboard(classified.mode, classified.autorun);
         return false;
+
+      case 'launch': {
+        const done = Launcher.run(classified.launch, clog);
+        if (done) return true;
+        // Unknown app name: PC server if configured, else say so honestly.
+        if (cortexUrl) { await _handleOsAction(intent, clog, Nervous, EVENT, cortexUrl); return true; }
+        clog(`🚀 CORTEX: I don't know an app called "${classified.launch.name}" — add it with "add app ${classified.launch.name} scheme://…"`, 'log-vec');
+        return true;
+      }
 
       case 'os_action':
         await _handleOsAction(intent, clog, Nervous, EVENT, cortexUrl);
