@@ -35,6 +35,9 @@ function _classify(intent) {
     return { type: 'clipboard', mode, autorun };
   }
 
+  // "open text tools" / "text tools" → the Text Tools panel
+  if (/^(?:open\s+|show\s+|launch\s+)?(?:the\s+|my\s+)?text\s*tools?$/.test(s)) return { type: 'text_tools' };
+
   // Local app launching / iOS Shortcuts (this device). "on my pc" is excluded
   // inside parse() and falls through to the PC server below.
   const _l = Launcher.parse(intent);
@@ -340,6 +343,12 @@ export const CortexAction = {
       case 'clipboard':
         if (window.ttFromClipboard) return await window.ttFromClipboard(classified.mode, classified.autorun);
         return false;
+
+      case 'text_tools': {
+        const p = Registry && Registry.getPreset('cortex_texttools');
+        if (p && firePresetFn) { firePresetFn(p); return true; }
+        return false;
+      }
 
       case 'launch': {
         const done = Launcher.run(classified.launch, clog);
