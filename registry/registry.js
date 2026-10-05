@@ -102,7 +102,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'CORTEX',
-    specialty:    'ai logic intelligence think reason analyse explain evaluate process decide infer breakdown examine what is how does why open launch run start engine model status download chrome spotify notepad app application camera scan ocr describe clipboard summarise paste translate rewrite',
+    specialty:    'ai logic intelligence think reason analyse explain evaluate process decide infer breakdown examine what is how does why open launch run start engine model status download chrome spotify notepad app application camera scan ocr describe clipboard summarise paste translate rewrite shortcut',
     color:        '#cc00ff',
     resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
