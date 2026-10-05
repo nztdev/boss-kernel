@@ -2174,6 +2174,7 @@ import { BackupManager }                                from '../actions/backup.
 import { SecureStore }                                  from '../actions/secure.js';
 import { Voice }                                        from '../actions/voice.js';
 import { Clipboard }                                    from '../actions/clipboard.js';
+import { Launcher }                                     from '../actions/launch.js';
 import { prepareImage, runVision, VISION_MODES, isVisionIntent, visionMode } from '../actions/vision.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
@@ -5635,6 +5636,7 @@ window.dismissBirth = function() {
 // ── Deterministic intent claims ───────────────────────────────────────────────
 const INTENT_CLAIMS = [
   { node: 'CORTEX', reason: 'vision',    test: i => isVisionIntent(i) },
+  { node: 'CORTEX', reason: 'launcher',  test: i => Launcher.claims(i) },
   { node: 'CORTEX', reason: 'clipboard', test: i => /\bclipboard\b/i.test(i) && !/\b(pc|computer|desktop|laptop)\b/i.test(i) },
 ];
 function claimIntent(intent) {
