@@ -38,6 +38,10 @@ function _classify(intent) {
   // "open text tools" / "text tools" → the Text Tools panel
   if (/^(?:open\s+|show\s+|launch\s+)?(?:the\s+|my\s+)?text\s*tools?$/.test(s)) return { type: 'text_tools' };
 
+  // "summarise / translate / rewrite this text" with no text supplied → Text Tools in that mode
+  { const tm = /^(summari[sz]e|translate|rewrite|paraphrase)\s+(?:this|the|my|some|a)?\s*text$/.exec(s.replace(/[.!?]+$/, ""));
+    if (tm) return { type: 'text_mode', mode: tm[1].startsWith('summ') ? 'summarise' : tm[1] === 'paraphrase' ? 'rewrite' : tm[1] }; }
+
   // Local app launching / iOS Shortcuts (this device). "on my pc" is excluded
   // inside parse() and falls through to the PC server below.
   const _l = Launcher.parse(intent);
@@ -342,6 +346,10 @@ export const CortexAction = {
 
       case 'clipboard':
         if (window.ttFromClipboard) return await window.ttFromClipboard(classified.mode, classified.autorun);
+        return false;
+
+      case 'text_mode':
+        if (window.openTextToolsMode) { window.openTextToolsMode(classified.mode); clog('✎ CORTEX: Text Tools — paste your text, then Run', 'log-vec'); return true; }
         return false;
 
       case 'text_tools': {
