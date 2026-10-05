@@ -5731,6 +5731,7 @@ window.dismissBirth = function() {
 const INTENT_CLAIMS = [
   { node: 'CORTEX', reason: 'vision',    test: i => isVisionIntent(i) },
   { node: 'CORTEX', reason: 'launcher',  test: i => Launcher.claims(i) },
+  { node: 'CORTEX', reason: 'text-tools', test: i => /^(?:open\s+|show\s+|launch\s+)?(?:the\s+|my\s+)?text\s*tools?$/i.test(i.trim()) },
   { node: 'COMMS',  reason: 'phone',     test: i => Comms.claims(i) },
   { node: 'CORTEX', reason: 'clipboard', test: i => /\bclipboard\b/i.test(i) && !/\b(pc|computer|desktop|laptop)\b/i.test(i) },
 ];
