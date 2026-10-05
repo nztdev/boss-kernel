@@ -180,7 +180,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'COMMS',
-    specialty:    'call dial ring text sms email mail send contact telephone number mailto dialer messages',
+    specialty:    'call dial ring sms email mail contact telephone mailto dialer message',
     color:        '#33ddaa',
     resonance:    1.5,
     tier:         'active',
