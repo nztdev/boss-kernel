@@ -179,6 +179,18 @@ const DEFAULT_NODES = [
     description:  'File access, viewing, and document management across Cortex, browser, and native.',
   },
   {
+    name:         'COMMS',
+    specialty:    'call dial ring text sms email mail send contact telephone number mailto dialer messages',
+    color:        '#33ddaa',
+    resonance:    1.5,
+    tier:         'active',
+    riskTier:     'standard',
+    hasAction:    true,
+    actionType:   'comms',
+    capabilities: ['call_link', 'sms_link', 'email_link'],
+    description:  'Phone — reach people through the device\'s own Phone, Messages and Mail apps (tel:/sms:/mailto:). You confirm and send. Contacts, direct SMS and call control need the native app.',
+  },
+  {
     name:         'DEVICES',
     specialty:    'device bluetooth smart home thermostat light lock sensor iot matter appliance control automation',
     color:        '#555566',
@@ -557,6 +569,22 @@ const DEFAULT_PRESETS = [
     usageCount: 0,
     tags:       ['engine', 'status'],
   },
+
+  // ── COMMS (Phone) presets ──────────────────────────────────────────────────
+  ...[['call','Call','📞'],['text','Text','💬'],['email','Email','✉']].map(([k,label,icon]) => ({
+    id:         'comms_' + k,
+    label,
+    icon,
+    nodes:      ['COMMS'],
+    intent:     k === 'call' ? 'call' : k === 'text' ? 'send a text' : 'send an email',
+    actions:    [],
+    source:     'default',
+    createdAt:  null,
+    usageCount: 0,
+    tags:       ['phone', 'comms', k],
+    _openModal: 'comms',
+    _commsTab:  k === 'text' ? 'sms' : k,
+  })),
 
   // ── FILES presets ──────────────────────────────────────────────────────────
   {
