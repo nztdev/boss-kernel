@@ -462,6 +462,29 @@ canvas {
   color: #cc00ff; font-family: inherit; font-size: 9px; padding: 5px 0; cursor: pointer; opacity: 0.8; }
 .tt-mini-btn:hover { background: #cc00ff11; }
 
+/* ── PHONE (COMMS) MODAL ── */
+#comms-modal {
+  display: none; position: fixed; z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #33ddaa66; border-radius: 12px;
+  padding: 14px 16px; width: 300px; max-height: 470px; overflow-y: auto;
+  box-shadow: 0 0 24px #33ddaa22;
+  font-family: 'Share Tech Mono', monospace;
+}
+#comms-modal.show { display: block; }
+.comms-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.comms-tab { flex: 1; background: none; border: 1px solid #33ddaa44; border-radius: 6px;
+  color: #33ddaa; font-family: inherit; font-size: 10px; padding: 7px 0; cursor: pointer; opacity: .7; }
+.comms-tab.active { background: #33ddaa18; opacity: 1; border-color: #33ddaa; }
+.comms-in { display: block; width: 100%; box-sizing: border-box; background: #030508;
+  border: 1px solid #33ddaa44; border-radius: 6px; color: #33ddaa; font-family: inherit;
+  font-size: 12px; padding: 8px 10px; margin-bottom: 8px; }
+textarea.comms-in { min-height: 60px; resize: vertical; }
+.comms-note { font-size: 8px; color: #33ddaa; opacity: 0.5; line-height: 1.5; margin-bottom: 8px; }
+.comms-msg { font-size: 10px; color: #ff8866; min-height: 12px; margin-bottom: 6px; }
+.comms-go { width: 100%; background: #33ddaa18; border: 1px solid #33ddaa; border-radius: 6px;
+  color: #33ddaa; font-family: inherit; font-size: 11px; padding: 9px 0; cursor: pointer; margin-bottom: 8px; }
+
 /* ── NETWORK MODAL ── */
 #network-modal {
   display: none;
@@ -1712,6 +1735,26 @@ textarea.profile-input {
   <button class="tt-close-btn" onclick="closeLookModal()">✕ close</button>
 </div>
 
+<!-- PHONE (COMMS) MODAL — appears near COMMS node -->
+<div id="comms-modal">
+  <div class="tt-title" style="color:#33ddaa">PHONE · COMMS</div>
+  <div class="comms-tabs">
+    <button class="comms-tab" id="comms-tab-call"  onclick="commsTab('call')">📞 Call</button>
+    <button class="comms-tab" id="comms-tab-sms"   onclick="commsTab('sms')">💬 Text</button>
+    <button class="comms-tab" id="comms-tab-email" onclick="commsTab('email')">✉ Email</button>
+  </div>
+  <input id="comms-to" class="comms-in" type="text" inputmode="tel" autocomplete="off"
+    onkeydown="event.stopPropagation(); if(event.key==='Enter')commsGo()">
+  <input id="comms-subject" class="comms-in" type="text" placeholder="Subject" style="display:none"
+    onkeydown="event.stopPropagation()">
+  <textarea id="comms-body" class="comms-in" placeholder="Message" style="display:none"
+    onkeydown="event.stopPropagation()"></textarea>
+  <div class="comms-note">BOSS opens your Phone / Messages / Mail app — you confirm the call and press send. Looking people up by name needs the native app.</div>
+  <div class="comms-msg" id="comms-msg"></div>
+  <button class="comms-go" id="comms-go" onclick="commsGo()">Open</button>
+  <button class="tt-close-btn" onclick="closeCommsModal()">✕ close</button>
+</div>
+
 <!-- NETWORK MODAL — appears near CORE node -->
 <div id="network-modal">
   <div class="net-title">CORE · NETWORK</div>
@@ -2175,6 +2218,7 @@ import { SecureStore }                                  from '../actions/secure.
 import { Voice }                                        from '../actions/voice.js';
 import { Clipboard }                                    from '../actions/clipboard.js';
 import { Launcher }                                     from '../actions/launch.js';
+import { CommsAction, Comms }                           from '../actions/comms.js';
 import { prepareImage, runVision, VISION_MODES, isVisionIntent, visionMode } from '../actions/vision.js';
 
 // Attach UI handlers to window for HTML onclick compatibility
@@ -2674,6 +2718,56 @@ window.ttFromClipboard = async function(mode, autorun) {
   document.getElementById('tt-input').value = r.text;
   if (autorun) ttRun();
   return true;
+};
+
+// ── PHONE (COMMS) panel ───────────────────────────────────────────────────────
+let _commsNode = null, _commsKind = 'call';
+function _positionCommsModal() {
+  const modal = document.getElementById('comms-modal');
+  const n = _commsNode; if (!n) return;
+  const canvas = document.querySelector('canvas');
+  const rect = canvas.getBoundingClientRect();
+  const px = rect.left + n.x * (rect.width  / canvas.width);
+  const py = rect.top  + n.y * (rect.height / canvas.height);
+  const mw = 300, mh = 360;
+  modal.style.left = Math.max(10, Math.min(px - mw / 2, window.innerWidth  - mw - 10)) + 'px';
+  modal.style.top  = Math.max(10, Math.min(py - mh - 20, window.innerHeight - mh - 10)) + 'px';
+}
+window.commsTab = function(kind) {
+  _commsKind = kind;
+  ['call','sms','email'].forEach(k =>
+    document.getElementById('comms-tab-' + k).classList.toggle('active', k === kind));
+  const to = document.getElementById('comms-to');
+  to.placeholder = kind === 'email' ? 'name@example.com' : '+34 600 123 456';
+  to.inputMode   = kind === 'email' ? 'email' : 'tel';
+  document.getElementById('comms-subject').style.display = kind === 'email' ? 'block' : 'none';
+  document.getElementById('comms-body').style.display    = kind === 'call' ? 'none' : 'block';
+  document.getElementById('comms-go').textContent =
+    kind === 'call' ? '📞 Open dialler' : kind === 'sms' ? '💬 Open Messages' : '✉ Open Mail';
+  document.getElementById('comms-msg').textContent = '';
+};
+function openCommsModal(kind, opts = {}, node) {
+  _commsNode = node || nodes.find(n => n.name === 'COMMS');
+  commsTab(kind || 'call');
+  document.getElementById('comms-to').value      = opts.to || '';
+  document.getElementById('comms-subject').value = opts.subject || '';
+  document.getElementById('comms-body').value    = opts.body || '';
+  _positionCommsModal();
+  document.getElementById('comms-modal').classList.add('show');
+}
+window.openCommsModal = (kind, opts) => openCommsModal(kind, opts || {});
+window.closeCommsModal = function() { document.getElementById('comms-modal').classList.remove('show'); };
+window.commsGo = function() {
+  const to = document.getElementById('comms-to').value.trim();
+  const body = document.getElementById('comms-body').value.trim();
+  const subject = document.getElementById('comms-subject').value.trim();
+  const msg = document.getElementById('comms-msg');
+  const url = Comms.buildUrl(_commsKind, { to, body, subject });
+  if (!url) { msg.textContent = _commsKind === 'email' ? '⚠ That email address looks wrong' : '⚠ That number looks wrong'; return; }
+  msg.textContent = '';
+  const label = _commsKind === 'call' ? 'call' : _commsKind === 'sms' ? 'text' : 'email';
+  clog(`📞 COMMS: opening ${label}${to ? ' ' + to : ''} — you confirm and send`, 'log-action');
+  Launcher.openScheme(url, label);
 };
 
 // ── LOOK (vision) ─────────────────────────────────────────────────────────────
@@ -5224,7 +5318,7 @@ async function runArbiter(top, second, delta, intent) {
   const _chronosIsQuery = top.node.name === 'CHRONOS' || second.node.name === 'CHRONOS'
     ? /\b(what time|time in|world clock|current time|date|day|weather|forecast|rain|raining|snow|temperature|umbrella|sunny|windy)\b/.test(intent.toLowerCase())
     : false;
-  const SIDE_EFFECT_NODES = new Set(['CHRONOS', 'MEDIA', 'SOMA', 'CORTEX']);
+  const SIDE_EFFECT_NODES = new Set(['CHRONOS', 'MEDIA', 'SOMA', 'CORTEX', 'COMMS']);
   const topSideEffect    = !!(top.node.action    && SIDE_EFFECT_NODES.has(top.node.name) && !_chronosIsQuery);
   const secondSideEffect = !!(second.node.action && SIDE_EFFECT_NODES.has(second.node.name) && !_chronosIsQuery);
   const bothActive   = topSideEffect && secondSideEffect;
@@ -5637,6 +5731,7 @@ window.dismissBirth = function() {
 const INTENT_CLAIMS = [
   { node: 'CORTEX', reason: 'vision',    test: i => isVisionIntent(i) },
   { node: 'CORTEX', reason: 'launcher',  test: i => Launcher.claims(i) },
+  { node: 'COMMS',  reason: 'phone',     test: i => Comms.claims(i) },
   { node: 'CORTEX', reason: 'clipboard', test: i => /\bclipboard\b/i.test(i) && !/\b(pc|computer|desktop|laptop)\b/i.test(i) },
 ];
 function claimIntent(intent) {
@@ -5869,6 +5964,9 @@ const ACTION_MAP = {
   },
   'MEMORY': async function(intent) {
     return await MemoryAction.handle(intent, clog, Nervous, EVENT, pcUrl());
+  },
+  'COMMS': async function(intent) {
+    return await CommsAction.handle(intent, clog);
   },
   'CORTEX': async function(intent) {
     return await CortexAction.handle(intent, clog, Nervous, EVENT, enginePool, deliberate, Immune, Registry,
@@ -6370,6 +6468,9 @@ async function firePreset(preset) {
     } else if (preset._openModal === 'security') {
       const memNode = nodes.find(n => n.name === 'MEMORY');
       if (memNode) openSecurityModal(memNode);
+    } else if (preset._openModal === 'comms') {
+      const commsNode = nodes.find(n => n.name === 'COMMS');
+      if (commsNode) openCommsModal(preset._commsTab || 'call', {}, commsNode);
     } else if (preset._openModal === 'backup') {
       const coreNode = nodes.find(n => n.name === 'CORE');
       if (coreNode) openBackupModal(coreNode);
