@@ -129,6 +129,8 @@ export function openScheme(url, label) {
     const a = document.createElement('a');
     a.href = url;
     a.rel = 'noopener';
+    // Web fallbacks (desktop) open in a new tab so BOSS isn't replaced.
+    if (/^https?:/i.test(url)) a.target = '_blank';
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
