@@ -462,6 +462,23 @@ canvas {
   color: #cc00ff; font-family: inherit; font-size: 9px; padding: 5px 0; cursor: pointer; opacity: 0.8; }
 .tt-mini-btn:hover { background: #cc00ff11; }
 
+/* ── NATIVE-ONLY LIST MODAL ── */
+#native-modal {
+  display: none; position: fixed; z-index: 45;
+  background: rgba(3,8,5,0.97);
+  border: 1px solid #77889966; border-radius: 12px;
+  padding: 14px 16px; width: 300px; max-height: 420px; overflow-y: auto;
+  box-shadow: 0 0 24px #77889922;
+  font-family: 'Share Tech Mono', monospace;
+}
+#native-modal.show { display: block; }
+.native-item { border: 1px solid #77889933; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+  color: #8899aa; font-size: 11px; cursor: pointer; }
+.native-item:hover { border-color: #778899; }
+.native-item .why { font-size: 9px; opacity: .65; line-height: 1.5; margin-top: 3px; }
+.native-item .risk { color: #ff8866; }
+.native-note { font-size: 8px; color: #8899aa; opacity: .55; line-height: 1.5; margin-bottom: 8px; }
+
 /* ── PHONE (COMMS) MODAL ── */
 #comms-modal {
   display: none; position: fixed; z-index: 45;
@@ -835,6 +852,7 @@ textarea.comms-in { min-height: 60px; resize: vertical; }
   letter-spacing: 0.08em; margin-bottom: 8px;
 }
 .stub-desc {
+  white-space: pre-line;
   font-size: 10px; color: #777788; line-height: 1.6; margin-bottom: 12px;
 }
 .stub-badge {
@@ -1653,6 +1671,7 @@ textarea.profile-input {
   <hr class="chronos-divider">
   <div class="alarm-section-label">SCHEDULED ALARMS</div>
   <div id="alarm-list"></div>
+  <div style="font-size:8px;color:#ffaa00;opacity:.55;line-height:1.5;margin-top:8px">⚠ Alarms and timers only ring while BOSS is open on this device. Reliable alarms that work when the app is closed need the native app.</div>
 </div>
 
 <!-- TEXT TOOLS MODAL — appears near CORTEX node -->
@@ -1733,6 +1752,14 @@ textarea.profile-input {
     <button class="tt-mini-btn" onclick="lookToTextTools()">→ Text Tools</button>
   </div>
   <button class="tt-close-btn" onclick="closeLookModal()">✕ close</button>
+</div>
+
+<!-- NATIVE-ONLY LIST — appears near the node -->
+<div id="native-modal">
+  <div class="tt-title" id="native-title" style="color:#8899aa">NATIVE</div>
+  <div class="native-note">These need the BOSS native app (or the OS tier). They are shown so you can see what is planned — nothing here runs in the browser.</div>
+  <div id="native-list"></div>
+  <button class="tt-close-btn" onclick="closeNativeModal()">✕ close</button>
 </div>
 
 <!-- PHONE (COMMS) MODAL — appears near COMMS node -->
@@ -2610,10 +2637,10 @@ window.closeNetworkModal = function() {
 const GAPS_KEY = 'BOSS_GAPS';
 const MAX_GAPS = 100;
 
-function logCapabilityGap(intent, engineConfigured) {
+function logCapabilityGap(intent, engineConfigured, extra) {
   try {
     const gaps = JSON.parse(localStorage.getItem(GAPS_KEY) || '[]');
-    gaps.unshift({ intent, timestamp: Date.now(), engineConfigured: !!engineConfigured });
+    gaps.unshift({ intent, timestamp: Date.now(), engineConfigured: !!engineConfigured, ...(extra && extra.native ? { native: extra.native } : {}) });
     if (gaps.length > MAX_GAPS) gaps.length = MAX_GAPS;
     localStorage.setItem(GAPS_KEY, JSON.stringify(gaps));
   } catch(_) { /* localStorage unavailable — nothing to do, not worth surfacing */ }
@@ -2656,7 +2683,7 @@ function _refreshGapsList() {
     const engineNote = g.engineConfigured ? '' : ' · no engine';
     return `<div class="gaps-entry">
       <div class="gaps-entry-intent">"${g.intent}"</div>
-      <div class="gaps-entry-meta">${ageStr}${engineNote}</div>
+      <div class="gaps-entry-meta">${ageStr}${engineNote}${g.native ? ' · 📱 known native-only' : ''}</div>
     </div>`;
   }).join('');
 }
@@ -2726,6 +2753,30 @@ window.ttFromClipboard = async function(mode, autorun) {
   if (autorun) ttRun();
   return true;
 };
+
+// ── NATIVE-ONLY layer ─────────────────────────────────────────────────────────
+function _explainNative(p, what) {
+  clog(`📱 ${what}: needs the BOSS native app — ${p._nativeReason}`, 'log-vec');
+  if (p._risk === 'high') clog('   (When built, this will be a high-risk action: it will always ask you first.)', 'log-vec');
+}
+function openNativeModal(node, list) {
+  document.getElementById('native-title').textContent = (node ? node.name : '') + ' · NATIVE';
+  document.getElementById('native-list').innerHTML = list.map(p =>
+    `<div class="native-item" onclick="nativeExplain('${p.id}')">${p.icon} ${p.label}` +
+    `${p._risk === 'high' ? ' <span class="risk">· high-risk</span>' : ''}` +
+    `<div class="why">${p._nativeReason}</div></div>`).join('');
+  const modal = document.getElementById('native-modal');
+  if (node) {
+    const canvas = document.querySelector('canvas'), rect = canvas.getBoundingClientRect();
+    const px = rect.left + node.x * (rect.width / canvas.width);
+    const py = rect.top  + node.y * (rect.height / canvas.height);
+    modal.style.left = Math.max(10, Math.min(px - 150, window.innerWidth - 310)) + 'px';
+    modal.style.top  = Math.max(10, Math.min(py - 300, window.innerHeight - 330)) + 'px';
+  }
+  modal.classList.add('show');
+}
+window.closeNativeModal = function() { document.getElementById('native-modal').classList.remove('show'); };
+window.nativeExplain = function(id) { const p = Registry.getPreset(id); if (p) _explainNative(p, p.label); };
 
 // ── PHONE (COMMS) panel ───────────────────────────────────────────────────────
 let _commsNode = null, _commsKind = 'call';
@@ -3646,6 +3697,8 @@ function showStubInfo(node) {
   document.getElementById('stub-modal-desc').textContent  =
     (regDef && regDef.description) ||
     `${node.name} requires native OS-level access not available in the browser. This will be part of the BOSS native app.`;
+  if (regDef && regDef._planned && regDef._planned.length)
+    document.getElementById('stub-modal-desc').textContent += '\n\nPlanned: ' + regDef._planned.join(' · ');
 
   const canvas = document.querySelector('canvas');
   const rect   = canvas.getBoundingClientRect();
@@ -5783,6 +5836,16 @@ async function firePulse() {
 
   if (!nodes.length) { clog('No nodes', 'log-sys'); return; }
 
+  // Known native-only request (flashlight, screen recording, contacts…):
+  // answer honestly and record it as known-native — not as a missing feature.
+  const _nat = Registry.matchNativeOnly(intent);
+  if (_nat) {
+    clog(`   ◎ known native-only: ${_nat.label}`, 'log-vec');
+    _explainNative(_nat, _nat.label);
+    if (window.logCapabilityGap) window.logCapabilityGap(intent, false, { native: _nat.id });
+    return;
+  }
+
   // Vault recall
   const memResult = searchVault(intent);
   if (memResult)
@@ -6287,8 +6350,9 @@ function drawOrbitals(now) {
     ctx.beginPath();
     _roundRect(ctx, x - w / 2, y - h / 2, w, h, 10);
     const isSpecial = o.isActive || o.preset._isClock;
+    const isNative  = !!o.preset._isNativeBucket;
     ctx.fillStyle   = isSpecial ? '#0a1a10' : '#050a06';
-    ctx.strokeStyle = isSpecial ? '#ffaa00aa' : _orbitalNode.color + 'aa';
+    ctx.strokeStyle = isSpecial ? '#ffaa00aa' : isNative ? '#778899aa' : _orbitalNode.color + 'aa';
     ctx.lineWidth   = 1;
     ctx.shadowBlur  = 8;
     ctx.shadowColor = _orbitalNode.color + '66';
@@ -6298,7 +6362,7 @@ function drawOrbitals(now) {
 
     // Label
     ctx.globalAlpha = alpha;
-    ctx.fillStyle   = (o.isActive || o.preset._isClock) ? '#ffaa00' : _orbitalNode.color;
+    ctx.fillStyle   = (o.isActive || o.preset._isClock) ? '#ffaa00' : isNative ? '#8899aa' : _orbitalNode.color;
     ctx.font        = '11px "Share Tech Mono", monospace';
     ctx.textAlign   = 'center';
     ctx.textBaseline = 'middle';
@@ -6353,6 +6417,14 @@ function activateOrbital(node) {
     }
     return true;
   });
+
+  // Native-only presets collapse into ONE greyed pill so rings stay readable.
+  const _nativeList = presets.filter(p => p.nativeOnly);
+  presets = presets.filter(p => !p.nativeOnly);
+  if (_nativeList.length) {
+    presets.push({ id: '_native_' + node.name, label: `Native (${_nativeList.length})`, icon: '📱',
+      nodes: [node.name], actions: [], _isNativeBucket: true, _nativeList });
+  }
 
   // Music orbital: update label to show what's playing if audio is active
   if (node.name === 'MEDIA' && window.MediaAction) {
@@ -6434,6 +6506,19 @@ function dismissOrbital() {
 
 // ── Fire a preset directly (bypasses intent input and routing) ────────────────
 async function firePreset(preset) {
+  // Native-only: the collapsed pill opens the list; a single native preset
+  // (e.g. reached by gap-fill) just explains itself.
+  if (preset._isNativeBucket) {
+    dismissOrbital();
+    const n = nodes.find(x => x.name === preset.nodes[0]);
+    openNativeModal(n, preset._nativeList);
+    return;
+  }
+  if (preset.nativeOnly) {
+    dismissOrbital();
+    _explainNative(preset, preset.label);
+    return;
+  }
   // Clock orbital — open timezone modal
   if (preset._isClock) {
     const chronosNode = nodes.find(n => n.name === 'CHRONOS');
