@@ -192,15 +192,29 @@ const DEFAULT_NODES = [
   },
   {
     name:         'DEVICES',
-    specialty:    'device bluetooth smart home thermostat light lock sensor iot matter appliance control automation',
+    specialty:    'device bluetooth smart home thermostat light lock sensor iot matter appliance control automation wearable watch band health heart steps sleep fitness',
     color:        '#555566',
     resonance:    0,
     tier:         'stub',
     hasAction:    false,
     actionType:   null,
     capabilities: [],
-    description:  'Bluetooth, Matter, and smart home device control. Native app only — not available in the browser PWA.',
-    _stubReason:  'requires native OS-level Bluetooth/Matter access unavailable to browser-based apps',
+    description:  'External devices: Bluetooth accessories, Matter/smart home, wearables and health data (heart rate, steps, sleep). Native app only — not available in the browser PWA.',
+    _stubReason:  'requires native OS-level Bluetooth/Matter/health access unavailable to browser-based apps',
+    _planned:     ['Bluetooth devices', 'Matter / smart home', 'Wearables & health data'],
+  },
+  {
+    name:         'BROWSER',
+    specialty:    'browser web page website tab bookmark navigate browse internet url sandbox history download',
+    color:        '#556677',
+    resonance:    0,
+    tier:         'stub',
+    hasAction:    false,
+    actionType:   null,
+    capabilities: [],
+    description:  'BOSS Browser — a sandboxed browser BOSS can read and operate for you (tabs, sign-ins, forms). Native app only.',
+    _stubReason:  'requires an embedded native web view that BOSS controls — not possible from inside a browser tab',
+    _planned:     ['Open & read pages', 'Fill forms for you', 'Remember sign-ins safely'],
   },
   {
     name:         'CHRONOS',
@@ -630,6 +644,36 @@ const DEFAULT_PRESETS = [
     _filesTab:  'url',
   },
 
+  // ── NATIVE-ONLY presets ────────────────────────────────────────────────────
+  // Shown greyed under each node's "📱 Native" pill; NEVER offered to the engine
+  // (exportToolSchema skips them). _triggers are the plain phrases that make
+  // BOSS answer "needs the native app" instead of logging a genuine gap.
+  // _risk: 'high' marks capabilities that change device state or capture the
+  // screen — when they ship they must use the elevated risk tier.
+  ...[
+    ['comms_contacts',   'COMMS', 'Contacts',        '👥', 'low',  ['contacts','contact list','address book','phone book'],        'Looking people up by name needs access to your contacts.'],
+    ['comms_send_sms',   'COMMS', 'Send SMS directly','📤', 'high', ['send sms directly','send a text without','text without opening'],'Sending a message without opening Messages needs the native SMS permission.'],
+    ['comms_call_direct','COMMS', 'Place call directly','☎','high', ['place a call directly','call without opening','hang up','end the call','answer the call'],'Placing or controlling calls needs the native phone permission.'],
+    ['core_flashlight',  'CORE',  'Flashlight',      '🔦', 'low',  ['flashlight','torch','turn on the light','turn on my light'],'The torch can only be switched by a native app.'],
+    ['core_screen_record','CORE', 'Record screen',   '🎥', 'high', ['record my screen','screen recording','record the screen','screen record'],'Screen recording needs the operating system\'s capture permission.'],
+    ['core_bluetooth',   'CORE',  'Bluetooth on/off','🔵', 'high', ['turn on bluetooth','turn off bluetooth','bluetooth on','bluetooth off','toggle bluetooth'],'Switching Bluetooth needs system settings access.'],
+    ['core_wifi_toggle', 'CORE',  'Wi-Fi / airplane','✈', 'high', ['turn off wifi','turn on wifi','turn off wi-fi','turn on wi-fi','airplane mode','flight mode'],'Changing Wi-Fi or airplane mode needs system settings access.'],
+    ['chronos_reliable_alarms','CHRONOS','Reliable alarms','🔔','low',['reliable alarm','reliable alarms','alarm when the app is closed','alarm while closed'],'Alarms only ring while BOSS is open here; the native app can schedule real system alarms.'],
+  ].map(([id, node, label, icon, risk, triggers, reason]) => ({
+    id, label, icon,
+    nodes:        [node],
+    intent:       label.toLowerCase(),
+    actions:      [],
+    source:       'default',
+    createdAt:    null,
+    usageCount:   0,
+    tags:         ['native'],
+    nativeOnly:   true,
+    _risk:        risk,
+    _triggers:    triggers,
+    _nativeReason: reason,
+  })),
+
   // ── Compound presets (multi-node) ──────────────────────────────────────────
   {
     id:         'compound_work_session',
@@ -914,7 +958,7 @@ export const Registry = {
     return this.getAllPresets()
       .filter(p => {
         const node = this.getNode(p.nodes[0]);
-        return node && node.tier !== 'stub';
+        return node && node.tier !== 'stub' && !p.nativeOnly;
       })
       .map(p => ({
         name:        p.id,
@@ -922,6 +966,21 @@ export const Registry = {
         node:        p.nodes[0],
         presetId:    p.id,
       }));
+  },
+
+  /**
+   * matchNativeOnly(intent) → preset | null
+   * Whole-phrase match against each native-only preset's _triggers. Used so a
+   * request for something only the native app can do gets an honest answer
+   * (and a "known-native" gap entry) instead of looking like a missing feature.
+   */
+  matchNativeOnly(intent) {
+    const s = ' ' + String(intent || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    for (const p of this.getAllPresets()) {
+      if (!p.nativeOnly || !p._triggers) continue;
+      if (p._triggers.some(t => s.includes(' ' + t + ' '))) return p;
+    }
+    return null;
   },
 
   getPresetsForNodes(nodeNames) {
