@@ -10,7 +10,23 @@
   "background_color": "#050a06",
   "theme_color": "#00ffcc",
   "icons": [
-    { "src": "bosslogo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "bosslogo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    {
+      "src": "bosslogo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "bosslogo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "bosslogo-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
