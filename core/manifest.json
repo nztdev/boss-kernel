@@ -1,24 +1,16 @@
 {
+  "id": "./index.html",
   "name": "B.O.S.S. Kernel",
   "short_name": "BOSS",
-  "description": "Biological Operating System Structure — Somatic Governor. Resonant AI routing kernel.",
+  "description": "Biological Operating System — Somatic Governor. Resonant AI routing kernel.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#050a06",
-  "theme_color": "#050a06",
+  "theme_color": "#00ffcc",
   "icons": [
-    {
-      "src": "./bosslogo.jpg",
-      "sizes": "1024x1024",
-      "type": "image/jpeg",
-      "purpose": "any"
-    },
-    {
-      "src": "./bosslogo.jpg",
-      "sizes": "1024x1024",
-      "type": "image/jpeg",
-      "purpose": "maskable"
-    }
+    { "src": "bosslogo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "bosslogo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
