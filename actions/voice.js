@@ -70,6 +70,22 @@ const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.w
 
 let _pending = [];
 let _flushTimer = null;
+let _lastRecogEnd = 0;     // when dictation last stopped (ms epoch)
+
+// ── Audio routing (best-effort) ───────────────────────────────────────────────
+// On iPhone, dictation puts the audio session into "play and record", which
+// tends to send speech to the phone speaker instead of Bluetooth headphones,
+// and Safari may not switch back by itself. Where Safari exposes the Audio
+// Session API we ask for 'playback' when speaking and 'play-and-record' while
+// listening. Where it doesn't, this does nothing. A web page can't fully
+// control routing — the native app can (Phase 10).
+function _audioSession(type) {
+  try {
+    const as = typeof navigator !== 'undefined' && navigator.audioSession;
+    if (as && as.type !== type) { as.type = type; return true; }
+    return !!as;
+  } catch (_) { return false; }
+}
 
 export const Voice = {
   supportsInput()  { return !!SR; },
@@ -79,6 +95,8 @@ export const Voice = {
   set(patch) { Object.assign(_load(), patch); _save(); _emit(); },
   onChange(fn) { _listeners.add(fn); return () => _listeners.delete(fn); },
   isListening() { return _listening; },
+  /** 'available' if this browser lets the page choose the audio session type. */
+  audioSessionSupport() { return (typeof navigator !== 'undefined' && navigator.audioSession) ? 'available' : 'unavailable'; },
 
   // ── OUT ─────────────────────────────────────────────────────────────────────
   voices() {
@@ -107,6 +125,11 @@ export const Voice = {
   /** Speak text now (also used for test + the iOS gesture unlock). */
   say(text) {
     if (!this.supportsOutput()) return false;
+    // Just after dictation, give the OS a moment to leave record mode, then
+    // ask for playback routing before speaking.
+    const since = Date.now() - _lastRecogEnd;
+    if (_lastRecogEnd && since < 700) { setTimeout(() => this.say(text), 700 - since); return true; }
+    _audioSession('playback');
     const s = _load();
     const u = new SpeechSynthesisUtterance(text.slice(0, 600));
     u.rate = s.rate;
@@ -136,6 +159,7 @@ export const Voice = {
     if (!SR) { onError && onError('unsupported', 'Dictation is not supported in this browser'); return false; }
     if (_listening) { this.stopListening(); return false; }
     this.cancel();   // don't transcribe our own voice
+    _audioSession('play-and-record');
 
     _recog = new SR();
     _recog.lang = navigator.language || 'en-US';
@@ -170,7 +194,7 @@ export const Voice = {
       if (onError && msg !== '') onError(e.error, msg || `Dictation error: ${e.error}`);
     };
     _recog.onend = () => {
-      _listening = false; _emit();
+      _listening = false; _lastRecogEnd = Date.now(); _audioSession('playback'); _emit();
       const text = (finalText.trim() || lastText).trim();
       if (text && onFinal) onFinal(text);
       if (onEnd) onEnd();
