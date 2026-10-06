@@ -1,6 +1,6 @@
 // B.O.S.S. Service Worker — Somatic Cache
 // ---------------------------------------------------------------------------
-// v0.9.1 — what changed and why:
+// v0.9.1 — what change and why:
 //   • Was CACHE-FIRST under a cache name that never changed, so an installed
 //     (home-screen) BOSS could keep serving an old index.html forever, and the
 //     kernel's JS modules were not cached at all (so "offline" only half worked).
