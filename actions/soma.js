@@ -240,9 +240,24 @@ function _buildIdentityResponse(nodes, Registry, cortexHandshake) {
   return lines.join(' ');
 }
 
+// ── Settings hub phrases ──────────────────────────────────────────────────────
+// "settings", "update boss", "text size", "reduce motion", "clear cache"… all
+// open the ⚙ Settings hub. Exported so the kernel can claim these deterministically.
+export function isSettingsIntent(intent) {
+  const s = String(intent || '').toLowerCase().trim().replace(/[.!?]+$/, '');
+  return /^(?:open |show |go to )?(?:the |my )?(?:settings|preferences|options)$/.test(s) ||
+         /^(?:update|refresh|reload)\s+(?:boss|the app|app)$/.test(s) ||
+         /^check for updates?$/.test(s) || /^clear (?:the )?(?:app )?cache$/.test(s) ||
+         /^(?:text|font) size$/.test(s) || /^(?:make )?(?:the )?text (?:bigger|larger|smaller)$/.test(s) ||
+         /^(?:bigger|larger|smaller) text$/.test(s) || /^reduce motion$/.test(s);
+}
+
 // ── Intent classification ─────────────────────────────────────────────────────
 function _classify(intent) {
   const s = intent.toLowerCase().trim();
+
+  // Settings hub
+  if (isSettingsIntent(s)) return { type: 'settings' };
 
   // Voice (spoken replies / dictation settings)
   if (/\b(voice|speak|speech|aloud|dictat\w*)\b/.test(s) || /\bread (it |this |replies )?(out )?loud\b/.test(s) ||
@@ -334,6 +349,10 @@ export const SomaAction = {
     const chain = getChain ? getChain() : [];
 
     switch (classified.type) {
+
+      case 'settings':
+        if (window.openSettings) { window.openSettings(); clog('⚙ SOMA: Settings', 'log-vec'); return true; }
+        break;
 
       case 'voice': {
         const V = window.BOSS_voice;
