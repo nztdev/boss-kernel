@@ -16,7 +16,7 @@ const BUILD      = '0.9.1';
 const CACHE_NAME = 'boss-' + BUILD;
 
 const SHELL = [
-  './', './index.html', './manifest.json', './bosslogo.jpg',
+  './', './index.html', './manifest.json', './bosslogo.jpg', './bosslogo-192.png', './bosslogo-512.png', './bosslogo-maskable-512.png',
   '../heart/heart.js', '../engine/engine.js', '../registry/registry.js',
   '../nervous/nervous.js', '../immune/immune.js',
   '../actions/backup.js',   '../actions/chronos.js', '../actions/clipboard.js',
