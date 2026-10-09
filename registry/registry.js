@@ -136,7 +136,7 @@ const DEFAULT_NODES = [
   },
   {
     name:         'MEDIA',
-    specialty:    'music sound audio playback play pause stop mute volume track song speaker listen headphones photo image picture video visual show display watch screen gallery wallpaper stream playing',
+    specialty:    'music sound audio playback play pause stop mute volume track song speaker listen headphones photo image picture video visual show display watch screen gallery wallpaper stream playing louder quieter softer',
     color:        '#00F0FF',
     resonance:    1.5,  // flattened (v0.9)
     tier:         'active',
@@ -975,10 +975,16 @@ export const Registry = {
    * (and a "known-native" gap entry) instead of looking like a missing feature.
    */
   matchNativeOnly(intent) {
-    const s = ' ' + String(intent || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    // Normalise verb variants so "switch on the bluetooth" == "turn on bluetooth".
+    const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ')
+      .replace(/\b(?:switch on|enable|activate|put on)\b/g, 'turn on')
+      .replace(/\b(?:switch off|disable|deactivate|shut off)\b/g, 'turn off')
+      .replace(/\bturn (on|off) (?:the|my) /g, 'turn $1 ')
+      .replace(/\s+/g, ' ').trim();
+    const s = ' ' + norm(intent) + ' ';
     for (const p of this.getAllPresets()) {
       if (!p.nativeOnly || !p._triggers) continue;
-      if (p._triggers.some(t => s.includes(' ' + t + ' '))) return p;
+      if (p._triggers.some(t => s.includes(' ' + norm(t) + ' '))) return p;
     }
     return null;
   },
