@@ -28,7 +28,8 @@ function _classify(intent) {
   if (isVisionIntent(s)) return { type: 'vision', mode: visionMode(s) };
 
   // Clipboard → Text Tools (device clipboard; PC clipboard needs an explicit PC word)
-  if (/\bclipboard\b/.test(s) && !/\b(pc|computer|desktop|laptop)\b/.test(s)) {
+  if ((/\bclipboard\b/.test(s) || /\bwhat (?:i|i've|i have) (?:just )?copied\b/.test(s) || /\b(?:the )?(?:text|thing|link) (?:i|i've|i have) (?:just )?copied\b/.test(s)) &&
+      !/\b(pc|computer|desktop|laptop)\b/.test(s)) {
     const mode = /\btranslate\b/.test(s) ? 'translate' : /\brewrite\b/.test(s) ? 'rewrite'
                : /\banaly[sz]e\b/.test(s) ? 'analyse' : /\bexplain\b/.test(s) ? 'explain' : 'summarise';
     const autorun = /\b(summari[sz]e|summary|translate|rewrite|analy[sz]e|explain)\b/.test(s);
@@ -320,6 +321,10 @@ export const CortexAction = {
       if (window.logCapabilityGap) window.logCapabilityGap(intent, engineReady);
 
       clog(`🔬 CORTEX: no recognised action in "${intent}"`, 'log-vec');
+      if (!engineReady) {
+        clog('   💡 Open questions ("tell me a joke", "why is the sky blue") need an AI engine key —', 'log-vec');
+        clog('      tap the cortex pill → Engine Keys. Everything else works without one.', 'log-vec');
+      }
       clog('   Analyse: "analyse [topic]" · "break down [topic]"', 'log-vec');
       clog('   Explain: "explain [topic]" · "what is [topic]"', 'log-vec');
       clog('   Reason:  "think through [topic]" · "reason about [topic]"', 'log-vec');
