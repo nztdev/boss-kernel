@@ -21,7 +21,7 @@
  * node labels keep a fixed size on purpose, so they always fit.
  */
 
-export const BUILD = '0.9.1';          // keep in step with BUILD in core/sw.js
+export const BUILD = '0.10.0';          // keep in step with BUILD in core/sw.js
 const KEY = 'BOSS_UI';
 
 // Settings that "Reset settings" restores to default. Everything else —
