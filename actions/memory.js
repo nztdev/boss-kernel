@@ -30,6 +30,11 @@ function _classify(intent) {
   // System/CORE intents
   if (/\b(system status|battery|diagnostics|uptime|network|cpu|memory usage|ram)\b/.test(s)) return null;
 
+  // Open the Notes / Vault panel: "show my notes", "open the vault", "what notes do I have"
+  if (/^(?:open|show|view|see|list)?\s*(?:all\s+)?(?:the\s+|my\s+)?notes?$/.test(s) || /^what notes do i have$/.test(s))
+    return { type: 'panel', which: 'notes' };
+  if (/^(?:open|show|view|see)\s+(?:the\s+|my\s+)?vault$/.test(s)) return { type: 'panel', which: 'vault' };
+
   // Security (encryption / lock)
   if (/\b(lock|unlock|encrypt|decrypt|passphrase|biometric)\b.*\b(vault|notes?|memor|data)\b/.test(s) ||
       /\b(vault|notes?|memor\w*)\b.*\b(lock|unlock|encrypt|passphrase|security)\b/.test(s) ||
@@ -272,6 +277,9 @@ export const MemoryAction = {
     }
 
     switch (classified.type) {
+      case 'panel':
+        if (window.openMemoryPanel) { window.openMemoryPanel(classified.which); clog('🧠 MEMORY: ' + classified.which, 'log-vec'); }
+        break;
       case 'status':   _handleStatus(clog);                                        break;
       case 'list':     _handleList(clog);                                          break;
       case 'recall':   _handleRecall(classified.query, intent, clog, cortexUrl);  break;
