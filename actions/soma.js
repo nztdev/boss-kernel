@@ -249,7 +249,20 @@ export function isSettingsIntent(intent) {
          /^(?:update|refresh|reload)\s+(?:boss|the app|app)$/.test(s) ||
          /^check for updates?$/.test(s) || /^clear (?:the )?(?:app )?cache$/.test(s) ||
          /^(?:text|font) size$/.test(s) || /^(?:make )?(?:the )?text (?:bigger|larger|smaller)$/.test(s) ||
-         /^(?:bigger|larger|smaller) text$/.test(s) || /^reduce motion$/.test(s);
+         /^(?:bigger|larger|smaller) text$/.test(s) || /^reduce motion$/.test(s) || /^reset (?:all )?(?:my )?settings$/.test(s);
+}
+
+/** Deterministic SOMA claim for unmistakable voice / reset / identity requests. */
+export function isSomaClaim(intent) {
+  const s = String(intent || '').toLowerCase().trim().replace(/[.!?]+$/, '');
+  return /^(?:turn |switch )?(?:the )?voice(?: (?:on|off))?$/.test(s) ||
+         /^(?:turn|switch) (?:the )?voice (?:on|off)$/.test(s) ||
+         /^(?:turn|switch) (?:on|off) (?:the )?voice$/.test(s) ||
+         /^(?:talk|speak) to me$/.test(s) || /^stop (?:talking|speaking)$/.test(s) ||
+         /^read (?:the )?(?:answers|replies|responses|everything) (?:aloud|out loud)$/.test(s) ||
+         /^reset (?:all )?(?:my )?settings$/.test(s) ||
+         /^who are you$/.test(s) || /^what are you$/.test(s) ||
+         /^(?:describe|introduce|tell me about) yourself$/.test(s);
 }
 
 // ── Intent classification ─────────────────────────────────────────────────────
@@ -260,10 +273,10 @@ function _classify(intent) {
   if (isSettingsIntent(s)) return { type: 'settings' };
 
   // Voice (spoken replies / dictation settings)
-  if (/\b(voice|speak|speech|aloud|dictat\w*)\b/.test(s) || /\bread (it |this |replies )?(out )?loud\b/.test(s) ||
+  if (/\b(voice|speak|speech|aloud|dictat\w*)\b/.test(s) || /^talk to me$/.test(s) || /\bread (it |this |replies )?(out )?loud\b/.test(s) ||
       /\b(stop|quiet|mute)\b.*\b(talking|speaking)\b/.test(s)) {
     const off = /\b(off|stop|mute|quiet|disable|silence)\b/.test(s);
-    const on  = /\b(on|enable|start|unmute)\b/.test(s);
+    const on  = /\b(on|enable|start|unmute)\b/.test(s) || /^(talk|speak) to me$/.test(s) || /\b(aloud|out loud)\b/.test(s);
     return { type: 'voice', mode: off ? 'off' : on ? 'on' : 'open' };
   }
 
@@ -291,6 +304,7 @@ function _classify(intent) {
   // "switch to crimson" alone is too ambiguous — "switch" is a generic verb
   // that future capabilities will also use. Context word is required.
   if (/\b(theme|colour|color|mode|skin|appearance|look)\b/.test(s) ||
+      /\b(switch|change|make|turn|set|use|go)\b.*\b(crimson|amber|violet|ice|solar)\b/.test(s) ||
       /\b(switch|change|set|use)\b.*\b(theme|colour|color|mode)\b/.test(s)) {
     return { type: 'theme', parsed: _parseThemeIntent(s) };
   }
