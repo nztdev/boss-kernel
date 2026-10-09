@@ -197,7 +197,8 @@ Install [Tailscale](https://tailscale.com) on both devices. Use your PC's Tailsc
 
 ```
 boss-kernel/
-├── core/index.html        — Soma v0.9 (Arbiter, intent claims, modals)
+├── core/index.html        — Soma v0.9 (Arbiter, intent claims, modals, ⚙ Settings hub)
+├── core/sw.js             — Service worker: network-first, offline cache, versioned (BUILD)
 ├── heart/heart.js         — Autonomic metabolic loop (vault maintenance is encryption-aware)
 ├── registry/registry.js   — Node/model/preset catalogue (10 nodes, 42 presets)
 ├── nervous/nervous.js     — Typed event bus
@@ -208,7 +209,8 @@ boss-kernel/
 │   ├── weather.js         — Open-Meteo forecast (used by CHRONOS)
 │   ├── media.js           — Audio · Image · Video · Progress tracking
 │   ├── soma.js            — Theme · Identity · Personality · Profile · Voice commands
-│   ├── voice.js           — Speech in/out
+│   ├── voice.js           — Speech in/out (+ best-effort audio routing)
+│   ├── ui.js              — UI settings, style tokens, update / reset / erase, permissions
 │   ├── memory.js          — Vault · Notes · Security commands
 │   ├── secure.js          — SecureStore: opt-in encryption for Vault + Notes
 │   ├── core.js            — Diagnostics · Battery · Network · Uptime · Backup · Location
@@ -336,6 +338,10 @@ Everything below runs in the browser PWA, works offline-first where the platform
 
 **Phone (COMMS).** Call / Text / Email through `tel:`, `sms:`, `mailto:` from either a typed intent ("call +34 600 123 456", "text +34600123456 saying hi", "email a@b.com subject Hi saying …") or the Phone panel. BOSS opens the device's own app; **you confirm the call and press send** — a browser cannot do either itself. Names ("call mom") are answered honestly: looking people up needs the native app.
 
+**Settings hub and updates (⚙ in the top bar).** Owned by SOMA, deliberately *not* a node — settings are not a capability and must not compete in routing. Contains: text size (S / M / L / XL — every font size is written as `calc(Npx * var(--ts))`; the top bar and canvas node labels stay fixed so they always fit), reduce motion (defaults to the system preference), a **style** selector backed by a small registry of CSS-variable sets (`registerStyle` in `actions/ui.js`; only "BOSS default" exists today — this is the hook for fully customisable styles later), shortcuts to Themes / Profile / Voice / Security / Backup / Engine keys / Gaps, a **permissions** panel (location, microphone, camera, notifications — state plus an "Allow…" button, with iPhone steps if something is blocked), and **About** (build, worker, installed-app or tab, live node / pulse / arbiter counts — moved here from the top bar on phones to make room for ⚙). Three separate maintenance actions, so one cannot be mistaken for another: **Update BOSS** re-downloads the app files and reloads (data untouched); **Reset settings** restores appearance and voice defaults (data untouched); **Erase everything** wipes all local data and requires typing ERASE, with a backup shortcut shown first.
+
+**Service worker fix.** The previous worker served `index.html` cache-first under a cache name that never changed, so an installed home-screen BOSS could run an old copy indefinitely, and the kernel's JS modules were not cached at all. It is now network-first (always the latest when online, the last good copy offline), pre-caches the shell and every module, uses a versioned cache name, and shows a **"BOSS updated — tap to reload"** banner when a new version takes over. **Release rule:** bump `BUILD` in both `core/sw.js` and `actions/ui.js` on every release. Installs still running the old worker need one manual refresh (clear site data, or reinstall) the first time; after that, updates arrive by themselves.
+
 **Native-only layer and stubs.** See §XIV-C. BROWSER joins DEVICES as a stub; DEVICES' scope now covers external devices, wearables and health data.
 
 ---
@@ -354,6 +360,7 @@ The routing physics in §V are **unchanged**. What was added is a short list of 
 | phone | COMMS | "call +34…", "text 555… saying hi", "email a@b.com", "send an email" |
 | text-tools | CORTEX | "open text tools" |
 | text-mode | CORTEX | "summarise this text", "translate text" |
+| settings | SOMA | "settings", "update boss", "text size", "reduce motion", "clear cache" |
 
 **Why:** words like *photo*, *text*, *open* and *phone* appear in several nodes' vocabularies, so clear requests produced near-ties and the Arbiter asked the user to resolve something that was never ambiguous. **Limits:** a claim is used only when the phrasing is unambiguous. App names that overlap another node's domain (music, photos, files, notes…) are *not* claimed and still go through scoring and the Arbiter.
 
@@ -427,9 +434,33 @@ There is no telemetry. The only network traffic BOSS itself initiates:
 
 Backups, the gap log and everything else stay on the device unless you export and share a file yourself.
 
-**Known limits.** iOS Safari requires a tap for some actions (file picker, camera, clipboard read) so typed intents may only get as far as pointing you to the button. Browsers cannot confirm that an app link opened. Alarms need the app open. Web Bluetooth is not available on iOS Safari. Biometric unlock was verified to fall back correctly but not on real biometric-capable hardware. The PWA and native app keep separate storage.
+**Known limits.** iOS Safari requires a tap for some actions (file picker, camera, clipboard read) so typed intents may only get as far as pointing you to the button. Browsers cannot confirm that an app link opened. Alarms need the app open. Web Bluetooth is not available on iOS Safari. Biometric unlock was verified to fall back correctly but not on real biometric-capable hardware. On iPhone, spoken replies after dictation may come out of the phone speaker instead of Bluetooth headphones: dictation switches the audio session to record mode, and a web page can only ask Safari to switch back (best-effort, see `voice.js`). Full control needs the native app. The PWA and native app keep separate storage.
 
 ---
+
+## XVI-b. Front Door, Tester Feedback & the Phrase Corpus (build 0.10.0)
+
+**Front door** (`actions/onboarding.js`, self-rendering): a 3-card skippable intro on first run (`BOSS_ONBOARDED`), then a **Home** screen (input, tappable example requests, *What can BOSS do?*, Settings, Quick intro, Send feedback, *Enter the field*). Home shows on launch unless switched off (Settings → *Show home screen on launch*, `BOSS_HOME`); the 🏠 pill returns to it. Typed `help`, `what can you do`, `show me around`, `home` are answered by this layer before scoring (no node, no gap logged). Copy and example lists are data at the top of the module.
+
+**Tester feedback** (`actions/feedback.js` + `actions/feedback-ui.js`, modular): every pulse is logged locally (node, route reason — claim/score/arbiter/clarification/clarified — and outcome). A **✋ Not what I meant** chip appears for 30 s after each pulse (optional expected node + note). Settings → *Send feedback* builds a `boss-feedback/1` JSON report with a preview, per-section toggles and masking (numbers, emails, links; remember/note text reduced to the verb). Nothing is sent automatically. **Delivery is a pluggable transport** — built in: *Share…* (system sheet, file attached) and *Save file*; a backend later is one `Feedback.registerTransport({id:'http', …})` call. Never included: vault, notes, keys, clipboard, location, files, contacts.
+
+**Phrase corpus** (`tests/phrases.tsv`, `tests/phrases_more.tsv`, `tests/run_corpus.py`): ~250 realistic requests with the node each should reach. `window.BOSS_route(intent)` is a side-effect-free routing preview the runner uses (`pip install playwright`, serve the repo root, `python3 tests/run_corpus.py`). Every tester miss that names an expected node can be exported as corpus lines (`Feedback.toCorpusTsv`). Run it after any vocabulary or claim change.
+
+**Amendments documented in this build (claims, not physics):**
+
+| Claim | Routes to | Why |
+|---|---|---|
+| clipboard-media | MEDIA | "play the video from my clipboard" took the text-tools clipboard claim; the claim is now verb-aware and substitutes the clipboard link |
+| voice / identity / reset settings | SOMA | unmistakable phrases scored as noise |
+| weather, clock, "remind me in N…", "wake me up at…" | CHRONOS | shared words with MEMORY / noise |
+| notes, vault, memories, "remember/note/forget …" | MEMORY | |
+| where am I / backup | CORE | |
+| general-knowledge questions ("who wrote…", "how do I…") | CORTEX | "who" collided with SOMA |
+| **no-signal fallback** | CORTEX | when the top score is at the n-gram noise floor (< 0.245) and the request is conversational, route to the generalist instead of a coin flip. Statements with no signal still reach the Birth Protocol unchanged |
+
+Also: COMMS parses polite/long forms ("can you send an email for me", "make a phone call", "dial 112"); native-only matching normalises verb variants ("switch on the bluetooth"); CORTEX says plainly that open questions need an AI engine key when none is set; MEDIA gained *louder / quieter / softer*.
+
+**Known open decision — Arbiter margin.** `confThreshold` (1.5) is larger than any achievable score (≈ 1.0), so *every* near-tie, and also clear wins such as `play music` (MEDIA 0.93 vs CORTEX 0.23), enter the Arbiter; with no engine key and two side-effect nodes that becomes a blocking clarification. The corpus counts these (≈ 32 of 256). Unchanged pending a decision; see the corpus report for the list.
 
 ## XVII. Related
 
