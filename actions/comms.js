@@ -22,7 +22,7 @@
 import { openScheme } from './launch.js';
 
 // ── Validation / URL building ─────────────────────────────────────────────────
-const _NUM = /^\+?\d[\d\s().-]{2,}\d$/;
+const _NUM = /^\+?\d[\d\s().-]{1,}\d$/;
 const _EMAIL = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']{2,}$/;
 const _NOT_A_NAME = /^(it|me|this|that|them|him|her|us|you|a|an|the|back|now|later|up|off|tools?|settings?|status|number|numbers|book|app|apps|battery|box|area|size|field|input|editor|file|files|history|log)$/i;
 /** A plausible person/contact name: ≤3 words, has a letter, none are stop-words. */
@@ -75,9 +75,22 @@ export function buildUrl(kind, { to = '', body = '', subject = '' } = {}) {
  *   looks like a person's name (contacts need the native app).
  */
 export function parse(intent) {
-  const raw = (intent || '').trim().replace(/[.!?]+$/, '');
+  let raw = (intent || '').trim().replace(/[.!?]+$/, '');
   if (!raw) return null;
+  // Polite / conversational wrappers: "can you send an email for me", "I want to call my mum"
+  raw = raw.replace(/^(?:(?:hey|ok|okay|please|can you|could you|would you|will you|i want to|i'd like to|i need to|i wanna|let's|lets)\s+)+/i, '')
+           .replace(/\s+(?:for me|please)$/i, '').trim();
   let m;
+
+  // "make a (phone) call [to X]", "write an email [to X]" → same as the plain verbs
+  if ((m = /^make\s+(?:a\s+)?(?:phone\s+)?call(?:\s+to\s+(.+))?$/i.exec(raw)))
+    raw = m[1] ? 'call ' + m[1] : 'call';
+  else if ((m = /^(?:write|compose|draft)\s+(?:an?\s+)?(?:e-?mail|mail)(?:\s+to\s+(.+))?$/i.exec(raw)) && !/\babout\b/i.test(raw))
+    raw = m[1] ? 'email ' + m[1] : 'email';
+  else if ((m = /^(?:write|compose|draft)\s+(?:an?\s+)?(?:e-?mail|mail)\s+to\s+(\S+@\S+)\s+about\s+(.+)$/i.exec(raw)))
+    raw = `email ${m[1]} subject ${m[2]}`;
+
+  if (/^(?:call|phone|dial|ring)$/i.test(raw)) return { kind: 'call', to: '' };
 
   // ── CALL ──
   if ((m = /^(?:please\s+)?(?:call|dial|phone|ring)\s+(.+)$/i.exec(raw))) {
@@ -141,10 +154,10 @@ export const CommsAction = {
       return true;
     }
 
-    // Bare "send an email" → just open the panel
-    if (p.kind === 'email' && !p.to && !p.subject && !p.body) {
-      if (window.openCommsModal) window.openCommsModal('email');
-      clog('📞 COMMS: Phone panel — email', 'log-vec');
+    // Bare "send an email" / "make a call" → just open the panel
+    if (!p.to && !p.subject && !p.body) {
+      if (window.openCommsModal) window.openCommsModal(p.kind);
+      clog('📞 COMMS: Phone panel — ' + p.kind, 'log-vec');
       return true;
     }
 
