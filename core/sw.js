@@ -1,6 +1,6 @@
 // B.O.S.S. Service Worker — Somatic Cache
 // ---------------------------------------------------------------------------
-// v0.9.1 — what change and why:
+// v0.9.1 — what changed and why:
 //   • Was CACHE-FIRST under a cache name that never changed, so an installed
 //     (home-screen) BOSS could keep serving an old index.html forever, and the
 //     kernel's JS modules were not cached at all (so "offline" only half worked).
@@ -12,7 +12,7 @@
 //     this file is also what makes browsers install the new worker.
 // The Python Cortex (port 5000) is a live connection and is never cached.
 
-const BUILD      = '0.9.1';
+const BUILD      = '0.10.0';
 const CACHE_NAME = 'boss-' + BUILD;
 
 const SHELL = [
@@ -24,6 +24,7 @@ const SHELL = [
   '../actions/files.js',    '../actions/launch.js',  '../actions/location.js',
   '../actions/media.js',    '../actions/memory.js',  '../actions/secure.js',
   '../actions/soma.js',     '../actions/vision.js',  '../actions/voice.js',  '../actions/ui.js',
+  '../actions/feedback.js', '../actions/feedback-ui.js', '../actions/onboarding.js',
   '../actions/weather.js',
 ];
 
