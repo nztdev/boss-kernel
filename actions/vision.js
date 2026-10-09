@@ -74,6 +74,8 @@ const VISION_RX = new RegExp([
   String.raw`\btranslate (this|that|the|my) (photo|image|picture|sign|menu|screenshot|label)\b`,
   String.raw`\bwhat('s| is| are) (in|on) (this|that|the|my) (photo|image|picture|pic|screenshot)\b`,
   String.raw`\b(identify|recognise|recognize) (this|that)( (photo|image|picture|plant|bird|animal|object|sign|logo))?\s*$`,
+  String.raw`^(?:open|start|launch|use) (?:the |my )?camera\s*$`,
+  String.raw`^what(?:'s| is) (?:this|that)\s*\??$`,
 ].join('|'), 'i');
 
 export function isVisionIntent(intent) { return VISION_RX.test(String(intent)); }
