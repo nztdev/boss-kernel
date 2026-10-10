@@ -30,6 +30,10 @@ let _recog = null;
 let _listening = false;
 let _voices = [];
 const _listeners = new Set();
+const _speakListeners = new Set();   // fn('start' | 'end' | 'boundary')
+let _speakingCount = 0;              // utterances queued or playing
+let _gen = 0;                        // bumped by cancel() so late events from cancelled utterances are ignored
+function _emitSpeak(kind) { _speakListeners.forEach(fn => { try { fn(kind); } catch (_) {} }); }
 
 // ── settings ──────────────────────────────────────────────────────────────────
 function _load() {
@@ -95,6 +99,9 @@ export const Voice = {
   set(patch) { Object.assign(_load(), patch); _save(); _emit(); },
   onChange(fn) { _listeners.add(fn); return () => _listeners.delete(fn); },
   isListening() { return _listening; },
+  isSpeaking()  { return _speakingCount > 0; },
+  /** fn('start' | 'end' | 'boundary') — drives the speaking animation. Returns an unsubscribe fn. */
+  onSpeak(fn) { _speakListeners.add(fn); return () => _speakListeners.delete(fn); },
   /** 'available' if this browser lets the page choose the audio session type. */
   audioSessionSupport() { return (typeof navigator !== 'undefined' && navigator.audioSession) ? 'available' : 'unavailable'; },
 
@@ -141,13 +148,26 @@ export const Voice = {
     if (s.voiceURI && s.voiceURI !== '__system__') v = this.voices().find(x => x.voiceURI === s.voiceURI);
     else if (!s.voiceURI) v = this.voices().find(x => /zarvox/i.test(x.name));
     if (v) { u.voice = v; u.lang = v.lang; }
+    // Speaking-state events for the waveform (the browser exposes no audio data, so the
+    // animation is driven by these events, not by the sound itself).
+    let _done = false; const _g = _gen;
+    const _end = () => { if (_done || _g !== _gen) return; _done = true; _speakingCount = Math.max(0, _speakingCount - 1); if (_speakingCount === 0) _emitSpeak('end'); };
+    u.onstart    = () => { if (_speakingCount === 1) _emitSpeak('start'); };
+    u.onend      = _end;
+    u.onerror    = _end;
+    u.onboundary = () => _emitSpeak('boundary');
+    _speakingCount++;
     window.speechSynthesis.speak(u);
+    // Some engines never fire onstart reliably — make sure the first utterance signals start.
+    if (_speakingCount === 1) _emitSpeak('start');
     return true;
   },
 
   cancel() {
     _pending = []; clearTimeout(_flushTimer);
     if (this.supportsOutput()) window.speechSynthesis.cancel();
+    _gen++;
+    if (_speakingCount > 0) { _speakingCount = 0; _emitSpeak('end'); }
   },
 
   // ── IN ──────────────────────────────────────────────────────────────────────
