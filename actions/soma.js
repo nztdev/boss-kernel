@@ -262,7 +262,8 @@ export function isSomaClaim(intent) {
          /^read (?:the )?(?:answers|replies|responses|everything) (?:aloud|out loud)$/.test(s) ||
          /^reset (?:all )?(?:my )?settings$/.test(s) ||
          /^who are you$/.test(s) || /^what are you$/.test(s) ||
-         /^(?:describe|introduce|tell me about) yourself$/.test(s);
+         /^(?:describe|introduce|tell me about) yourself$/.test(s) ||
+         /^(?:list|show) (?:the )?(?:available )?themes$/.test(s);
 }
 
 // ── Intent classification ─────────────────────────────────────────────────────
