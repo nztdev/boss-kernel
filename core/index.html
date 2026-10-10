@@ -1602,6 +1602,7 @@ textarea.profile-input {
     <div class="pill" id="engine-pill"><div class="dot"></div><span style="color:#335544">engine off</span></div>
   </div>
   <div class="status-right">
+    <div class="pill icon" id="home-btn" onclick="Onboarding_openHome()" title="Home">🏠</div>
     <div class="pill icon" id="settings-btn" onclick="openSettings()" title="Settings">⚙</div>
     <div class="stat"><span class="stat-l">nodes</span><span class="stat-v" id="h-nodes">0</span></div>
     <div class="stat"><span class="stat-l">pulses</span><span class="stat-v" id="h-pulses">0</span></div>
@@ -1838,6 +1839,22 @@ textarea.profile-input {
       <button class="set-btn" onclick="settingsGo('keys')">🔑 Engine keys</button>
       <button class="set-btn" onclick="settingsGo('gaps')">🕳 Gaps</button>
     </div>
+
+    <div class="set-sec">HELP &amp; FEEDBACK</div>
+    <div class="set-grid">
+      <button class="set-btn" onclick="settingsGo('caps')">❓ What can BOSS do?</button>
+      <button class="set-btn" onclick="settingsGo('intro')">👋 Quick intro</button>
+      <button class="set-btn" onclick="settingsGo('home')">🏠 Home screen</button>
+      <button class="set-btn" onclick="settingsGo('feedback')">💬 Send feedback</button>
+    </div>
+    <div class="set-row"><span>Show home screen on launch</span><input type="checkbox" id="set-home" onchange="BOSS_onboarding.setHomeOnLaunch(this.checked)"></div>
+    <div class="set-note">Testing BOSS? "Send feedback" packages what you tried into a file for the team — you see exactly what's in it first.</div>
+
+    <div class="set-sec">LEARNING</div>
+    <div class="set-row"><span>Adapt to how I use BOSS</span><input type="checkbox" id="set-learn" onchange="setLearning(this.checked)"></div>
+    <div class="set-about" id="set-learn-info"></div>
+    <button class="set-btn" style="width:100%;margin-top:8px" onclick="resetLearning()">↺ Forget what BOSS has learned</button>
+    <div class="set-note">BOSS only learns from your answers to "which did you mean?" and your "Not what I meant" flags. It stays on this device, and switching it off restores the default behaviour.</div>
 
     <div class="set-sec">PERMISSIONS</div>
     <div id="set-perms"></div>
@@ -2360,8 +2377,12 @@ import { Nervous, EVENT }                                from '../nervous/nervou
 import { Immune }                                        from '../immune/immune.js';
 import { ChronosAction, chronosBoot, getClockState }     from '../actions/chronos.js';
 import { MediaAction }                                   from '../actions/media.js';
-import { SomaAction, restoreTheme, isSettingsIntent }  from '../actions/soma.js';
+import { SomaAction, restoreTheme, isSettingsIntent, isSomaClaim }  from '../actions/soma.js';
 import { UI }                                           from '../actions/ui.js';
+import { Feedback }                                     from '../actions/feedback.js';
+import { FeedbackUI }                                   from '../actions/feedback-ui.js';
+import { Onboarding }                                   from '../actions/onboarding.js';
+import { Learning }                                     from '../actions/learning.js';
 import { MemoryAction }                                  from '../actions/memory.js';
 import { CoreAction }                                    from '../actions/core.js';
 import { FilesAction }                                   from '../actions/files.js';
@@ -2370,6 +2391,7 @@ import { BackupManager }                                from '../actions/backup.
 import { SecureStore }                                  from '../actions/secure.js';
 import { Voice }                                        from '../actions/voice.js';
 import { Clipboard }                                    from '../actions/clipboard.js';
+import { Weather }                                      from '../actions/weather.js';
 import { Launcher }                                     from '../actions/launch.js';
 import { CommsAction, Comms }                           from '../actions/comms.js';
 import { prepareImage, runVision, VISION_MODES, isVisionIntent, visionMode } from '../actions/vision.js';
@@ -2869,6 +2891,12 @@ window.openTextToolsMode = function(mode) {
 };
 
 /** Typed "summarise my clipboard" etc. — pulls the clipboard into Text Tools and runs it. */
+/** Typed "show my notes" / "open the vault". */
+window.openMemoryPanel = function(which) {
+  const n = nodes.find(x => x.name === 'MEMORY');
+  if (n) openMemoryModal(which === 'vault' ? 'vault' : 'notes', n);
+};
+
 window.ttFromClipboard = async function(mode, autorun) {
   const r = await Clipboard.readText();
   const cortexNode = nodes.find(n => n.name === 'CORTEX');
@@ -2887,6 +2915,8 @@ function _renderSettings() {
   document.getElementById('set-sizes').innerHTML = UI.TEXT_SIZES.map(t =>
     `<button class="set-chip ${t.id === st.textSize ? 'on' : ''}" onclick="setTextSize('${t.id}')">${t.label}</button>`).join('');
   document.getElementById('set-reduce').checked = !!st.reduceMotion;
+  document.getElementById('set-home').checked = Onboarding.homeOnLaunch();
+  _renderLearning();
   document.getElementById('set-style').innerHTML = UI.listStyles().map(x =>
     `<option value="${x.id}" ${x.id === st.style ? 'selected' : ''}>${x.label}</option>`).join('');
   const t = id => (document.getElementById(id) || {}).textContent || '–';
@@ -2930,8 +2960,23 @@ window.settingsGo = function(where) {
     if (where === 'backup')   openBackupModal(_nodeByName('CORE'));
     if (where === 'gaps')     openGapsModal(_nodeByName('CORE'));
     if (where === 'keys')     openCortexModal();
+    if (where === 'caps')     Onboarding.openCapabilities();
+    if (where === 'intro')    Onboarding.openIntro();
+    if (where === 'home')     Onboarding.openHome();
+    if (where === 'feedback') FeedbackUI.openReport();
   }, 60);
 };
+function _renderLearning() {
+  const l = Learning.summary();
+  document.getElementById('set-learn').checked = l.enabled;
+  document.getElementById('set-learn-info').innerHTML = l.enabled
+    ? `Asks you only when two parts are within <b>${l.margin.toFixed(2)}</b> of each other (default ${l.base.toFixed(2)}).<br>` +
+      `Answers so far: ${l.confirmed} kept BOSS's first pick · ${l.overridden} chose the other · ${l.misses} flagged.<br>` +
+      (l.preferences.length ? 'Learned: ' + l.preferences.map(p => `${p.pair} → ${p.winner}`).join(' · ') : 'No learned preferences yet.')
+    : 'Learning is off — BOSS uses its default behaviour.';
+}
+window.setLearning = on => { Learning.setEnabled(on); _renderLearning(); };
+window.resetLearning = () => { Learning.reset(); _renderLearning(); clog('🎓 Learning reset', 'log-sys'); };
 window.settingsUpdate = function() {
   clog('⚙ Updating BOSS — refreshing app files…', 'log-sys');
   document.getElementById('set-about').textContent = '⟳ refreshing app files…';
@@ -5179,7 +5224,7 @@ const DISSONANCE_CUT = 0.55;
 const VECTOR_WEIGHT  = 2.0;
 // Birth Protocol threshold: max(match) below this → no existing node is relevant
 const BIRTH_THRESHOLD = 0.15;
-let   confThreshold  = 1.5;
+let   confThreshold  = 1.5;   // legacy ceiling (kept; Arbiter now gated by the decisive margin below)
 
 // ── Orbital preset UI state ───────────────────────────────────────────────────
 let _orbitalNode    = null;   // currently expanded node
@@ -5714,6 +5759,13 @@ function clarify(nodeId) {
   if (!node) return;
   node.ignite(pendingClarification?._intent || '');
   clog(`💬 Clarified: ${node.name} confirmed by user`, 'log-arbiter');
+  // The user's choice is a labelled example of what they meant — keep it for the tester report.
+  try {
+    const pc = pendingClarification;
+    Feedback.record({ intent: pc?._intent || '', node: node.name, via: 'clarified',
+                      between: pc ? [pc.top.name, pc.second.name] : null, handled: true });
+    if (pc) Learning.learnClarification(pc.top.name, pc.second.name, node.name);
+  } catch (_) {}
   dismissToast();
 }
 
@@ -5995,12 +6047,110 @@ const INTENT_CLAIMS = [
   { node: 'CORTEX', reason: 'text-mode',  test: i => /^(summari[sz]e|translate|rewrite|paraphrase)\s+(?:this|the|my|some|a)?\s*text$/i.test(i.trim().replace(/[.!?]+$/,'')) },
   { node: 'CORTEX', reason: 'text-tools', test: i => /^(?:open\s+|show\s+|launch\s+)?(?:the\s+|my\s+)?text\s*tools?$/i.test(i.trim()) },
   { node: 'COMMS',  reason: 'phone',     test: i => Comms.claims(i) },
-  { node: 'CORTEX', reason: 'clipboard', test: i => /\bclipboard\b/i.test(i) && !/\b(pc|computer|desktop|laptop)\b/i.test(i) },
+  // Verb-aware: "play/watch/show … from my clipboard" is a MEDIA request that
+  // takes its source from the clipboard — it must not be swallowed by the
+  // text-tools clipboard claim below.
+  { node: 'MEDIA',  reason: 'clipboard-media', test: i => isClipboardMedia(i) },
+  { node: 'CORTEX', reason: 'clipboard', test: i => isClipboardText(i) },
+  // Phrase-level claims added by the phrase-corpus pass (tests/phrases.tsv)
+  { node: 'SOMA',    reason: 'voice/identity', test: i => isSomaClaim(i) },
+  { node: 'CHRONOS', reason: 'weather',   test: i => Weather.isWeatherIntent(i) && !/\b(clipboard|text|document|file|article|report)\b/i.test(i) },
+  { node: 'CHRONOS', reason: 'reminder-in', test: i => /\bremind(?:er|ed)?\b.*\b(?:in|after)\s+(?:\d+|an?|one|two|three|five|ten|fifteen|twenty|thirty|half|quarter)\b/i.test(i) },
+  { node: 'CORE',    reason: 'location/backup', test: i => /\bwhere am i\b|\bwhere i am\b|\bmy (?:current )?location\b|\bmy coordinates\b/i.test(i) ||
+                                                      /^(?:please\s+)?(?:create|make|take|run|do)?\s*(?:a\s+|my\s+)?back-?up(?:\s+(?:now|of (?:my )?(?:data|boss|everything)))?$/i.test(i.trim()) ||
+                                                      /^(?:back ?up|restore)\b.*\b(?:data|boss|everything|settings|backup)\b/i.test(i.trim()) ||
+                                                      /^restore (?:from )?(?:a |my )?backup$/i.test(i.trim()) },
+  { node: 'CHRONOS', reason: 'clock',     test: i => /^(?:what(?:'s| is)?\s+)?(?:the\s+)?(?:current\s+)?(?:time|date)(?:\s+(?:is it|now|today))?$/i.test(i.trim().replace(/[?!.]+$/,'')) ||
+                                                      /\bwhat\s+(?:time|day)\s+is\s+it\b/i.test(i) || /\bwhat(?:'s| is)\s+(?:today'?s\s+date|the\s+date)\b/i.test(i) ||
+                                                      /\bwake me(?: up)?\b.*\b(?:at|in)\b/i.test(i) },
+  { node: 'MEDIA',   reason: 'volume',    test: i => /^(?:a (?:bit|little) )?(?:louder|quieter|softer)$/i.test(i.trim().replace(/[.!?]+$/,'')) },
+  { node: 'FILES',   reason: 'recent-files', test: i => /\b(?:recent|latest)\s+(?:files?|downloads?)\b/i.test(i) },
+  { node: 'CORTEX',  reason: 'translate', test: i => /^translate\s+.+\s+(?:into|to)\s+[a-z]+$/i.test(i.trim().replace(/[.!?]+$/,'')) && !/\b(photo|image|picture|clipboard)\b/i.test(i) },
+  { node: 'MEMORY',  reason: 'notes',     test: i => /^(?:please\s+)?(?:remember|memori[sz]e|note|forget)\b/i.test(i.trim()) ||
+                                                      /^note\s*:/i.test(i.trim()) ||
+                                                      /\bwhat did i (?:tell|ask) you to remember\b/i.test(i) ||
+                                                      /\bdon'?t let me forget\b/i.test(i) ||
+                                                      /^(?:open|show|view|see|list)?\s*(?:all\s+)?(?:the\s+|my\s+)?notes?$/i.test(i.trim()) ||
+                                                      /^what notes do i have$/i.test(i.trim()) ||
+                                                      /^(?:vault|memory)\s*(?:status|size|count|info|stats)$/i.test(i.trim()) ||
+                                                      /^(?:list|show)\s+(?:my\s+)?memories$/i.test(i.trim()) || /^what do you remember$/i.test(i.trim()) ||
+                                                      /^(?:lock|unlock|open|show)\s+(?:the\s+|my\s+)?vault$/i.test(i.trim()) },
+  // General-knowledge questions belong to the thinker, not to nodes whose words they happen to share ("who" → SOMA)
+  { node: 'CORTEX',  reason: 'question',  test: i => /^(?:who\s+(?:wrote|invented|discovered|painted|founded|directed|composed|built|won|was|were)|what(?:'s| is| are| was)\s+the\s+(?:capital|population|meaning|difference|definition|origin)\s+of|how\s+(?:do|does|did|can|to)\b|why\s+(?:is|are|do|does|did)\b|what(?:'s| is)\s+(?:a|an)\s+\w+)/i.test(i.trim()) },
 ];
+/** "summarise my clipboard", "translate what I copied" → text tools on the device clipboard. */
+function isClipboardText(i) {
+  if (/\b(pc|computer|desktop|laptop)\b/i.test(i)) return false;
+  return /\bclipboard\b/i.test(i) || /\bwhat (?:i|i've|i have) (?:just )?copied\b/i.test(i) || /\b(?:the )?(?:text|thing|link) (?:i|i've|i have) (?:just )?copied\b/i.test(i);
+}
+function isClipboardMedia(i) {
+  return /\b(clipboard|copied|pasted)\b/i.test(i)
+      && /\b(play|watch|listen|stream|show|view|display|open)\b/i.test(i)
+      && /\b(video|clip|movie|film|youtube|song|music|audio|track|image|photo|picture|pic|link|url)\b/i.test(i)
+      && !/\b(pc|computer|desktop|laptop)\b/i.test(i);
+}
+/** Turn "play the video in my clipboard" into "play video <url>" using the real clipboard. */
+async function resolveClipboardMedia(intent) {
+  const r = await Clipboard.readText();
+  if (!r.ok) { clog('📋 ' + r.error, 'log-vec'); return intent.replace(/\b(from|in|on)\s+(my\s+)?clipboard\b/ig, '').trim(); }
+  const m = r.text.match(/https?:\/\/[^\s]+/i);
+  if (!m) { clog('📋 No link found on the clipboard — copy a video link first', 'log-vec'); return intent; }
+  const url = m[0];
+  const verb = /\b(image|photo|picture|pic)\b/i.test(intent) ? 'show image' : /\b(song|music|audio|track|listen)\b/i.test(intent) ? 'play' : 'play video';
+  clog('📋 Using the link on your clipboard', 'log-vec');
+  return `${verb} ${url}`;
+}
+/** Below this the top score is just n-gram noise (every node sits ~0.23 on a phrase
+ *  it knows nothing about), so "the winner" is effectively a coin flip. */
+const NOISE_FLOOR = 0.245;
+/** No node resonates but it isn't novel enough to birth one → the general thinker. */
+const CONVERSATIONAL = /^(?:hey\s+|ok\s+|please\s+)?(?:what|why|how|who|when|where|which|can you|could you|would you|tell me|give me|show me how|write|explain|help|suggest|recommend|describe|define|teach|think|should i|do you|are you|is it|i need|i want|i'd like)\b/i;
+function noSignalClaim(scored, intent) {
+  if (!scored.length || scored[0].total >= NOISE_FLOOR) return null;
+  const novel = Math.max(...scored.map(x => x.match)) < BIRTH_THRESHOLD;
+  // A question/request in plain language is for the generalist, not a new-node proposal.
+  // Statements with no signal at all stay with the Birth Protocol (unchanged).
+  if (novel && !(intent && CONVERSATIONAL.test(String(intent).trim()))) return null;
+  return { node: 'CORTEX', reason: 'no-signal' };
+}
 function claimIntent(intent) {
   const c = INTENT_CLAIMS.find(c => c.test(intent));
   return c ? { node: c.node, reason: c.reason } : null;
 }
+
+/** Side-effect-free routing preview: what firePulse WOULD decide for an intent.
+ *  Used by the phrase-corpus test harness and the feedback report. */
+window.BOSS_route = function(intent) {
+  if (Onboarding.isHelpIntent(intent)) return { outcome: 'help', node: null, via: 'help' };
+  if (Onboarding.isHomeIntent(intent)) return { outcome: 'help', node: null, via: 'home' };
+  const nat = Registry.matchNativeOnly(intent);
+  if (nat) return { outcome: 'native', node: nat.node || null, via: 'native:' + nat.id };
+  const scored = nodes
+    .map(n => ({ node: n, ...n.score(intent, chain, nodes, 0) }))
+    .filter(x => x.node.tier !== 'stub')
+    .sort((a, b) => b.total - a.total);
+  const claim = claimIntent(intent) || noSignalClaim(scored, intent);
+  const top = scored[0], second = scored[1];
+  const delta = second ? top.total - second.total : Infinity;
+  const top3 = scored.slice(0, 3).map(x => `${x.node.name}=${x.total.toFixed(2)}`);
+  if (claim) return { outcome: 'claim', node: claim.node, via: 'claim:' + claim.reason, top3 };
+  if (second && delta < Math.min(confThreshold, Learning.margin())) {
+    const lp = Learning.preferred(top.node.name, second.node.name, n => (nodes.find(x => x.name === n) || {}).riskTier === 'elevated');
+    if (lp) return { outcome: 'learned', node: lp, via: 'learned', between: [top.node.name, second.node.name], top3 };
+    // Mirror the non-interactive Arbiter stages (see runArbiter): Active-First
+    // tier-break, then the dissonance/compatibility check. Anything left over
+    // would need the engine or a user clarification → reported as 'conflict'.
+    const between = [top.node.name, second.node.name];
+    if (delta < 0.2 && ACTIVE_NODES.has(top.node.name) !== ACTIVE_NODES.has(second.node.name)) {
+      const w = ACTIVE_NODES.has(top.node.name) ? top.node : second.node;
+      return { outcome: 'arbiter-resolved', node: w.name, via: 'active-first', between, top3 };
+    }
+    const dissonance = 1 - semanticSim(top.node.specialty, second.node.specialty);
+    if (dissonance <= DISSONANCE_CUT) return { outcome: 'arbiter-resolved', node: top.node.name, via: 'compatible', between, top3 };
+    return { outcome: 'conflict', node: top.node.name, via: 'conflict', between, top3 };
+  }
+  return { outcome: 'score', node: top.node.name, via: 'margin', top3 };
+};
 
 async function firePulse() {
   const el     = document.getElementById('pulse-input');
@@ -6037,11 +6187,27 @@ async function firePulse() {
 
   if (!nodes.length) { clog('No nodes', 'log-sys'); return; }
 
+  // Front-door requests: "help", "what can you do", "home" — answered by the
+  // onboarding layer, not by a node (no scoring, no gap logging).
+  if (Onboarding.isHelpIntent(intent)) {
+    clog('❓ Opening "What can BOSS do?"', 'log-vec');
+    Feedback.record({ intent, node: null, via: 'help', handled: true });
+    Onboarding.openCapabilities();
+    return;
+  }
+  if (Onboarding.isHomeIntent(intent)) {
+    Feedback.record({ intent, node: null, via: 'home', handled: true });
+    Onboarding.openHome();
+    return;
+  }
+
   // Known native-only request (flashlight, screen recording, contacts…):
   // answer honestly and record it as known-native — not as a missing feature.
   const _nat = Registry.matchNativeOnly(intent);
   if (_nat) {
     clog(`   ◎ known native-only: ${_nat.label}`, 'log-vec');
+    Feedback.record({ intent, node: null, via: 'native:' + _nat.id, handled: true });
+    FeedbackUI.noteLastPulse({ intent, node: null, via: 'native' });
     _explainNative(_nat, _nat.label);
     if (window.logCapabilityGap) window.logCapabilityGap(intent, false, { native: _nat.id });
     return;
@@ -6069,7 +6235,7 @@ async function firePulse() {
   // vocabulary the scoring physics can't separate (e.g. "describe this
   // photo": CORTEX vs MEDIA tie on the word "photo"). Scoring itself is
   // untouched — a claim only chooses the winner and skips conflict handling.
-  const claim = claimIntent(intent);
+  const claim = claimIntent(intent) || noSignalClaim(scored, intent);
   if (!claim) checkBirthProtocol(scored, intent);
 
   const top    = scored[0];
@@ -6079,17 +6245,30 @@ async function firePulse() {
   clog(`   ${scored.slice(0,3).map(s => `${s.node.name}=${s.total.toFixed(2)}`).join(' | ')}`, 'log-sys');
 
   let winner = top.node;
+  let learnedVia = false;
 
   if (claim) {
     winner = nodes.find(n => n.name === claim.node) || winner;
     clog(`   ◎ claimed by ${winner.name} (${claim.reason})`, 'log-sys');
-  } else if (second && delta < confThreshold) {
+  } else if (second && delta < Math.min(confThreshold, Learning.margin())) {
+    // A conflict this user has already resolved the same way, repeatedly, is applied
+    // without asking (learning.js). Elevated-risk pairs are never auto-resolved.
+    const _learned = Learning.preferred(top.node.name, second.node.name,
+                       n => (nodes.find(x => x.name === n) || {}).riskTier === 'elevated');
+    if (_learned) {
+      winner = nodes.find(n => n.name === _learned) || top.node;
+      learnedVia = true;
+      clog(`   🎓 Learned preference: ${winner.name} (you've chosen it for ${top.node.name} vs ${second.node.name} before)`, 'log-sys');
+    } else {
     // Three-stage Arbiter (soft/hard/engine path)
     const result = await runArbiter(top, second, delta, intent);
     if (result && result.deferred) {
       // Blocking clarification is pending — the toast's clarify() button
       // will fire the chosen node once the user picks. Nothing fires now,
       // and this is NOT a full-kernel suspension — limp mode is unaffected.
+      Feedback.record({ intent, node: null, via: 'clarification', between: [top.node.name, second.node.name],
+                        top3: scored.slice(0, 3).map(x => `${x.node.name}=${x.total.toFixed(2)}`), handled: false });
+      FeedbackUI.noteLastPulse({ intent, node: null, via: 'clarification' });
       return;
     }
     if (result === null) {
@@ -6098,6 +6277,7 @@ async function firePulse() {
       return;
     }
     winner = result;
+    }
   }
 
   // Synaptic bond
@@ -6114,7 +6294,18 @@ async function firePulse() {
   chain.push(winner.id);
   // ignite returns whether action fully handled the intent
   // true = handled (no orbitals needed), false/undefined = needs follow-up
-  const handled = await winner.igniteAsync(intent);
+  let fireIntent = intent;
+  if (claim && claim.reason === 'clipboard-media') fireIntent = await resolveClipboardMedia(intent);
+  {
+    // Logged BEFORE the action runs (an action may wait on a permission prompt),
+    // then settled with the outcome below.
+    const _via = claim ? 'claim:' + claim.reason : learnedVia ? 'learned' : (second && delta < Math.min(confThreshold, Learning.margin()) ? 'arbiter' : 'margin');
+    Feedback.record({ intent, node: winner.name, via: _via,
+                      top3: scored.slice(0, 3).map(x => `${x.node.name}=${x.total.toFixed(2)}`) });
+    FeedbackUI.noteLastPulse({ intent, node: winner.name, via: _via });
+  }
+  const handled = await winner.igniteAsync(fireIntent);
+  Feedback.settleLast(intent, handled);
 
   // Kernel-level gap-fill fallback (v0.9). CORTEX already runs its own
   // full-catalogue check internally when it wins — but a near-zero-match
@@ -6952,6 +7143,34 @@ Heart.registerBeatCallback(() => {
   Nervous.emit(EVENT.HEART_BEAT, { source: 'HEART',
     payload: { timestamp: Date.now() } });
 });
+
+window.Onboarding_openHome = () => Onboarding.openHome();
+
+// ── Front door + feedback (modular: each renders its own DOM) ────────────────
+FeedbackUI.init({
+  getNodeNames: () => nodes.filter(n => n.tier !== 'stub').map(n => n.name),
+  getConsoleText: () => (document.getElementById('console') || {}).innerText || '',
+  getEnv: () => {
+    let perms = null;
+    return {
+      build: UI.BUILD, worker: window.BOSS_SW_BUILD || null,
+      platform: Launcher.platform(), installed: UI.isInstalledApp(), online: navigator.onLine,
+      viewport: `${innerWidth}x${innerHeight}`, textSize: UI.get().textSize,
+      engineConfigured: !!engineConfigured(), nodes: nodes.length,
+      learning: (() => { const l = Learning.summary(); return { on: l.enabled, margin: l.margin, prefs: l.preferences.length, confirmed: l.confirmed, overridden: l.overridden }; })(),
+      ua: navigator.userAgent.slice(0, 160),
+    };
+  },
+  log: m => clog(m, 'log-vec'),
+  onMiss: m => Learning.learnMiss({ routedTo: m.routedTo, expected: m.expected, via: m.via }),
+});
+Onboarding.init({
+  run: t => { const el = document.getElementById('pulse-input'); el.value = t; firePulse(); },
+  openSettings: () => openSettings(),
+  enterField: () => {},
+  nativeItems: () => Registry.getAllPresets().filter(p => p.nativeOnly).map(p => ({ icon: p.icon, label: p.label, reason: p._nativeReason })),
+});
+Onboarding.start();
 
 requestAnimationFrame(loop);
 </script>
