@@ -229,6 +229,7 @@ boss-kernel/
 │   ├── feedback-ui.js     — Miss chip + tester-report sheet (self-rendering)
 │   ├── learning.js        — On-device adaptation: learned pair preferences + personal Arbiter margin
 │   └── files.js           — File access across Cortex, browser, and native paths
+├── TESTING.md             — Tester guide: guided test pass + results sheet
 ├── tests/                 — Routing regression suite (not shipped to users)
 │   ├── phrases.tsv        — ~165 core requests, each with the node it should reach (EXPECTED<TAB>phrase)
 │   ├── phrases_more.tsv   — ~90 casual / edge-case requests, same format
@@ -455,7 +456,7 @@ Backups, the gap log and everything else stay on the device unless you export an
 
 **Tester feedback** (`actions/feedback.js` + `actions/feedback-ui.js`, modular): every pulse is logged locally (node, route reason — claim/score/arbiter/clarification/clarified — and outcome). A **✋ Not what I meant** chip appears for 30 s after each pulse (optional expected node + note). Settings → *Send feedback* builds a `boss-feedback/1` JSON report with a preview, per-section toggles and masking (numbers, emails, links; remember/note text reduced to the verb). Nothing is sent automatically. **Delivery is a pluggable transport** — built in: *Share…* (system sheet, file attached) and *Save file*; a backend later is one `Feedback.registerTransport({id:'http', …})` call. Never included: vault, notes, keys, clipboard, location, files, contacts.
 
-**Phrase corpus** (`tests/phrases.tsv`, `tests/phrases_more.tsv`, `tests/run_corpus.py`): ~250 realistic requests with the node each should reach. `window.BOSS_route(intent)` is a side-effect-free routing preview the runner uses (`pip install playwright`, serve the repo root, `python3 tests/run_corpus.py`). Every tester miss that names an expected node can be exported as corpus lines (`Feedback.toCorpusTsv`). Run it after any vocabulary or claim change.
+**Phrase corpus** (`tests/phrases.tsv`, `tests/phrases_more.tsv`, `tests/run_corpus.py`): ~250 realistic requests with the node each should reach. `window.BOSS_route(intent)` is a side-effect-free routing preview the runner uses (`pip install playwright`, serve the repo root, `python3 tests/run_corpus.py`; add `--stress` to re-run every phrase with each node "warm" — recency is part of the scoring, so a node just used gets a head start). Every tester miss that names an expected node can be exported as corpus lines (`Feedback.toCorpusTsv`). Run it after any vocabulary or claim change.
 
 **Amendments documented in this build (claims, not physics):**
 
