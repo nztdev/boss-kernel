@@ -1832,6 +1832,9 @@ textarea.profile-input {
     <div class="set-note">Text size applies to panels and the console. The top bar and node labels keep a fixed size so they always fit. More styles can be added later.</div>
 
     <div class="set-sec">SETTINGS &amp; DATA</div>
+    <div class="set-row"><span>Speaking animation</span></div>
+    <select class="set-sel" id="set-wave" onchange="setWave(this.value)"></select>
+    <div class="set-note">A visual cue while BOSS speaks or listens. It is an animation, not the actual sound.</div>
     <div class="set-grid">
       <button class="set-btn" onclick="settingsGo('voice')">🎙 Voice</button>
       <button class="set-btn" onclick="settingsGo('security')">🔐 Security</button>
@@ -2383,6 +2386,7 @@ import { Feedback }                                     from '../actions/feedbac
 import { FeedbackUI }                                   from '../actions/feedback-ui.js';
 import { Onboarding }                                   from '../actions/onboarding.js';
 import { Learning }                                     from '../actions/learning.js';
+import { Waveform }                                     from '../actions/waveform.js';
 import { MemoryAction }                                  from '../actions/memory.js';
 import { CoreAction }                                    from '../actions/core.js';
 import { FilesAction }                                   from '../actions/files.js';
@@ -2916,6 +2920,8 @@ function _renderSettings() {
     `<button class="set-chip ${t.id === st.textSize ? 'on' : ''}" onclick="setTextSize('${t.id}')">${t.label}</button>`).join('');
   document.getElementById('set-reduce').checked = !!st.reduceMotion;
   document.getElementById('set-home').checked = Onboarding.homeOnLaunch();
+  document.getElementById('set-wave').innerHTML = Waveform.MODES.map(m =>
+    `<option value="${m.id}" ${m.id === Waveform.getMode() ? 'selected' : ''}>${m.label}</option>`).join('');
   _renderLearning();
   document.getElementById('set-style').innerHTML = UI.listStyles().map(x =>
     `<option value="${x.id}" ${x.id === st.style ? 'selected' : ''}>${x.label}</option>`).join('');
@@ -2975,6 +2981,7 @@ function _renderLearning() {
       (l.preferences.length ? 'Learned: ' + l.preferences.map(p => `${p.pair} → ${p.winner}`).join(' · ') : 'No learned preferences yet.')
     : 'Learning is off — BOSS uses its default behaviour.';
 }
+window.setWave = m => { Waveform.setMode(m); if (m !== 'off') { clog('〰 Speaking animation: ' + m, 'log-sys'); } };
 window.setLearning = on => { Learning.setEnabled(on); _renderLearning(); };
 window.resetLearning = () => { Learning.reset(); _renderLearning(); clog('🎓 Learning reset', 'log-sys'); };
 window.settingsUpdate = function() {
@@ -7172,6 +7179,15 @@ Onboarding.init({
   openSettings: () => openSettings(),
   enterField: () => {},
   nativeItems: () => Registry.getAllPresets().filter(p => p.nativeOnly).map(p => ({ icon: p.icon, label: p.label, reason: p._nativeReason })),
+});
+Waveform.init({
+  voice: Voice,
+  getAnchor: () => {
+    const n = nodes.find(x => x.name === 'SOMA'), c = document.getElementById('canvas');
+    if (!n || !c) return null;
+    const r = c.getBoundingClientRect();
+    return { x: r.left + n.x * (r.width / c.width), y: r.top + n.y * (r.height / c.height), color: n.color };
+  },
 });
 Onboarding.start();
 
