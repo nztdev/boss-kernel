@@ -1,0 +1,179 @@
+# B.O.S.S. phrase corpus — one request per line:  EXPECTED_NODE<TAB>phrase
+# EXPECTED may list alternatives with | (any one is acceptable).
+# NATIVE = known native-only (honest "needs the app" answer).  Lines starting with # are comments.
+# Add every real-world miss testers report here, then run:  python3 tests/run_corpus.py
+# ── CHRONOS: timers, alarms, time, weather ──
+CHRONOS	set a timer for 10 minutes
+CHRONOS	timer 5 minutes
+CHRONOS	start a 20 minute timer
+CHRONOS	countdown 3 minutes
+CHRONOS	can you set a timer for me
+CHRONOS	set an alarm for 7am
+CHRONOS	alarm at 6:30
+CHRONOS	set alarm for tomorrow morning
+CHRONOS	what time is it
+CHRONOS	what's the time in tokyo
+CHRONOS	time in london
+CHRONOS	start the stopwatch
+CHRONOS	how long has it been
+CHRONOS	what's the weather
+CHRONOS	weather today
+CHRONOS	will it rain tomorrow
+CHRONOS	do I need an umbrella
+CHRONOS	how hot is it outside
+CHRONOS	forecast for the weekend
+CHRONOS	temperature right now
+CHRONOS	remind me in 30 minutes
+CHRONOS	time zone for new york
+# ── CORE: health, battery, status, location ──
+CORE	where am i
+CORE	what's my location
+CORE	how is the battery
+CORE	battery level
+CORE	system status
+CORE|SOMA|CORTEX	how are you doing
+CORE	check system health
+CORE	am I online
+CORE	is the network working
+CORE	run diagnostics
+CORE	how much battery is left
+CORE	back up my data
+CORE	create a backup
+CORE	restore from backup
+CORE	what are my coordinates
+CORE|SOMA|CORTEX	are you ok
+# ── SOMA: appearance, voice, settings ──
+SOMA	change the theme
+SOMA	switch to amber
+SOMA	make it violet
+SOMA	change colour to crimson
+SOMA	open settings
+SOMA	settings
+SOMA	make the text bigger
+SOMA	text size
+SOMA	voice on
+SOMA	turn voice off
+SOMA	talk to me
+SOMA	read answers aloud
+SOMA	update boss
+SOMA	clear the cache
+SOMA	reset settings
+SOMA	who are you
+# ── MEMORY: notes, remember, vault ──
+MEMORY	remember that my locker code is 4821
+MEMORY	remember to buy milk
+MEMORY	note: call the dentist
+MEMORY	save this note
+MEMORY	what did I tell you to remember
+MEMORY	recall my notes
+MEMORY	show my notes
+MEMORY	forget the locker code
+MEMORY	open the vault
+MEMORY	add a note
+MEMORY	what notes do I have
+MEMORY	keep this for later
+MEMORY	lock the vault
+# ── MEDIA: play, volume, image, video ──
+MEDIA	play music
+MEDIA	play some music
+MEDIA	pause
+MEDIA	stop the music
+MEDIA	stop
+MEDIA	volume up
+MEDIA	turn the volume down
+MEDIA	mute
+MEDIA	unmute
+MEDIA	louder
+MEDIA	what's playing
+MEDIA	play video https://youtube.com/watch?v=abc123
+MEDIA	watch https://youtu.be/abc123
+MEDIA	show image https://example.com/cat.jpg
+MEDIA	play the video from my clipboard
+MEDIA	play a video from my clipboard
+MEDIA	watch the youtube link I copied
+MEDIA	play the song in my clipboard
+MEDIA	show me the image from my clipboard
+MEDIA	play a youtube video
+MEDIA	resume the music
+MEDIA	next song
+# ── FILES: device files ──
+FILES	open a file
+FILES	open a file from my phone
+FILES	pick a pdf
+FILES	browse my files
+FILES	show my recent downloads
+FILES	open a document
+FILES	upload a file
+FILES	choose a file from my device
+FILES|CORTEX	open a pdf
+# ── COMMS: calls, texts, email ──
+COMMS	call +34600123456
+COMMS	call mom
+COMMS	phone john
+COMMS	text +34600123456 saying hi
+COMMS	send a text to +34600123456
+COMMS	send a message to mom
+COMMS	send an email
+COMMS	email john@example.com
+COMMS	write an email to sam@example.com about the meeting
+COMMS|CORTEX	open mail
+COMMS	send a text message
+COMMS	make a phone call
+COMMS	dial 112
+COMMS	ring my sister
+# ── CORTEX: thinking, apps, text tools, clipboard, vision ──
+CORTEX	open spotify
+CORTEX	open instagram
+CORTEX	launch whatsapp
+CORTEX	open calendar
+CORTEX	open maps
+CORTEX	open youtube
+CORTEX	open the camera
+CORTEX	list apps
+CORTEX	run shortcut BOSS TEST
+CORTEX	run my morning shortcut
+CORTEX	summarise my clipboard
+CORTEX	summarize what I copied
+CORTEX	translate my clipboard
+CORTEX	rewrite my clipboard
+CORTEX	explain my clipboard
+CORTEX	read my clipboard
+CORTEX	open text tools
+CORTEX	text tools
+CORTEX	summarise this text
+CORTEX	translate this text
+CORTEX	rewrite this text
+CORTEX	describe this photo
+CORTEX	what is this
+CORTEX	look at this
+CORTEX|FILES	read this document aloud
+CORTEX	take a photo and tell me what it is
+CORTEX	what's in this picture
+CORTEX	explain how rainbows form
+CORTEX	why is the sky blue
+CORTEX	what is photosynthesis
+CORTEX	how does a car engine work
+CORTEX	help me think through a decision
+CORTEX	give me an idea for dinner
+CORTEX	write me a short poem
+CORTEX	tell me a joke
+HELP	what can you do
+HELP	help
+# ── NATIVE: honest "needs the app" ──
+NATIVE	turn on the flashlight
+NATIVE	record my screen
+NATIVE	turn on bluetooth
+NATIVE	turn off wifi
+NATIVE	airplane mode
+NATIVE	turn on airplane mode
+# ── Mixed / tricky phrasing ──
+CHRONOS	hey can you please set me a timer for ten minutes
+CHRONOS	I need to be reminded in an hour
+CORE	tell me where I am right now
+COMMS	I want to call my mum
+COMMS	can you send an email for me
+MEDIA	I want to listen to something
+MEDIA	play something relaxing
+MEMORY	don't let me forget my passport
+CORTEX	what should I do today
+CORTEX|SOMA	open the settings app on my phone
