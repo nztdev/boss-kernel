@@ -1,7 +1,9 @@
 import os
 import sys, json
 from playwright.sync_api import sync_playwright
-corpus = sys.argv[1] if len(sys.argv)>1 else os.path.join(os.path.dirname(os.path.abspath(__file__)),'phrases.tsv')
+STRESS = '--stress' in sys.argv
+args = [a for a in sys.argv[1:] if not a.startswith('--')]
+corpus = args[0] if args else os.path.join(os.path.dirname(os.path.abspath(__file__)),'phrases.tsv')
 rows=[]
 for ln in open(corpus, encoding='utf8'):
     ln=ln.rstrip('\n')
@@ -14,6 +16,13 @@ with sync_playwright() as p:
     pg=b.new_page(); errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
     pg.goto(os.environ.get('BOSS_URL','http://localhost:8123/core/index.html')); pg.wait_for_timeout(2500)
     res=pg.evaluate("rows => rows.map(([e,p]) => ({e,p,r:window.BOSS_route(p)}))", rows)
+    stress={}
+    if STRESS:
+        # Recency test: a node that was just used is "warm" and gets a head start in scoring.
+        # Re-route every phrase with each node warm in turn; a phrase fails if it lands on a wrong node.
+        for heat in ['CORTEX','CHRONOS','MEMORY','MEDIA','CORE','SOMA']:
+            stress[heat]=pg.evaluate("([rows,h]) => rows.map(([e,p]) => { BOSS_heat(h, 3); return {e,p,r:BOSS_route(p)}})",[rows,heat])
+        pg.evaluate("BOSS_heat('NONE', 0.1)")
     b.close()
 ok=0; bad=[]; arb=[]
 for x in res:
@@ -32,4 +41,13 @@ print('--- right node, but Arbiter would ask the user (count %d) ---'%len(arb))
 for e,p,g,t in arb: print(f"  {e:8} {g:22} {t} <- {p}")
 print('--- WRONG / UNROUTED ---')
 for e,p,g,v,t in bad: print(f"  want {e:8} got {g:18} [{v}] {t}  <- {p}")
+if STRESS:
+    print('--- STRESS: phrases routed to a wrong node while one node is warm ---')
+    for heat,rs in stress.items():
+        wrong=[]
+        for x in rs:
+            r=x['r']; exp=[e.strip() for e in x['e'].split('|')]
+            got='NATIVE' if r['outcome']=='native' else ('HELP' if r['outcome']=='help' else r['node'])
+            if got not in exp and r['outcome']!='conflict': wrong.append((x['p'],got))
+        print(f"  warm {heat:8} wrong {len(wrong)}/{len(rs)}  e.g. {wrong[:3]}")
 print('ERR',errs)
