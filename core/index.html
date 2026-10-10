@@ -6152,6 +6152,9 @@ window.BOSS_route = function(intent) {
   return { outcome: 'score', node: top.node.name, via: 'margin', top3 };
 };
 
+/** Test hook: set a node's warmth (simulates recent use) — used by tests/run_corpus.py --stress. */
+window.BOSS_heat = function(name, w) { nodes.forEach(n => { n.warmth = (n.name === name ? w : 0.1); }); };
+
 async function firePulse() {
   const el     = document.getElementById('pulse-input');
   const intent = el.value.trim();
