@@ -17,7 +17,7 @@
 
 import { Feedback } from './feedback.js';
 
-let _cfg = { getEnv: () => ({}), getNodeNames: () => [], getConsoleText: () => '', log: () => {} };
+let _cfg = { onMiss: null, getEnv: () => ({}), getNodeNames: () => [], getConsoleText: () => '', log: () => {} };
 let _last = null;          // { intent, node, via }
 let _chipTimer = null;
 let _built = false;
@@ -150,6 +150,7 @@ function _saveMiss() {
   if (_last) {
     Feedback.markMiss({ intent: _last.intent, routedTo: _last.node, via: _last.via, expected: _expected,
                         note: document.getElementById('fb-miss-note').value.trim() });
+    try { _cfg.onMiss && _cfg.onMiss({ routedTo: _last.node, via: _last.via, expected: _expected }); } catch (_) {}
     _cfg.log('✋ Thanks — saved. It will be in your tester report.');
   }
   document.getElementById('fb-miss-chip').classList.remove('show');
