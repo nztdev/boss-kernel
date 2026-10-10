@@ -1,0 +1,92 @@
+# Second corpus: casual wording, typos, longer sentences, edge cases.  Same format as phrases.tsv
+CHRONOS	timer for 15 mins
+CHRONOS	set a timer for one hour
+CHRONOS	set a timer for 90 seconds
+CHRONOS	wake me up at 7
+CHRONOS	alarm for 7:30 am
+CHRONOS	whats the time
+CHRONOS	what day is it
+CHRONOS	what's today's date
+CHRONOS	what is the weather like in madrid
+CHRONOS	weather in barcelona tomorrow
+CHRONOS	is it going to rain today
+CHRONOS	how cold is it
+CHRONOS	cancel the timer
+CHRONOS	stopwatch
+CHRONOS	lap
+CHRONOS	remind me in 10 minutes to check the oven
+CHRONOS	remind me in an hour
+CORE	where am I right now
+CORE	whats my battery
+CORE	battery
+CORE	how much charge do I have
+CORE	status
+CORE	check my connection
+CORE	are we online
+CORE	diagnostics
+CORE	make a backup
+CORE	backup
+SOMA	change color to green
+SOMA	use the violet theme
+SOMA	list themes
+SOMA	reset theme
+SOMA	describe yourself
+SOMA	make the text larger
+SOMA	bigger text
+SOMA	check for updates
+SOMA	preferences
+SOMA	speak to me
+SOMA	stop talking
+MEMORY	note to self buy batteries
+MEMORY	remember my wifi password is hunter2
+MEMORY	remember I parked on level 3
+MEMORY	forget my wifi password
+MEMORY	what do you remember
+MEMORY	list memories
+MEMORY	memory status
+MEMORY	open notes
+MEDIA	play
+MEDIA	pause the music
+MEDIA	play a song
+MEDIA	play some jazz
+MEDIA	volume to 40
+MEDIA	set volume to 30%
+MEDIA	quieter
+MEDIA	watch a video
+MEDIA|CORTEX	show me a photo of a cat
+FILES	open a file from my device
+FILES	show recent files
+FILES	I want to open a pdf from my phone
+COMMS	call 911
+COMMS	text +34 600 123 456 hello there
+COMMS	sms 555123 running late
+COMMS	email sam@example.com subject hello saying hi
+COMMS	send an email to anna
+COMMS	phone +44 20 7946 0958
+COMMS	please call +34600123456
+COMMS	could you text my brother
+CORTEX	open whatsapp
+CORTEX	open the calendar
+CORTEX	launch youtube
+CORTEX|COMMS	open gmail
+CORTEX|SOMA	open settings app
+CORTEX	what's the capital of france
+CORTEX	who wrote don quixote
+CORTEX	how do I boil an egg
+CORTEX	suggest a name for my dog
+CORTEX	translate hello into spanish
+CORTEX	summarise my clipboard please
+CORTEX	read the text in this image
+CORTEX	scan this document
+CORTEX	identify this plant
+CORTEX	look at this
+HELP	what can you do for me
+HELP	how do I use you
+NATIVE	turn on the torch
+NATIVE	enable airplane mode
+NATIVE	turn on wifi
+NATIVE	switch on bluetooth
+HELP	show me around
+HELP	what can boss do
+HELP	getting started
+HELP	home
