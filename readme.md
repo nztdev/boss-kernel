@@ -199,6 +199,9 @@ Install [Tailscale](https://tailscale.com) on both devices. Use your PC's Tailsc
 boss-kernel/
 ├── core/index.html        — Soma v0.9 (Arbiter, intent claims, modals, ⚙ Settings hub)
 ├── core/sw.js             — Service worker: network-first, offline cache, versioned (BUILD)
+├── core/manifest.json     — PWA manifest (installable on iPhone and Android)
+├── core/bosslogo.jpg      — Logo (iPhone home-screen icon, favicon)
+├── core/bosslogo-192.png / bosslogo-512.png / bosslogo-maskable-512.png — PNG icons Android requires to offer "Install"
 ├── heart/heart.js         — Autonomic metabolic loop (vault maintenance is encryption-aware)
 ├── registry/registry.js   — Node/model/preset catalogue (10 nodes, 42 presets)
 ├── nervous/nervous.js     — Typed event bus
@@ -221,7 +224,15 @@ boss-kernel/
 │   ├── clipboard.js       — Clipboard read / write
 │   ├── launch.js          — App launcher table · Shortcuts bridge · shared openScheme()
 │   ├── comms.js           — Phone: tel: / sms: / mailto: parsing and hand-off
+│   ├── onboarding.js      — Front door: intro cards · Home screen · "What can BOSS do?" (self-rendering)
+│   ├── feedback.js        — Request log · "not what I meant" flags · tester report · pluggable transports
+│   ├── feedback-ui.js     — Miss chip + tester-report sheet (self-rendering)
+│   ├── learning.js        — On-device adaptation: learned pair preferences + personal Arbiter margin
 │   └── files.js           — File access across Cortex, browser, and native paths
+├── tests/                 — Routing regression suite (not shipped to users)
+│   ├── phrases.tsv        — ~165 core requests, each with the node it should reach (EXPECTED<TAB>phrase)
+│   ├── phrases_more.tsv   — ~90 casual / edge-case requests, same format
+│   └── run_corpus.py      — Runner: loads core/index.html in headless Chromium, calls BOSS_route() per phrase
 ├── cortex/cortex.py       — Semantic bridge v0.8
 ├── .env.example           — Cortex configuration template
 └── README.md
@@ -438,7 +449,7 @@ Backups, the gap log and everything else stay on the device unless you export an
 
 ---
 
-## XVI-b. Front Door, Tester Feedback & the Phrase Corpus (build 0.10.0)
+## XVI-b. Front Door, Tester Feedback & the Phrase Corpus (builds 0.10.0 – 0.11.0)
 
 **Front door** (`actions/onboarding.js`, self-rendering): a 3-card skippable intro on first run (`BOSS_ONBOARDED`), then a **Home** screen (input, tappable example requests, *What can BOSS do?*, Settings, Quick intro, Send feedback, *Enter the field*). Home shows on launch unless switched off (Settings → *Show home screen on launch*, `BOSS_HOME`); the 🏠 pill returns to it. Typed `help`, `what can you do`, `show me around`, `home` are answered by this layer before scoring (no node, no gap logged). Copy and example lists are data at the top of the module.
 
@@ -460,7 +471,12 @@ Backups, the gap log and everything else stay on the device unless you export an
 
 Also: COMMS parses polite/long forms ("can you send an email for me", "make a phone call", "dial 112"); native-only matching normalises verb variants ("switch on the bluetooth"); CORTEX says plainly that open questions need an AI engine key when none is set; MEDIA gained *louder / quieter / softer*.
 
-**Known open decision — Arbiter margin.** `confThreshold` (1.5) is larger than any achievable score (≈ 1.0), so *every* near-tie, and also clear wins such as `play music` (MEDIA 0.93 vs CORTEX 0.23), enter the Arbiter; with no engine key and two side-effect nodes that becomes a blocking clarification. The corpus counts these (≈ 32 of 256). Unchanged pending a decision; see the corpus report for the list.
+**Amendment — decisive margin (build 0.11.0).** `confThreshold` (1.5) was larger than any achievable score (≈ 1.0), so *every* request entered the Arbiter, and with no engine key and two side-effect nodes even clear wins (`play music`: MEDIA 0.93 vs CORTEX 0.23) ended in a blocking "which did you mean?". The Arbiter now runs only when the top two nodes are within a **decisive margin** (default **0.35**, `Learning.BASE_MARGIN`); a larger lead wins outright (logged `via: margin`). Real near-ties are handled exactly as before (Active-First, dissonance, engine, clarification, hard grief for elevated risk). Scoring is untouched. Result on the corpus: requests blocked by a clarification fell from 32 to 0 of 256, with 0 wrong routes.
+
+**Learning (`actions/learning.js`, on-device, switchable).** BOSS adapts only from explicit signals — your answers to "which did you mean?" and your "✋ Not what I meant" flags:
+- **Pair preferences:** after ≥ 3 answers with a ≥ 75 % majority for the same pair, BOSS applies your choice and stops asking (logged `🎓 Learned preference`). One contrary answer weakens it, so preferences can reverse. Pairs with an elevated-risk node are never auto-resolved.
+- **Personal margin:** starts at 0.35; each answer that keeps BOSS's first pick tightens it by 0.01 (fewer prompts), each override widens it by 0.02, a flagged margin-bypass by 0.03. Bounded to **0.20 – 0.55**.
+- Stored in `BOSS_LEARNED` (included in Backup); Settings → *Learning* shows the current margin and learned pairs, can switch learning off (restores default behaviour exactly) or forget everything. Only counts reach the tester report. Not built: learning from successful actions or silence, cross-device sharing, anything that changes node vocabulary.
 
 ## XVII. Related
 
