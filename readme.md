@@ -228,6 +228,7 @@ boss-kernel/
 │   ├── feedback.js        — Request log · "not what I meant" flags · tester report · pluggable transports
 │   ├── feedback-ui.js     — Miss chip + tester-report sheet (self-rendering)
 │   ├── learning.js        — On-device adaptation: learned pair preferences + personal Arbiter margin
+│   ├── waveform.js        — Speaking/listening animation (strip above input · ring around SOMA · off)
 │   └── files.js           — File access across Cortex, browser, and native paths
 ├── TESTING.md             — Tester guide: guided test pass + results sheet
 ├── tests/                 — Routing regression suite (not shipped to users)
@@ -453,6 +454,8 @@ Backups, the gap log and everything else stay on the device unless you export an
 ## XVI-b. Front Door, Tester Feedback & the Phrase Corpus (builds 0.10.0 – 0.11.0)
 
 **Front door** (`actions/onboarding.js`, self-rendering): a 3-card skippable intro on first run (`BOSS_ONBOARDED`), then a **Home** screen (input, tappable example requests, *What can BOSS do?*, Settings, Quick intro, Send feedback, *Enter the field*). Home shows on launch unless switched off (Settings → *Show home screen on launch*, `BOSS_HOME`); the 🏠 pill returns to it. Typed `help`, `what can you do`, `show me around`, `home` are answered by this layer before scoring (no node, no gap logged). Copy and example lists are data at the top of the module.
+
+**Speaking animation (`actions/waveform.js`, build 0.12.0).** A visual cue while BOSS speaks (cyan) or listens (amber, calmer): a **strip** above the input box (hidden when idle; tap to collapse to a thin line), a **ring** radiating from the SOMA node, or **off** (Settings → *Speaking animation*, `BOSS_WAVE`). It is **synthetic by design**: `speechSynthesis` exposes no audio, so the animation is driven by `Voice.onSpeak('start' | 'end' | 'boundary')` events plus smooth motion — it means "BOSS is speaking", not "this is the sound". The level source is isolated in `_level()` so a real analyser can replace it if BOSS ever plays audio it controls. Respects reduce-motion (still indicator) and only runs animation frames while active.
 
 **Tester feedback** (`actions/feedback.js` + `actions/feedback-ui.js`, modular): every pulse is logged locally (node, route reason — claim/score/arbiter/clarification/clarified — and outcome). A **✋ Not what I meant** chip appears for 30 s after each pulse (optional expected node + note). Settings → *Send feedback* builds a `boss-feedback/1` JSON report with a preview, per-section toggles and masking (numbers, emails, links; remember/note text reduced to the verb). Nothing is sent automatically. **Delivery is a pluggable transport** — built in: *Share…* (system sheet, file attached) and *Save file*; a backend later is one `Feedback.registerTransport({id:'http', …})` call. Never included: vault, notes, keys, clipboard, location, files, contacts.
 
