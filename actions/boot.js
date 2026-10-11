@@ -93,170 +93,209 @@ export function start() {
     //   2100→   status words appear one by one, in a single row that always fits;  fade out at the end
     const T_FALL0 = 800, T_FALL1 = 1450, T_IMPACT = T_FALL1;
 
-    // ── grid geometry: a hexagonal floor in perspective ─────────────────────
-    const ROWS = 15;                                  // floor depth, in depth units
-    const landD = ROWS * 0.6;                         // where the badge lands
-    const sc = d => Math.pow(clamp(d / ROWS, 0.02, 1), 1.7);
-    const P = (x, d) => {                             // world (x, depth) → screen
-      const s = sc(d), hy = H * 0.3, unit = Math.min(W, H * 0.62) / 4.2;
-      return [W / 2 + x * unit * s, hy + (H * 0.98 - hy) * s];
+    // ── the world: a hexagonal grid wrapped around a large sphere ───────────
+    // A geodesic "Goldberg" mesh: cells are hexagons (plus 12 pentagons, like a football).
+    // Nodes are the cell corners; edges are the grid lines. Orthographic view of the sphere.
+    const v3 = {
+      add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+      mul: (a, k) => [a[0] * k, a[1] * k, a[2] * k], dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+      cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+      len: a => Math.hypot(a[0], a[1], a[2]), norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+      rot: (v, ax, an) => { const c = Math.cos(an), s2 = Math.sin(an), k = ax;           // Rodrigues
+        const kv = v3.cross(k, v), kd = v3.dot(k, v);
+        return [v[0] * c + kv[0] * s2 + k[0] * kd * (1 - c), v[1] * c + kv[1] * s2 + k[1] * kd * (1 - c), v[2] * c + kv[2] * s2 + k[2] * kd * (1 - c)]; },
     };
-    const HEX_R = 1.0, DK = 0.85;                     // hex radius (x units) and depth stretch
-    const MS_PER_UNIT = reduced ? 150 : 95;          // how fast light travels along the lines
+    const FREQ_LEVEL = 2;                                   // 2 → 162 cells (4× subdivision of an icosahedron)
+    const world = (() => {
+      const t = (1 + Math.sqrt(5)) / 2;
+      let V = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]].map(v3.norm);
+      let F = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+      for (let l = 0; l < FREQ_LEVEL; l++) {
+        const cache = new Map(), mid = (i, j) => {
+          const k = i < j ? i + '_' + j : j + '_' + i;
+          if (!cache.has(k)) { V.push(v3.norm(v3.mul(v3.add(V[i], V[j]), 0.5))); cache.set(k, V.length - 1); }
+          return cache.get(k);
+        };
+        const NF = [];
+        for (const [a, b, c] of F) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); NF.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); }
+        F = NF;
+      }
+      const nodes = F.map(([a, b, c]) => v3.norm(v3.add(v3.add(V[a], V[b]), V[c])));   // one node per triangle = a cell corner
+      const cellFaces = V.map(() => []), edgeFaces = new Map();
+      F.forEach((f, fi) => {
+        f.forEach(vi => cellFaces[vi].push(fi));
+        for (let q = 0; q < 3; q++) { const i = f[q], j = f[(q + 1) % 3], k = i < j ? i + '_' + j : j + '_' + i; (edgeFaces.get(k) || edgeFaces.set(k, []).get(k)).push(fi); }
+      });
+      const edges = [];
+      edgeFaces.forEach(fs => { if (fs.length === 2) edges.push({ u: fs[0], v: fs[1], len: Math.acos(Math.max(-1, Math.min(1, v3.dot(nodes[fs[0]], nodes[fs[1]])))) }); });
+      const adj = nodes.map(() => []); edges.forEach((e, i) => { adj[e.u].push(i); adj[e.v].push(i); });
+      // the landing cell: a hexagon (6 corners), not one of the 12 pentagons
+      const c0 = V.findIndex((p, i) => cellFaces[i].length === 6 && p[2] > 0.2);
+      return { nodes, edges, adj, c0, centre: V[c0], corners: cellFaces[c0] };
+    })();
 
-    // Build the hex mesh once: vertices, unique edges, and for each wave a random
-    // arrival time per vertex (Dijkstra with jittered edge costs) so light spreads
-    // unevenly, branch by branch, never all at once.
-    const mesh = (() => {
-      const vid = new Map(), V = [], E = [], seen = new Set();
-      const vert = (x, d) => {
-        const k = Math.round(x * 100) + ',' + Math.round(d * 100);
-        if (!vid.has(k)) { vid.set(k, V.length); V.push({ x, d, adj: [] }); }
-        return vid.get(k);
-      };
-      const w = HEX_R * 1.5, h = Math.sqrt(3) * HEX_R;
-      for (let c = -22; c <= 22; c++) {
-        for (let r = -2; r <= 14; r++) {
-          const cx = c * w, cd = landD + (r * h + (c & 1 ? h / 2 : 0)) * DK - 8 * h * DK;
-          if (cd < 0.6 || cd > ROWS + 1.2) continue;
-          const ring = [];
-          for (let q = 0; q < 6; q++) { const an = q * Math.PI / 3; ring.push(vert(cx + HEX_R * Math.cos(an), cd + HEX_R * Math.sin(an) * DK)); }
-          for (let q = 0; q < 6; q++) {
-            const u = ring[q], v = ring[(q + 1) % 6], key = u < v ? u + '-' + v : v + '-' + u;
-            if (seen.has(key)) continue; seen.add(key);
-            const len = Math.hypot(V[u].x - V[v].x, (V[u].d - V[v].d) / DK);
-            E.push({ u, v, len }); V[u].adj.push(E.length - 1); V[v].adj.push(E.length - 1);
-          }
+    // Orient the sphere: the landing cell faces up-and-toward the viewer, one corner pointing right (flat-top hex).
+    const PHI = 0.62;                                      // how far the landing cell leans back from facing the viewer (rad)
+    const TV = [0, -Math.sin(PHI), Math.cos(PHI)];         // landing cell normal in view space (x right, y down, z toward viewer)
+    const B1 = [1, 0, 0], B2 = v3.cross(TV, B1);           // tangent axes at the landing cell
+    const orient = (() => {
+      const n0 = world.centre, ax0 = v3.cross(n0, TV), sn = v3.len(ax0), an0 = Math.atan2(sn, v3.dot(n0, TV));
+      const r1 = v => sn < 1e-6 ? v : v3.rot(v, v3.mul(ax0, 1 / sn), an0);
+      const p = r1(world.nodes[world.corners[0]]);
+      const u = v3.sub(p, v3.mul(TV, v3.dot(p, TV))), roll = Math.atan2(v3.dot(u, B2), v3.dot(u, B1));
+      return v => v3.rot(r1(v), TV, -roll);
+    })();
+    const N = world.nodes.map(orient);
+    const cornerPts = world.corners.map(i => N[i]).map(p => ({ p, a: Math.atan2(v3.dot(v3.sub(p, TV), B2), v3.dot(v3.sub(p, TV), B1)) })).sort((x, y) => x.a - y.a);
+    const CELL_R = cornerPts.reduce((m, c) => m + v3.len(v3.sub(c.p, TV)), 0) / 6;   // cell corner radius (unit sphere)
+    const RF = CELL_R * 0.9;                               // badge circumradius: fits inside the cell with a small gap
+
+    // layout (depends on screen size)
+    let Rs = 0, cx0 = 0, cy0 = 0;
+    const layout = () => {
+      Rs = Math.min(W * 0.9, H * 0.62); cx0 = W / 2;
+      cy0 = H * 0.46 + Rs * Math.sin(PHI);                 // so the landing cell sits at 46% of the height
+    };
+    layout(); addEventListener('resize', layout);
+    const MS_PER_RAD = reduced ? 1500 : 1000;              // how fast light travels along the lines
+    const WAVE_OFFSET = [0, 1000];
+
+    // Light spreads from the landing cell's six corners: shortest paths with jittered costs
+    // (Dijkstra), so it advances branch by branch and never all at once. Two waves.
+    const waves = [0, 1].map(() => {
+      const n = N.length, ar = new Float64Array(n).fill(Infinity), done = new Uint8Array(n);
+      const jit = world.edges.map(() => 0.65 + Math.random() * 1.0);
+      world.corners.forEach(i => { ar[i] = Math.random() * 140; });
+      for (let k = 0; k < n; k++) {
+        let m = -1, best = Infinity;
+        for (let i = 0; i < n; i++) if (!done[i] && ar[i] < best) { best = ar[i]; m = i; }
+        if (m < 0) break; done[m] = 1;
+        for (const ei of world.adj[m]) {
+          const e = world.edges[ei], o = e.u === m ? e.v : e.u, c = ar[m] + e.len * jit[ei] * MS_PER_RAD;
+          if (c < ar[o]) ar[o] = c;
         }
       }
-      // light is born at the vertices around the badge and flows outward
-      const wave = () => {
-        const ar = new Float64Array(V.length).fill(Infinity), done = new Uint8Array(V.length);
-        const jit = E.map(() => 0.65 + Math.random() * 1.0);
-        V.forEach((p, i) => { const dd = Math.hypot(p.x, (p.d - landD) / DK); if (dd < 1.6) ar[i] = dd * 0.5 * MS_PER_UNIT; });
-        for (let n = 0; n < V.length; n++) {
-          let m = -1, best = Infinity;
-          for (let i = 0; i < V.length; i++) if (!done[i] && ar[i] < best) { best = ar[i]; m = i; }
-          if (m < 0) break; done[m] = 1;
-          for (const ei of V[m].adj) {
-            const e = E[ei], o = e.u === m ? e.v : e.u, cost = e.len * jit[ei] * MS_PER_UNIT;
-            if (ar[m] + cost < ar[o]) ar[o] = ar[m] + cost;
-          }
-        }
-        return ar;
-      };
-      return { V, E, A: [wave(), wave()] };
-    })();
-    const WAVE_OFFSET = [0, 1000];                    // second wave follows, travelling different branches
-    const proj = new Map();
-    const pv = i => { let p = proj.get(i); if (!p) { p = P(mesh.V[i].x, mesh.V[i].d); proj.set(i, p); } return p; };
-    const projReset = () => proj.clear();
-    addEventListener('resize', projReset);
+      return ar;
+    });
+
+    let spin = 0;                                          // slow turn of the whole sphere (not under reduce-motion)
+    const view = v => { const c = Math.cos(spin), s2 = Math.sin(spin); return [v[0] * c + v[2] * s2, v[1], -v[0] * s2 + v[2] * c]; };
+    const scr = v => [cx0 + Rs * v[0], cy0 + Rs * v[1]];
 
     function drawGrid(t) {
       if (t < T_IMPACT) return;
-      const tt = t - T_IMPACT;
+      const tt = t - T_IMPACT, fadeIn = clamp(tt / 600);
+      spin = reduced ? 0 : -0.16 * clamp(tt / 3200);
+      // sphere body + limb glow
+      const body = ctx.createRadialGradient(cx0 - Rs * 0.2, cy0 - Rs * 0.35, Rs * 0.1, cx0, cy0, Rs);
+      body.addColorStop(0, 'rgba(12,60,50,' + (0.28 * fadeIn) + ')'); body.addColorStop(1, 'rgba(0,10,10,' + (0.0) + ')');
+      ctx.fillStyle = body; ctx.beginPath(); ctx.arc(cx0, cy0, Rs, 0, 6.2832); ctx.fill();
+      ctx.save(); ctx.globalAlpha = 0.5 * fadeIn; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.shadowColor = col; ctx.shadowBlur = 22;
+      ctx.beginPath(); ctx.arc(cx0, cy0, Rs, 0, 6.2832); ctx.stroke(); ctx.restore();
+      // node screen positions
+      const S = N.map(p => { const v = view(p); const q = scr(v); return [q[0], q[1], v[2], v]; });
       ctx.lineCap = 'round';
-      for (const e of mesh.E) {
-        const pu = pv(e.u), pw = pv(e.v);
-        const depth = 0.3 + 0.7 * sc((mesh.V[e.u].d + mesh.V[e.v].d) / 2);
-        // 1) the dark, unlit wire
-        ctx.globalAlpha = 0.07 * depth; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.shadowBlur = 0;
-        ctx.beginPath(); ctx.moveTo(pu[0], pu[1]); ctx.lineTo(pw[0], pw[1]); ctx.stroke();
-        let res = 0, headU = -1, trail = 0, lift = 0, from = 0;
+      for (const e of world.edges) {
+        const a = S[e.u], b = S[e.v], zm = (a[2] + b[2]) / 2;
+        if (zm < 0.02 && a[2] < 0.02 && b[2] < 0.02) continue;          // behind the limb
+        const face = clamp(0.2 + 0.8 * zm) * fadeIn;                     // fades toward the horizon
+        ctx.globalAlpha = 0.08 * face; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();      // the dark, unlit wire
+        let res = 0, trail = 0, headU = 1, from = 0;
         for (let k = 0; k < 2; k++) {
-          const A = mesh.A[k], au = A[e.u], av = A[e.v];
-          const fwd = au <= av, t0 = (fwd ? au : av) + WAVE_OFFSET[k], dur = Math.max(30, Math.abs(au - av));
-          const since = tt - t0; if (since < 0) continue;
-          const u = since / dur;                        // 0..1 head position along the edge from its earlier end
+          const A = waves[k], au = A[e.u], av = A[e.v], fwd = au <= av;
+          const since = tt - ((fwd ? au : av) + WAVE_OFFSET[k]), dur = Math.max(40, Math.abs(au - av));
+          if (since < 0) continue;
+          const u = since / dur;
           res += (k ? 0.18 : 0.42) * (1 - Math.exp(-since / 900));
           if (u < 1.6) { const hv = u < 1 ? 1 : Math.exp(-(u - 1) * 3); if (hv > trail) { trail = hv; headU = u; from = fwd ? 0 : 1; } }
         }
-        if (res > 0) {                                  // lit portion fills in behind the head, then stays and slowly brightens
-          const u = Math.min(1, Math.max(headU, 0) || 1);
-          const a0 = from ? pw : pu, a1 = from ? pu : pw;
-          const hx = a0[0] + (a1[0] - a0[0]) * (headU >= 0 && headU < 1 ? headU : 1), hy2 = a0[1] + (a1[1] - a0[1]) * (headU >= 0 && headU < 1 ? headU : 1);
-          ctx.globalAlpha = clamp(res * (0.45 + 0.55 * depth)); ctx.lineWidth = 1.3;
-          ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(hx, hy2); ctx.stroke();
-          if (trail > 0.05) {                           // the bright, raised pulse itself
-            lift = trail * 5 * depth;
-            const b0x = a0[0] + (a1[0] - a0[0]) * Math.max(0, (headU < 1 ? headU : 1) - 0.55), b0y = a0[1] + (a1[1] - a0[1]) * Math.max(0, (headU < 1 ? headU : 1) - 0.55);
-            ctx.globalAlpha = clamp(trail * depth + 0.1); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2 + 1.8 * trail * depth;
-            ctx.shadowColor = col; ctx.shadowBlur = 12 * trail;
-            ctx.beginPath(); ctx.moveTo(b0x, b0y - lift); ctx.lineTo(hx, hy2 - lift); ctx.stroke();
-            ctx.globalAlpha = clamp(0.35 * trail * depth);   // faint post dropping to the floor
-            ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hx, hy2 - lift); ctx.lineTo(hx, hy2); ctx.stroke();
-            ctx.strokeStyle = col; ctx.shadowBlur = 0;
-          }
+        if (res <= 0) continue;
+        const p0 = from ? b : a, p1 = from ? a : b, hu = headU < 1 ? headU : 1;
+        const hx = p0[0] + (p1[0] - p0[0]) * hu, hy = p0[1] + (p1[1] - p0[1]) * hu;
+        ctx.globalAlpha = clamp(res * face); ctx.lineWidth = 1.3;                  // fills in behind the head and stays, slowly brightening
+        ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(hx, hy); ctx.stroke();
+        if (trail > 0.05) {                                                        // the bright pulse, raised off the surface
+          const lift = trail * 0.03 * Rs * (0.4 + 0.6 * zm);
+          const bx = p0[0] + (p1[0] - p0[0]) * Math.max(0, hu - 0.55), by = p0[1] + (p1[1] - p0[1]) * Math.max(0, hu - 0.55);
+          const nx = (hx - cx0) / Rs, ny = (hy - cy0) / Rs;                         // lift outward from the sphere centre
+          ctx.globalAlpha = clamp((trail + 0.1) * face); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2 + 1.8 * trail * face;
+          ctx.shadowColor = col; ctx.shadowBlur = 12 * trail;
+          ctx.beginPath(); ctx.moveTo(bx + ((bx - cx0) / Rs) * lift, by + ((by - cy0) / Rs) * lift); ctx.lineTo(hx + nx * lift, hy + ny * lift); ctx.stroke();
+          ctx.strokeStyle = col; ctx.shadowBlur = 0;
         }
+      }
+      // shock ring travelling over the surface from the landing cell
+      if (!reduced && tt < 900) {
+        const k = clamp(tt / 900), rho = 0.12 + 1.0 * ease.out(k);
+        ctx.globalAlpha = (1 - k) * 0.85; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 12;
+        ctx.beginPath(); let pen = false;
+        for (let q = 0; q <= 72; q++) {
+          const an = q / 72 * 6.2832, p = v3.add(v3.mul(TV, Math.cos(rho)), v3.mul(v3.add(v3.mul(B1, Math.cos(an)), v3.mul(B2, Math.sin(an))), Math.sin(rho)));
+          const v = view(p); if (v[2] < 0.03) { pen = false; continue; }
+          const sp = scr(v); pen ? ctx.lineTo(sp[0], sp[1]) : ctx.moveTo(sp[0], sp[1]); pen = true;
+        }
+        ctx.stroke();
       }
       ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     }
 
-    // ── the badge: a thick slab with the logo on its face ──────────────────
-    // tilt 0 = standing, face to the viewer;  tilt 1 = lying flat on its back, face up.
-    function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-    const FLAT = 0.34;                                  // vertical squash of a flat face seen from the camera
-    function drawBadge(cx, cy, s, tilt, roll, glowAmt, alpha) {
-      const k = 1 - tilt * (1 - FLAT);                  // face squash: 1 (upright) → FLAT (lying)
-      const th = s * 0.16 * tilt;                       // visible thickness grows as it lies down
-      const n = Math.max(1, Math.round(th / 1.5));
-      ctx.save(); ctx.translate(cx, cy); ctx.rotate(roll); ctx.globalAlpha = alpha;
-      // body of the slab: stacked rims from the bottom up, lit from above
-      for (let i = n; i >= 1; i--) {
-        const off = th * i / n;
-        ctx.save(); ctx.translate(0, off); ctx.scale(1, k);
-        ctx.fillStyle = i === n ? '#031a16' : (i % 2 ? '#0b5247' : '#0e6a5b');
-        rr(-s / 2, -s / 2, s, s, s * 0.2); ctx.fill(); ctx.restore();
-      }
-      // glowing rim on the floor under it
-      ctx.save(); ctx.translate(0, th); ctx.scale(1, k);
-      ctx.shadowColor = col; ctx.shadowBlur = s * (0.1 + 0.55 * glowAmt);
-      ctx.strokeStyle = col; ctx.lineWidth = 2; rr(-s / 2, -s / 2, s, s, s * 0.2); ctx.stroke(); ctx.restore();
-      // the face
-      ctx.save(); ctx.scale(1, k); ctx.shadowColor = col; ctx.shadowBlur = s * (0.08 + 0.4 * glowAmt);
-      rr(-s / 2, -s / 2, s, s, s * 0.2); ctx.save(); ctx.clip();
-      if (imgOk) ctx.drawImage(img, -s / 2, -s / 2, s, s);
-      else if (imgErr) { ctx.fillStyle = '#04141a'; ctx.fillRect(-s / 2, -s / 2, s, s); ctx.fillStyle = col; ctx.font = `${s * 0.3}px "Share Tech Mono",monospace`; ctx.textAlign = 'center'; ctx.fillText('B·O·S·S', 0, s * 0.1); }
-      // sheen sweeping over the face as it lights up
-      const sh = ctx.createLinearGradient(-s / 2, -s / 2, s / 2, s / 2);
-      sh.addColorStop(0, 'rgba(255,255,255,0.22)'); sh.addColorStop(0.45, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = sh; ctx.fillRect(-s / 2, -s / 2, s, s);
-      ctx.restore();
-      ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(214,255,243,0.55)'; ctx.lineWidth = 1.5; rr(-s / 2, -s / 2, s, s, s * 0.2); ctx.stroke();
-      ctx.restore(); ctx.restore();
-    }
-
+    // ── the badge: a thin hexagonal tile that drops onto the landing cell ───
     function drawLogo(t) {
-      const size = Math.min(W, H) * 0.3;
-      const [lx, ly] = P(0, landD);
-      const thick = size * 0.16;
-      const yEnd = ly - thick - size * FLAT * 0.0;      // face centre when resting: slab bottom touches the floor point
-      const yHover = reduced ? yEnd - size * 1.0 : Math.max(H * 0.14, yEnd - H * 0.3);
       const p = clamp((t - T_FALL0) / (T_FALL1 - T_FALL0));
       const lit = clamp(t / 800);
-      // it tumbles over backwards while dropping, so it lands face-up
-      const tilt = p * p * (3 - 2 * p);
-      const y = yHover + (yEnd - yHover) * ease.in(p) - (reduced ? 0 : size * 0.05 * Math.sin(Math.PI * clamp((t - T_FALL1) / 350)));
-      const roll = reduced ? 0 : 0.12 * Math.sin(p * Math.PI) * (1 - p);
       const glowAmt = lit * (1 + 0.5 * clamp((t - T_FALL1) / 300));
-      if (t >= T_IMPACT - 40) {                          // light pool on the floor
-        const pool = ctx.createRadialGradient(lx, ly, 0, lx, ly, size * 1.4);
+      const tilt = p * p * (3 - 2 * p);                                    // 0 → 1 while falling
+      // it tumbles over backwards onto its back: leaning forward at first, ending face-up on the cell
+      const th0 = PHI + (reduced ? 0.12 : 0.55), th = th0 * (1 - tilt);
+      const Nn = v3.add(v3.mul(TV, Math.cos(th)), v3.mul(B2, Math.sin(th)));
+      const A2 = v3.sub(v3.mul(B2, Math.cos(th)), v3.mul(TV, Math.sin(th)));
+      const roll = reduced ? 0 : 0.14 * Math.sin(p * Math.PI) * (1 - p);
+      const A1r = v3.add(v3.mul(B1, Math.cos(roll)), v3.mul(A2, Math.sin(roll)));
+      const A2r = v3.sub(v3.mul(A2, Math.cos(roll)), v3.mul(B1, Math.sin(roll)));
+      const thick = RF * 0.07;
+      const drop = (reduced ? H * 0.12 : H * 0.3) * (1 - ease.in(p));         // starts high above its cell, falls to it
+      const rebound = reduced ? 0 : -Rs * 0.012 * Math.sin(Math.PI * clamp((t - T_FALL1) / 350));
+      const C = v3.add(TV, v3.mul(Nn, thick));
+      const top = [], bot = [];
+      for (let a = 0; a < 6; a++) {
+        const ca = Math.cos(a * Math.PI / 3) * RF, sa = Math.sin(a * Math.PI / 3) * RF;
+        const T3 = v3.add(C, v3.add(v3.mul(A1r, ca), v3.mul(A2r, sa)));
+        top.push(scr(view(T3)));
+        bot.push(scr(view(v3.sub(T3, v3.mul(Nn, thick)))));
+      }
+      const off = y => y - drop + rebound;
+      const lx = cx0 + Rs * view(TV)[0], ly = cy0 + Rs * view(TV)[1];
+      ctx.save(); ctx.globalAlpha = lit;
+      if (t >= T_IMPACT - 40) {                                            // light pool under the tile
+        const pool = ctx.createRadialGradient(lx, ly, 0, lx, ly, Rs * CELL_R * 2.2);
         const pa = clamp((t - T_IMPACT) / 400) * 0.5;
         pool.addColorStop(0, col + Math.round(pa * 255).toString(16).padStart(2, '0')); pool.addColorStop(1, col + '00');
-        ctx.save(); ctx.translate(lx, ly); ctx.scale(1, 0.32); ctx.translate(-lx, -ly);
-        ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(lx, ly, size * 1.4, 0, 6.2832); ctx.fill(); ctx.restore();
+        ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(lx, ly, Rs * CELL_R * 2.2, 0, 6.2832); ctx.fill();
       }
-      if (!reduced && t > T_IMPACT - 40 && t < T_IMPACT + 700) {   // impact ring
-        const k = clamp((t - (T_IMPACT - 40)) / 740);
-        ctx.save(); ctx.translate(lx, ly); ctx.scale(1, 0.32);
-        ctx.globalAlpha = (1 - k) * 0.9; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5 * (1 - k) + 0.5;
-        ctx.shadowColor = col; ctx.shadowBlur = 14;
-        ctx.beginPath(); ctx.arc(0, 0, size * (0.4 + 2.0 * ease.out(k)), 0, 6.2832); ctx.stroke(); ctx.restore();
+      // body: base, then the six side walls, then the lit face
+      ctx.fillStyle = '#031a16'; ctx.beginPath(); bot.forEach((q, i) => i ? ctx.lineTo(q[0], off(q[1])) : ctx.moveTo(q[0], off(q[1]))); ctx.closePath(); ctx.fill();
+      for (let a = 0; a < 6; a++) {
+        const b = (a + 1) % 6;
+        ctx.fillStyle = a % 2 ? '#0b5247' : '#0e6a5b';
+        ctx.beginPath(); ctx.moveTo(top[a][0], off(top[a][1])); ctx.lineTo(top[b][0], off(top[b][1])); ctx.lineTo(bot[b][0], off(bot[b][1])); ctx.lineTo(bot[a][0], off(bot[a][1])); ctx.closePath(); ctx.fill();
       }
-      drawBadge(lx, y, size, tilt, roll, glowAmt, lit);
+      const cs = scr(view(C)), cxs = cs[0], cys = off(cs[1]);
+      const ax = view(v3.mul(A1r, RF)), ay = view(v3.mul(A2r, RF));          // face axes → screen
+      ctx.save(); ctx.translate(cxs, cys); ctx.transform(Rs * ax[0], Rs * ax[1], Rs * ay[0], Rs * ay[1], 0, 0);
+      ctx.shadowColor = col; ctx.shadowBlur = Rs * RF * (0.08 + 0.4 * glowAmt);
+      ctx.beginPath(); for (let a = 0; a < 6; a++) { const x = Math.cos(a * Math.PI / 3), y = Math.sin(a * Math.PI / 3); a ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.closePath();
+      ctx.fillStyle = '#04141a'; ctx.fill(); ctx.shadowBlur = 0; ctx.save(); ctx.clip();
+      if (imgOk) ctx.drawImage(img, -1, -1, 2, 2);
+      else if (imgErr) { ctx.fillStyle = col; ctx.font = '0.5px "Share Tech Mono",monospace'; ctx.textAlign = 'center'; ctx.fillText('B·O·S·S', 0, 0.15); }
+      const sh = ctx.createLinearGradient(-1, -1, 1, 1);
+      sh.addColorStop(0, 'rgba(255,255,255,0.22)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sh; ctx.fillRect(-1, -1, 2, 2); ctx.restore();
+      ctx.strokeStyle = 'rgba(214,255,243,0.7)'; ctx.lineWidth = 0.05; ctx.shadowColor = col; ctx.shadowBlur = Rs * RF * 0.3 * glowAmt;
+      ctx.beginPath(); for (let a = 0; a < 6; a++) { const x = Math.cos(a * Math.PI / 3), y = Math.sin(a * Math.PI / 3); a ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.closePath(); ctx.stroke();
+      ctx.restore(); ctx.restore();
       ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-      return { lx, ly, size };
+      return { lx: W / 2, ly, size: Rs * RF * 2 };
     }
 
     const LINES = ['kernel', 'field', 'nodes', 'ready'];
@@ -274,7 +313,7 @@ export function start() {
       ctx.font = `bold ${tf}px "Share Tech Mono",monospace`;
       while (tf > 12 && ctx.measureText('B · O · S · S').width > W * 0.92) { tf -= 1; ctx.font = `bold ${tf}px "Share Tech Mono",monospace`; }
       ctx.fillStyle = '#d6fff3'; ctx.globalAlpha = clamp((t - t0) / 300); ctx.textAlign = 'center';
-      const ty = g.ly + g.size * 0.38;
+      const ty = g.ly + g.size * 0.62;
       ctx.fillText('B · O · S · S', g.lx, ty);
       ctx.font = `${fs}px "Share Tech Mono",monospace`; ctx.textAlign = 'left';
       let x = g.lx - widthAt(fs) / 2; ctx.font = `${fs}px "Share Tech Mono",monospace`;
