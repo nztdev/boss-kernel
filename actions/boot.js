@@ -101,79 +101,103 @@ export function start() {
       const s = sc(d), hy = H * 0.3;
       return [W / 2 + i * (W / 4.2) * s, hy + (H * 0.98 - hy) * s];
     };
-    const SPEED = reduced ? 0.0065 : 0.0095, PERIOD = 5.2;   // grid units per ms / between pulses
+    const SPEED = reduced ? 0.0055 : 0.0075, PERIOD = 4.2;   // grid units per ms / between pulses
 
     function drawGrid(t) {
       if (t < T_IMPACT) return;
-      const R = (t - T_IMPACT) * SPEED;                 // wavefront radius in grid units
-      const fadeIn = clamp((t - T_IMPACT) / 500);
+      const R = (t - T_IMPACT) * SPEED;                 // lead pulse position, in grid units
       ctx.lineCap = 'round';
       const seg = (a, b, i0, d0, i1, d1) => {
         const mi = (i0 + i1) / 2, md = (d0 + d1) / 2;
-        const dist = Math.hypot(mi, (md - landD) * 0.8);
-        let glow = 0;
-        for (let k = 0; k < 5; k++) {
-          const front = R - k * PERIOD;
-          if (front < 0 || front > 24) continue;
-          glow = Math.max(glow, Math.exp(-Math.pow((dist - front) / 0.9, 2)) * (1 - front / 28));
+        // distance measured ALONG the lines (taxicab-like), so light visibly runs down the grid lines
+        const dist = (Math.abs(mi) + Math.abs(md - landD) * 0.8) * 0.85;
+        let head = 0, trail = 0, passes = 0;
+        for (let k = 0; k < 7; k++) {
+          const delta = (R - k * PERIOD) - dist;       // >0: this pulse has already gone through
+          if (delta < 0) continue;
+          passes++;
+          head = Math.max(head, Math.exp(-Math.pow(delta / 0.55, 2)));
+          trail = Math.max(trail, 0.7 * Math.exp(-delta / 2.6));
         }
-        const depthFade = 0.25 + 0.75 * sc(md);
-        ctx.globalAlpha = clamp((0.13 * depthFade + glow * 0.95) * fadeIn);
-        ctx.lineWidth = 1 + glow * 2.2 * depthFade;
-        ctx.strokeStyle = glow > 0.15 ? '#ffffff' : col;
-        if (glow > 0.05) { ctx.shadowColor = col; ctx.shadowBlur = 10 * glow; } else ctx.shadowBlur = 0;
+        const glow = Math.max(head, trail);
+        // lines start almost black, and every pulse that passes leaves them a little lighter
+        const level = 0.04 + 0.075 * Math.min(passes, 4) + 0.85 * glow;
+        const depthFade = 0.3 + 0.7 * sc((d0 + d1) / 2);
+        ctx.globalAlpha = clamp(level * depthFade);
+        ctx.lineWidth = (1 + head * 2.2) * (0.5 + 0.5 * depthFade);
+        ctx.strokeStyle = head > 0.35 ? '#ffffff' : col;
+        if (head > 0.08) { ctx.shadowColor = col; ctx.shadowBlur = 12 * head; } else ctx.shadowBlur = 0;
         ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
       };
-      for (let j = 1; j <= ROWS; j++)                      // horizontal lines (cell by cell)
+      for (let j = 1; j <= ROWS; j++)                      // lines across (cell by cell)
         for (let i = -COLS; i < COLS; i++) seg(P(i, j), P(i + 1, j), i, j, i + 1, j);
       for (let i = -COLS; i <= COLS; i++)                  // lines receding to the horizon
         for (let j = 1; j < ROWS; j++) seg(P(i, j), P(i, j + 1), i, j, i, j + 1);
-      // pulse rings on the floor, centred on the logo
-      for (let k = 0; k < 5; k++) {
-        const front = R - k * PERIOD;
-        if (front < 0.4 || front > 20) continue;
-        ctx.globalAlpha = clamp((1 - front / 20) * 0.9); ctx.strokeStyle = '#fff';
-        ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let q = 0; q <= 48; q++) {
-          const ang = q / 48 * 6.2832, d = landD + Math.sin(ang) * front / 0.8;
-          if (d < 0.3 || d > ROWS + 1) { continue; }
-          const [x, y] = P(Math.cos(ang) * front, d);
-          q === 0 || !ctx._pen ? ctx.moveTo(x, y) : ctx.lineTo(x, y); ctx._pen = true;
-        }
-        ctx._pen = false; ctx.stroke();
-      }
       ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     }
 
+    // ── the badge: a thick slab with the logo on its face ──────────────────
+    // tilt 0 = standing, face to the viewer;  tilt 1 = lying flat on its back, face up.
+    function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+    const FLAT = 0.34;                                  // vertical squash of a flat face seen from the camera
+    function drawBadge(cx, cy, s, tilt, roll, glowAmt, alpha) {
+      const k = 1 - tilt * (1 - FLAT);                  // face squash: 1 (upright) → FLAT (lying)
+      const th = s * 0.16 * tilt;                       // visible thickness grows as it lies down
+      const n = Math.max(1, Math.round(th / 1.5));
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(roll); ctx.globalAlpha = alpha;
+      // body of the slab: stacked rims from the bottom up, lit from above
+      for (let i = n; i >= 1; i--) {
+        const off = th * i / n;
+        ctx.save(); ctx.translate(0, off); ctx.scale(1, k);
+        ctx.fillStyle = i === n ? '#031a16' : (i % 2 ? '#0b5247' : '#0e6a5b');
+        rr(-s / 2, -s / 2, s, s, s * 0.2); ctx.fill(); ctx.restore();
+      }
+      // glowing rim on the floor under it
+      ctx.save(); ctx.translate(0, th); ctx.scale(1, k);
+      ctx.shadowColor = col; ctx.shadowBlur = s * (0.1 + 0.55 * glowAmt);
+      ctx.strokeStyle = col; ctx.lineWidth = 2; rr(-s / 2, -s / 2, s, s, s * 0.2); ctx.stroke(); ctx.restore();
+      // the face
+      ctx.save(); ctx.scale(1, k); ctx.shadowColor = col; ctx.shadowBlur = s * (0.08 + 0.4 * glowAmt);
+      rr(-s / 2, -s / 2, s, s, s * 0.2); ctx.save(); ctx.clip();
+      if (imgOk) ctx.drawImage(img, -s / 2, -s / 2, s, s);
+      else if (imgErr) { ctx.fillStyle = '#04141a'; ctx.fillRect(-s / 2, -s / 2, s, s); ctx.fillStyle = col; ctx.font = `${s * 0.3}px "Share Tech Mono",monospace`; ctx.textAlign = 'center'; ctx.fillText('B·O·S·S', 0, s * 0.1); }
+      // sheen sweeping over the face as it lights up
+      const sh = ctx.createLinearGradient(-s / 2, -s / 2, s / 2, s / 2);
+      sh.addColorStop(0, 'rgba(255,255,255,0.22)'); sh.addColorStop(0.45, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sh; ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.restore();
+      ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(214,255,243,0.55)'; ctx.lineWidth = 1.5; rr(-s / 2, -s / 2, s, s, s * 0.2); ctx.stroke();
+      ctx.restore(); ctx.restore();
+    }
+
     function drawLogo(t) {
-      const size = Math.min(W, H) * 0.26;
+      const size = Math.min(W, H) * 0.3;
       const [lx, ly] = P(0, landD);
-      const yEnd = ly - size * 0.62;
-      const yHover = reduced ? yEnd - size * 1.1 : Math.max(H * 0.1, yEnd - H * 0.3);
+      const thick = size * 0.16;
+      const yEnd = ly - thick - size * FLAT * 0.0;      // face centre when resting: slab bottom touches the floor point
+      const yHover = reduced ? yEnd - size * 1.0 : Math.max(H * 0.14, yEnd - H * 0.3);
       const p = clamp((t - T_FALL0) / (T_FALL1 - T_FALL0));
-      const rebound = reduced ? 0 : -size * 0.06 * Math.sin(Math.PI * clamp((t - T_FALL1) / 350));
-      const y = yHover + (yEnd - yHover) * ease.in(p) + rebound;
-      const lit = clamp(t / 800);                                   // illumination
-      const glowK = lit * (1 + 0.5 * clamp((t - T_FALL1) / 300));   // brighter on impact
-      if (t >= T_IMPACT - 40) {                                     // light pool on the floor
-        const pool = ctx.createRadialGradient(lx, ly, 0, lx, ly, size * 1.5);
-        const pa = clamp((t - T_IMPACT) / 400) * 0.55;
+      const lit = clamp(t / 800);
+      // it tumbles over backwards while dropping, so it lands face-up
+      const tilt = p * p * (3 - 2 * p);
+      const y = yHover + (yEnd - yHover) * ease.in(p) - (reduced ? 0 : size * 0.05 * Math.sin(Math.PI * clamp((t - T_FALL1) / 350)));
+      const roll = reduced ? 0 : 0.12 * Math.sin(p * Math.PI) * (1 - p);
+      const glowAmt = lit * (1 + 0.5 * clamp((t - T_FALL1) / 300));
+      if (t >= T_IMPACT - 40) {                          // light pool on the floor
+        const pool = ctx.createRadialGradient(lx, ly, 0, lx, ly, size * 1.4);
+        const pa = clamp((t - T_IMPACT) / 400) * 0.5;
         pool.addColorStop(0, col + Math.round(pa * 255).toString(16).padStart(2, '0')); pool.addColorStop(1, col + '00');
         ctx.save(); ctx.translate(lx, ly); ctx.scale(1, 0.32); ctx.translate(-lx, -ly);
-        ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(lx, ly, size * 1.5, 0, 6.2832); ctx.fill(); ctx.restore();
+        ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(lx, ly, size * 1.4, 0, 6.2832); ctx.fill(); ctx.restore();
       }
       if (!reduced && t > T_IMPACT - 40 && t < T_IMPACT + 700) {   // impact ring
         const k = clamp((t - (T_IMPACT - 40)) / 740);
         ctx.save(); ctx.translate(lx, ly); ctx.scale(1, 0.32);
         ctx.globalAlpha = (1 - k) * 0.9; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5 * (1 - k) + 0.5;
         ctx.shadowColor = col; ctx.shadowBlur = 14;
-        ctx.beginPath(); ctx.arc(0, 0, size * (0.4 + 2.2 * ease.out(k)), 0, 6.2832); ctx.stroke(); ctx.restore();
+        ctx.beginPath(); ctx.arc(0, 0, size * (0.4 + 2.0 * ease.out(k)), 0, 6.2832); ctx.stroke(); ctx.restore();
       }
-      ctx.globalAlpha = lit;
-      ctx.shadowColor = col; ctx.shadowBlur = size * (0.1 + 0.5 * glowK);
-      if (imgOk) ctx.drawImage(img, lx - size / 2, y, size, size);
-      else if (imgErr) { ctx.fillStyle = col; ctx.font = `${size * 0.3}px "Share Tech Mono",monospace`; ctx.textAlign = 'center'; ctx.fillText('B·O·S·S', lx, y + size * 0.55); }
+      drawBadge(lx, y, size, tilt, roll, glowAmt, lit);
       ctx.globalAlpha = 1; ctx.shadowBlur = 0;
       return { lx, ly, size };
     }
@@ -188,13 +212,13 @@ export function start() {
       ctx.fillStyle = '#d6fff3';
       ctx.font = `bold ${fs * 1.15}px "Share Tech Mono",monospace`;
       ctx.globalAlpha = clamp((t - t0) / 300);
-      ctx.fillText('B · O · S · S', g.lx, g.ly + g.size * 0.42);
+      ctx.fillText('B · O · S · S', g.lx, g.ly + g.size * 0.38);
       ctx.font = `${fs}px "Share Tech Mono",monospace`;
       LINES.forEach((ln, i) => {
         const a = clamp((t - (t0 + 250 + i * 420)) / 250);
         if (a <= 0) return;
         ctx.globalAlpha = a; ctx.fillStyle = i === LINES.length - 1 ? col : '#d6fff3';
-        ctx.fillText((i === LINES.length - 1 ? '✓ ' : '▸ ') + ln, g.lx, g.ly + g.size * (0.42 + 0.3 * (i + 1)));
+        ctx.fillText((i === LINES.length - 1 ? '✓ ' : '▸ ') + ln, g.lx, g.ly + g.size * (0.38 + 0.3 * (i + 1)));
       });
       ctx.globalAlpha = 1; ctx.shadowBlur = 0;
     }
