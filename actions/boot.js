@@ -61,8 +61,8 @@ export function start() {
     cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block';
     el.appendChild(cv);
     const ctx = cv.getContext('2d');
-    const img = new Image(); let imgOk = false;
-    img.onload = () => { imgOk = true; }; img.src = LOGO;
+    const img = new Image(); let imgOk = false, imgErr = false;
+    img.onload = () => { imgOk = true; }; img.onerror = () => { imgErr = true; }; img.src = LOGO;
 
     let W = 0, H = 0, dpr = 1;
     const fit = () => {
@@ -73,7 +73,7 @@ export function start() {
     };
     fit(); addEventListener('resize', fit);
 
-    let done = false, raf = 0, t0 = performance.now();
+    let done = false, raf = 0, clock = 0, last = 0;
     const finish = () => {
       if (done) return; done = true;
       cancelAnimationFrame(raf); removeEventListener('resize', fit);
@@ -150,7 +150,7 @@ export function start() {
       ctx.globalAlpha = 0.25 + 0.75 * lit;
       ctx.shadowColor = col; ctx.shadowBlur = size * (0.15 + 0.45 * lit);
       if (imgOk) ctx.drawImage(img, lx - size / 2, y, size, size);
-      else { ctx.fillStyle = col; ctx.font = `${size * 0.3}px "Share Tech Mono",monospace`; ctx.textAlign = 'center'; ctx.fillText('B·O·S·S', lx, y + size * 0.55); }
+      else if (imgErr) { ctx.fillStyle = col; ctx.font = `${size * 0.3}px "Share Tech Mono",monospace`; ctx.textAlign = 'center'; ctx.fillText('B·O·S·S', lx, y + size * 0.55); }
       ctx.globalAlpha = 1; ctx.shadowBlur = 0;
       return { lx, ly, size };
     }
@@ -172,7 +172,10 @@ export function start() {
 
     function frame(now) {
       if (done) return;
-      const t = reduced ? 2400 : now - t0;
+      // accumulate time with each step capped, so a stalled main thread pauses the
+      // animation instead of skipping it to the end
+      if (last) clock += Math.min(now - last, 50); last = now;
+      const t = reduced ? 2400 : clock;
       ctx.clearRect(0, 0, W, H);
       // dim vignette so the grid fades into the dark
       const v = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.1, W / 2, H * 0.55, H * 0.8);
