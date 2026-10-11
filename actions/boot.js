@@ -15,7 +15,8 @@
  *   • After an update (flag cleared by Update BOSS / the "BOSS updated" banner).
  *   • NOT on a plain reload inside the same session (sessionStorage flag BOSS_BOOTED).
  *   • Never when switched off in Settings. Tap / key to skip at any time.
- *   • Reduce-motion → a calm still frame (no movement), shorter.
+ *   • Reduce-motion (iOS/Android system setting, or Settings → Reduce motion) → a calmer
+ *     version: the logo fades in place (no fall), pulses flow slowly.
  *
  * Self-contained: the overlay div (#boot) is placed in index.html right after
  * <body> so there is no flash of the field first; this module draws into it.
@@ -94,7 +95,7 @@ export function start() {
     };
 
     function drawGrid(t, tImpact) {
-      const R = t < tImpact ? -1 : (t - tImpact) * 0.0105;     // wavefront radius, grid units / ms
+      const R = t < tImpact ? -1 : (t - tImpact) * (reduced ? 0.0058 : 0.0105);     // wavefront radius, grid units / ms
       ctx.lineCap = 'round';
       const seg = (a, b, i0, d0, i1, d1) => {
         const mi = (i0 + i1) / 2, md = (d0 + d1) / 2;
@@ -131,11 +132,11 @@ export function start() {
       const p = clamp((t - tFall0) / (tFall1 - tFall0));
       const yEnd = ly - size * 0.62, yStart = -size;
       const rebound = reduced ? 0 : -size * 0.07 * Math.sin(Math.PI * clamp((t - tFall1) / 380)) ;
-      const y = reduced ? yEnd : yStart + (yEnd - yStart) * ease.in(p) + rebound;
-      const lit = reduced ? 1 : clamp((t - 150) / 1000);         // illumination ramps while falling
+      const y = reduced ? yEnd : yStart + (yEnd - yStart) * ease.in(p) + rebound;   // reduce-motion: no fall, it fades in place
+      const lit = reduced ? clamp(t / 900) : clamp((t - 150) / 1000);         // illumination ramps while falling
       // light pool on the floor
       const pool = ctx.createRadialGradient(lx, ly, 0, lx, ly, size * 1.5);
-      const poolA = clamp((t - 900) / 500) * 0.5 * (reduced ? 1 : 1);
+      const poolA = clamp(((reduced ? t - 300 : t - 900)) / 500) * 0.5;
       pool.addColorStop(0, col + Math.round(poolA * 255).toString(16).padStart(2, '0')); pool.addColorStop(1, col + '00');
       ctx.save(); ctx.translate(lx, ly); ctx.scale(1, 0.32); ctx.translate(-lx, -ly);
       ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(lx, ly, size * 1.5, 0, 6.2832); ctx.fill(); ctx.restore();
@@ -174,20 +175,21 @@ export function start() {
       if (done) return;
       // accumulate time with each step capped, so a stalled main thread pauses the
       // animation instead of skipping it to the end
+      if (!imgOk && !imgErr && now - wall0 < 1500) { raf = requestAnimationFrame(frame); return; }   // let the logo load first
       if (last) clock += Math.min(now - last, 50); last = now;
-      const t = reduced ? 2400 : clock;
+      const t = clock;
       ctx.clearRect(0, 0, W, H);
       // dim vignette so the grid fades into the dark
       const v = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.1, W / 2, H * 0.55, H * 0.8);
       v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.65)');
-      drawGrid(t, 1150);
+      drawGrid(t, reduced ? 900 : 1150);
       const g = drawLogo(t);
       drawText(t, g);
       ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
-      if (reduced) { raf = 0; setTimeout(finish, 900); return; }
-      if (t >= DURATION) { finish(); return; }
+      if (t >= (reduced ? 3000 : DURATION)) { finish(); return; }
       raf = requestAnimationFrame(frame);
     }
+    const wall0 = performance.now();
     raf = requestAnimationFrame(frame);
   });
 }
