@@ -21,12 +21,12 @@
  * node labels keep a fixed size on purpose, so they always fit.
  */
 
-export const BUILD = '0.12.0';          // keep in step with BUILD in core/sw.js
+export const BUILD = '0.13.0';          // keep in step with BUILD in core/sw.js
 const KEY = 'BOSS_UI';
 
 // Settings that "Reset settings" restores to default. Everything else —
 // vault, notes, alarms, profile, keys — is DATA and is never touched by it.
-export const SETTINGS_KEYS = ['BOSS_UI', 'BOSS_SOMA_CONFIG', 'BOSS_VOICE', 'BOSS_WAVE'];
+export const SETTINGS_KEYS = ['BOSS_UI', 'BOSS_SOMA_CONFIG', 'BOSS_VOICE', 'BOSS_WAVE', 'BOSS_BOOT'];
 
 export const TEXT_SIZES = [
   { id: 's',  label: 'S',  scale: 0.9 },
@@ -91,6 +91,7 @@ async function _dropAppCaches() {
 /** Re-download the app files and reload. Your data is not touched. */
 export async function updateBoss() {
   await _dropAppCaches();       // the page re-registers the worker on reload
+  try { sessionStorage.removeItem('BOSS_BOOTED'); } catch (_) {}   // replay the boot animation after an update
   location.reload();
 }
 
