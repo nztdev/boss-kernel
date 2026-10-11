@@ -7072,7 +7072,9 @@ function seed() {
 // Registry must be initialised before seed() or loadKernel() runs,
 // because both read from Registry for node definitions.
 UI.apply();   // text size, reduce-motion, style tokens
-const _bootDone = Boot.start().catch(() => {});   // once per session / after an update
+// Play the boot animation BEFORE the heavy start-up work below: that work blocks the
+// main thread, which would freeze the animation (seen on iPhone). Once per session / after an update.
+await Boot.start().catch(() => {});
 Registry.init();
 ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
 Immune.init(Registry, Nervous);
@@ -7196,7 +7198,7 @@ Waveform.init({
     return { x: r.left + n.x * (r.width / c.width), y: r.top + n.y * (r.height / c.height), color: n.color };
   },
 });
-_bootDone.then(() => Onboarding.start());
+Onboarding.start();
 
 requestAnimationFrame(loop);
 </script>
