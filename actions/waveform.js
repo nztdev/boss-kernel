@@ -22,7 +22,7 @@
  *   • Strip: a slim bar above the input box. Hidden when idle, grows while BOSS
  *     speaks (cyan) or listens (amber, calmer). Tap it to collapse to a thin line.
  *   • Ring: expanding rings from the SOMA node on a transparent overlay.
- *   • Reduce-motion (Settings / system) → a still, low indicator, no animation.
+ *   • Reduce-motion (Settings / system) → slow, small "breathing" motion (never frozen).
  *   • Animation frames only run while active (no idle battery cost).
  */
 
@@ -72,8 +72,8 @@ const _amber = '#ffcc00';
 function _level(now) {
   if (_state === 'idle') return 0;
   const t = (now - _t0) / 1000;
-  const base = _state === 'speaking' ? 0.55 : 0.28;
-  const wob  = 0.22 * Math.sin(t * 5.1) * Math.sin(t * 1.7 + 1) + 0.12 * Math.sin(t * 11.3);
+  const base = _state === 'speaking' ? 0.6 : 0.32;
+  const wob  = 0.25 * Math.sin(t * 5.1) * Math.sin(t * 1.7 + 1) + 0.12 * Math.sin(t * 11.3);
   return Math.max(0, Math.min(1, base + wob + _boost));
 }
 
@@ -96,13 +96,20 @@ function _drawStrip(now) {
   const reduced = _reduced();
   const gap = 3, bw = (w - gap * (_BARS + 1)) / _BARS;
   _sctx.fillStyle = col;
+  // Motion speed: full normally; slow "breathing" for reduce-motion (never frozen —
+  // a frozen bar looks like a broken indicator).
+  const sp = reduced ? 0.35 : 1;
+  const amp = reduced ? Math.max(_amp, 0.35) : Math.max(_amp, 0.25);
   for (let i = 0; i < _BARS; i++) {
     const p = _ph[i];
-    // bell-shaped envelope so the middle is livelier than the edges
     const env = 0.35 + 0.65 * Math.sin((i + 0.5) / _BARS * Math.PI);
-    const v = reduced ? 0.25 : (0.5 + 0.5 * Math.sin(t * p.f * 3 + p.a)) * (0.6 + 0.4 * Math.sin(t * p.f * 1.3 + p.b));
-    const bh = Math.max(2, (h - 6) * Math.min(1, 1.5 * _amp * env * (0.3 + 0.7 * v)));
-    _sctx.globalAlpha = 0.35 + 0.65 * Math.min(1, _amp * 1.4);
+    // three layers: fast per-bar flutter, a wave travelling along the strip, a slow swell
+    const flutter = 0.5 + 0.5 * Math.sin(t * sp * p.f * 6 + p.a);
+    const travel  = 0.5 + 0.5 * Math.sin(t * sp * 4 - i * 0.55);
+    const swell   = 0.75 + 0.25 * Math.sin(t * sp * 1.3 + p.b);
+    const v = (0.45 * flutter + 0.55 * travel) * swell;
+    const bh = Math.max(3, (h - 6) * Math.min(1, 1.6 * amp * env * (0.15 + 0.85 * v)));
+    _sctx.globalAlpha = 0.45 + 0.55 * Math.min(1, amp * 1.3);
     _sctx.fillRect(gap + i * (bw + gap), (h - bh) / 2, bw, bh);
   }
   _sctx.globalAlpha = 1;
@@ -120,15 +127,16 @@ function _drawRing(now) {
   const baseR = 30;
   _rctx.strokeStyle = col; _rctx.fillStyle = col;
   // soft pulsing glow on the node itself
-  const g = _rctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, baseR + 26 * _amp);
+  const amp = Math.max(_amp, 0.3) * (1 + 0.18 * Math.sin(t * (reduced ? 1.5 : 7)));
+  const g = _rctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, baseR + 26 * amp);
   g.addColorStop(0, col + '55'); g.addColorStop(1, col + '00');
-  _rctx.fillStyle = g; _rctx.beginPath(); _rctx.arc(a.x, a.y, baseR + 26 * _amp, 0, 6.2832); _rctx.fill();
+  _rctx.fillStyle = g; _rctx.beginPath(); _rctx.arc(a.x, a.y, baseR + 26 * amp, 0, 6.2832); _rctx.fill();
   const rings = 3;
   for (let i = 0; i < rings; i++) {
-    const prog = reduced ? 0.4 : ((t * (_state === 'speaking' ? 0.55 : 0.3) + i / rings) % 1);
-    const r = baseR + prog * (44 + 30 * _amp);
-    _rctx.globalAlpha = Math.max(0, (1 - prog)) * Math.min(1, 0.25 + _amp) * 0.8;
-    _rctx.lineWidth = 1 + 2.2 * _amp * (1 - prog);
+    const prog = ((t * (reduced ? 0.22 : (_state === 'speaking' ? 0.7 : 0.4)) + i / rings) % 1);
+    const r = baseR + prog * (44 + 30 * amp);
+    _rctx.globalAlpha = Math.max(0, (1 - prog)) * Math.min(1, 0.3 + amp) * 0.85;
+    _rctx.lineWidth = 1.2 + 2.4 * amp * (1 - prog);
     _rctx.beginPath(); _rctx.arc(a.x, a.y, r, 0, 6.2832); _rctx.stroke();
   }
   _rctx.globalAlpha = 1;
@@ -143,7 +151,7 @@ function _frame(now) {
   if (_st.mode === 'strip') _drawStrip(now);
   else if (_st.mode === 'ring') _drawRing(now);
   const keepGoing = _state !== 'idle' || _amp > 0.02;
-  if (keepGoing && !_reduced()) _raf = requestAnimationFrame(_frame);
+  if (keepGoing) _raf = requestAnimationFrame(_frame);
   else if (!keepGoing) _hide();
 }
 function _kick() { if (!_raf) _raf = requestAnimationFrame(_frame); }
@@ -163,8 +171,6 @@ function _setState(s) {
   if (s === _state) return;
   _state = s;
   if (s !== 'idle') { _t0 = performance.now(); _show(); }
-  // reduced motion: draw one still frame and stop
-  if (_reduced()) { _amp = s === 'idle' ? 0 : 0.5; const now = performance.now(); (_st.mode === 'strip' ? _drawStrip : _drawRing)(now); if (s === 'idle') _hide(); return; }
   _kick();
 }
 
