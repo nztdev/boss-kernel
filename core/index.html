@@ -1589,6 +1589,9 @@ textarea.profile-input {
 </style>
 </head>
 <body>
+<!-- BOOT OVERLAY: removed at once if the animation isn't due (same session / switched off) -->
+<div id="boot" style="position:fixed;inset:0;z-index:200;background:#02060a"></div>
+<script>try{if(sessionStorage.getItem('BOSS_BOOTED')||localStorage.getItem('BOSS_BOOT')==='off'){document.getElementById('boot').remove()}}catch(e){}setTimeout(function(){var b=document.getElementById('boot');if(b)b.remove()},9000)</script>
 
 <!-- STATUS BAR -->
 <div id="status-bar">
@@ -1850,6 +1853,7 @@ textarea.profile-input {
       <button class="set-btn" onclick="settingsGo('home')">🏠 Home screen</button>
       <button class="set-btn" onclick="settingsGo('feedback')">💬 Send feedback</button>
     </div>
+    <div class="set-row"><span>Boot animation on launch</span><input type="checkbox" id="set-boot" onchange="BOSS_boot.setEnabled(this.checked)"></div>
     <div class="set-row"><span>Show home screen on launch</span><input type="checkbox" id="set-home" onchange="BOSS_onboarding.setHomeOnLaunch(this.checked)"></div>
     <div class="set-note">Testing BOSS? "Send feedback" packages what you tried into a file for the team — you see exactly what's in it first.</div>
 
@@ -2364,7 +2368,7 @@ if ('serviceWorker' in navigator) {
     b.style.cssText = 'position:fixed;top:48px;left:50%;transform:translateX(-50%);z-index:100;padding:9px 16px;' +
       'border-radius:18px;background:rgba(3,10,6,.97);color:#00ffcc;border:1px solid #00ffcc;' +
       'font:12px "Share Tech Mono",monospace;cursor:pointer;box-shadow:0 0 14px #00ffcc44;';
-    b.onclick = () => location.reload();
+    b.onclick = () => { try { sessionStorage.removeItem('BOSS_BOOTED'); } catch (_) {} location.reload(); };
     document.body.appendChild(b);
   });
   navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -2385,6 +2389,7 @@ import { UI }                                           from '../actions/ui.js';
 import { Feedback }                                     from '../actions/feedback.js';
 import { FeedbackUI }                                   from '../actions/feedback-ui.js';
 import { Onboarding }                                   from '../actions/onboarding.js';
+import { Boot }                                         from '../actions/boot.js';
 import { Learning }                                     from '../actions/learning.js';
 import { Waveform }                                     from '../actions/waveform.js';
 import { MemoryAction }                                  from '../actions/memory.js';
@@ -2920,6 +2925,7 @@ function _renderSettings() {
     `<button class="set-chip ${t.id === st.textSize ? 'on' : ''}" onclick="setTextSize('${t.id}')">${t.label}</button>`).join('');
   document.getElementById('set-reduce').checked = !!st.reduceMotion;
   document.getElementById('set-home').checked = Onboarding.homeOnLaunch();
+  document.getElementById('set-boot').checked = Boot.enabled();
   document.getElementById('set-wave').innerHTML = Waveform.MODES.map(m =>
     `<option value="${m.id}" ${m.id === Waveform.getMode() ? 'selected' : ''}>${m.label}</option>`).join('');
   _renderLearning();
@@ -7066,6 +7072,7 @@ function seed() {
 // Registry must be initialised before seed() or loadKernel() runs,
 // because both read from Registry for node definitions.
 UI.apply();   // text size, reduce-motion, style tokens
+const _bootDone = Boot.start().catch(() => {});   // once per session / after an update
 Registry.init();
 ACTIVE_NODES = new Set(Registry.getActiveNodeNames());
 Immune.init(Registry, Nervous);
@@ -7189,7 +7196,7 @@ Waveform.init({
     return { x: r.left + n.x * (r.width / c.width), y: r.top + n.y * (r.height / c.height), color: n.color };
   },
 });
-Onboarding.start();
+_bootDone.then(() => Onboarding.start());
 
 requestAnimationFrame(loop);
 </script>
