@@ -14,6 +14,7 @@ for ln in open(corpus, encoding='utf8'):
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/opt/pw-browsers/chromium', args=['--no-sandbox'])
     pg=b.new_page(); errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
+    pg.add_init_script("try{localStorage.setItem('BOSS_BOOT','off')}catch(e){}")  # skip the launch animation
     pg.goto(os.environ.get('BOSS_URL','http://localhost:8123/core/index.html')); pg.wait_for_timeout(2500)
     res=pg.evaluate("rows => rows.map(([e,p]) => ({e,p,r:window.BOSS_route(p)}))", rows)
     stress={}
