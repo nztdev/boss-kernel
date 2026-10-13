@@ -31,7 +31,7 @@ CORE	what's my location
 CORE	how is the battery
 CORE	battery level
 CORE	system status
-CORE|SOMA|CORTEX	how are you doing
+CHAT	how are you doing
 CORE	check system health
 CORE	am I online
 CORE	is the network working
@@ -41,7 +41,7 @@ CORE	back up my data
 CORE	create a backup
 CORE	restore from backup
 CORE	what are my coordinates
-CORE|SOMA|CORTEX	are you ok
+CHAT	are you ok
 # ── SOMA: appearance, voice, settings ──
 SOMA	change the theme
 SOMA	switch to amber
@@ -156,7 +156,7 @@ CORTEX	how does a car engine work
 CORTEX	help me think through a decision
 CORTEX	give me an idea for dinner
 CORTEX	write me a short poem
-CORTEX	tell me a joke
+CHAT	tell me a joke
 HELP	what can you do
 HELP	help
 # ── NATIVE: honest "needs the app" ──
