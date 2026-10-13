@@ -1,0 +1,141 @@
+# Conversation layer (actions/dialogue.js). CHAT = answered locally by the dialogue layer.
+# Anything else = the request must still reach that node (pleasantries are peeled off, never swallow the action).
+# ── greetings ──
+CHAT	hi
+CHAT	hello
+CHAT	hey
+CHAT	hey there
+CHAT	hello there
+CHAT	hey boss
+CHAT	hi boss
+CHAT	yo
+CHAT	howdy
+CHAT	hiya
+CHAT	good morning
+CHAT	good afternoon
+CHAT	good evening
+CHAT	morning
+CHAT	good morning boss
+CHAT	good night
+CHAT	night night
+# ── how are you ──
+CHAT	how are you
+CHAT	how are you today
+CHAT	how's it going
+CHAT	how is it going
+CHAT	what's up
+CHAT	whats up
+CHAT	how have you been
+CHAT	you good
+CHAT	how's your day
+# ── thanks / goodbyes / compliments ──
+CHAT	thanks
+CHAT	thank you
+CHAT	thank you so much
+CHAT	thanks a lot
+CHAT	thx
+CHAT	cheers
+CHAT	much appreciated
+CHAT	thanks boss
+CHAT	bye
+CHAT	goodbye
+CHAT	see you later
+CHAT	see ya
+CHAT	talk to you later
+CHAT	gotta go
+CHAT	you're awesome
+CHAT	you are great
+CHAT	good job
+CHAT	well done
+CHAT	nice work
+CHAT	love you
+CHAT	you rock
+# ── acknowledgements / replies ──
+CHAT	ok
+CHAT	okay
+CHAT	cool
+CHAT	got it
+CHAT	alright
+CHAT	sounds good
+CHAT	perfect
+CHAT	lol
+CHAT	haha
+CHAT	hmm
+CHAT	yes
+CHAT	no
+CHAT	yeah
+CHAT	nope
+CHAT	sorry
+CHAT	my bad
+CHAT	oops
+CHAT	never mind
+CHAT	forget it
+CHAT	nvm
+# ── mood / chat ──
+CHAT	i'm bored
+CHAT	im bored
+CHAT	i am so bored
+CHAT	entertain me
+CHAT	i'm tired
+CHAT	i am so tired
+CHAT	i feel exhausted
+CHAT	i need a break
+CHAT	i need a nap
+CHAT	i'm stressed
+CHAT	i feel anxious
+CHAT	i'm feeling down
+CHAT	my day was rough
+CHAT	i had a terrible day
+CHAT	let's chat
+CHAT	can we talk
+CHAT	i want to talk
+CHAT	keep me company
+CHAT	are you there
+CHAT	tell me a joke
+CHAT	make me laugh
+CHAT	say something funny
+CHAT	got any jokes
+CHAT	that's wrong
+CHAT	you don't understand
+CHAT	that's not what i asked
+# ── safety (fixed reply) ──
+CHAT	i want to die
+CHAT	i want to kill myself
+CHAT	i don't want to live anymore
+# ── missing detail → BOSS asks ──
+CHAT	set a timer
+CHAT	start a timer
+CHAT	set an alarm
+# ── traps: pleasantries glued to a real request MUST still reach the action ──
+CHRONOS	thanks, set a timer for 5 minutes
+CHRONOS	thank you, set a timer for 10 minutes
+CHRONOS	hey, set a timer for 5 minutes
+CHRONOS	ok set a timer for 2 minutes
+CHRONOS	please set a timer for 3 minutes
+CHRONOS	set a timer for 5 minutes please
+CHRONOS	set a timer for 5 minutes thanks
+CHRONOS	good morning, what's the weather
+CHRONOS	hello, what time is it in Tokyo
+CHRONOS	so what's the weather in Rome
+CHRONOS	alright what time is it in London
+CHRONOS	set a timer for 5 minutes
+CHRONOS	what's the weather
+CHRONOS	what time is it in Paris
+CHRONOS	cancel timer
+MEDIA	hey, play music
+MEDIA	thanks, play some music
+MEDIA	ok play music
+MEDIA	play music please
+MEDIA	stop
+MEDIA	stop the music
+MEDIA	turn the volume down
+# these look chatty but are real requests
+CORTEX	what do you think about cats
+CORTEX	explain how rainbows form
+CORTEX	why is the sky blue
+CORTEX	what is the capital of france
+CORE|SOMA	who are you
+HELP	what can you do
+MEMORY	remember my locker code is 4821
+MEMORY	what do you remember
+MEMORY	show my notes
