@@ -1,6 +1,6 @@
 # B.O.S.S. — Tester Guide
 
-Thanks for trying BOSS. This takes about **25–30 minutes**. You don't need to be technical — just do the steps, write down what happened, and send us the report at the end.
+Thanks for trying BOSS. This takes about **30–35 minutes**. You don't need to be technical — just do the steps, write down what happened, and send us the report at the end.
 
 **What BOSS is:** an assistant you talk to in your own words. You type (or speak) a request; it finds the right part of itself to handle it — timers, notes, music, calls, files, weather and more. It works offline and keeps your data on your device.
 
@@ -66,6 +66,25 @@ BOSS should understand ordinary wording. Try a few of your **own** versions of t
 | C3 | Do two different things back-to-back (e.g. `play music`, then immediately `set a timer for 5 minutes`). | Each goes to the right place. If the second one goes somewhere odd right after the first, **flag it** — see the note below. |
 
 > **Note:** BOSS briefly “remembers” what you just used, which can occasionally pull the next request to the same part. We know this exists and want examples — flagging them helps a lot.
+
+## 3b · Talking to BOSS
+
+BOSS now handles everyday small talk and follow-ups. Try these in order (give each a moment):
+
+| # | Say / do | Expect |
+|---|---|---|
+| G1 | `hi` → `how are you` → `thanks` → `bye` | Short, natural replies. Not repeated word for word if you do it twice. |
+| G2 | `thanks, set a timer for 1 minute` | The timer is set **and** BOSS says you're welcome. (The request must never be lost.) |
+| G3 | `set a timer` → then just `10 minutes` | BOSS asks how long, then sets a 10-minute timer. |
+| G4 | `what time is it in Tokyo` → `and in London` | The second answers for London. Also try `what's the weather in Paris` → `and in Rome`. |
+| G5 | `set a timer for 5 minutes` → `make it 10`, then `cancel that` | A 10-minute timer is set; then timers are cancelled. |
+| G6 | `tell me a joke` → `another one` | A joke, then a different one. |
+| G7 | `i'm tired`, `i'm bored` | A friendly reply with small tappable suggestions — tap one and it runs. |
+| G8 | Settings → **Personality**: switch to *Dry*, *Playful*, *Formal*, *Concise* and say `hello` and `thanks` each time. | The replies change tone. |
+| G9 | Say something chatty that BOSS can't know, e.g. `what do you think about cats`. | No engine: a clear message that open chat needs an AI engine. With an engine key: a short answer in the chosen tone. |
+| G10 | Try 3–5 ordinary chit-chat lines of your own. | Anything that gets a strange reply or triggers the wrong feature: tap ✋ **Not what I meant**. |
+
+*(Please don't test the distress response with real feelings. If you want to check it exists, a tester can ask the dev team.)*
 
 ## 4 · Reporting problems (please do this as you go)
 
@@ -133,6 +152,16 @@ Copy this table into a note or email (or just attach the report file from D3 —
 | C1 (your 5 requests) | | |
 | C2 | | |
 | C3 | | |
+| G1 | | |
+| G2 | | |
+| G3 | | |
+| G4 | | |
+| G5 | | |
+| G6 | | |
+| G7 | | |
+| G8 | | |
+| G9 | | |
+| G10 | | |
 | D1 | | |
 | D2 | | |
 | D3 | | |
