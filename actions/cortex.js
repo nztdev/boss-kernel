@@ -219,6 +219,9 @@ async function _handleDeliberate(type, subject, intent, clog, Nervous, EVENT, en
     }
   }
 
+  // Conversation style (chosen personality) + the last few turns, so open chat stays coherent.
+  if (window.BOSS_DIALOGUE && type === 'question') systemPrompt = `${window.BOSS_DIALOGUE.promptContext()} ${systemPrompt}`;
+
   try {
     const result = await deliberateFn(subject || intent, enginePool, {
       systemPrompt,
@@ -232,6 +235,7 @@ async function _handleDeliberate(type, subject, intent, clog, Nervous, EVENT, en
     const conf    = Math.round((result.confidence || 0) * 100);
     const winner  = result.winner?.name || 'unknown';
     const output  = result.output || '';
+    if (window.BOSS_DIALOGUE && output) window.BOSS_DIALOGUE.noteEngine(intent, output);
 
     clog(`🔬 CORTEX [${winner}, ${conf}% consensus]:`, 'log-vec');
 
