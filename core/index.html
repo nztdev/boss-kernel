@@ -1835,6 +1835,9 @@ textarea.profile-input {
     <div class="set-note">Text size applies to panels and the console. The top bar and node labels keep a fixed size so they always fit. More styles can be added later.</div>
 
     <div class="set-sec">SETTINGS &amp; DATA</div>
+    <div class="set-row"><span>Personality</span></div>
+    <select class="set-sel" id="set-tone" onchange="setTone(this.value)"></select>
+    <div class="set-note" id="set-tone-sample"></div>
     <div class="set-row"><span>Speaking animation</span></div>
     <select class="set-sel" id="set-wave" onchange="setWave(this.value)"></select>
     <div class="set-note">A visual cue while BOSS speaks or listens. It is an animation, not the actual sound.</div>
@@ -2390,6 +2393,7 @@ import { Feedback }                                     from '../actions/feedbac
 import { FeedbackUI }                                   from '../actions/feedback-ui.js';
 import { Onboarding }                                   from '../actions/onboarding.js';
 import { Boot }                                         from '../actions/boot.js';
+import { Dialogue }                                     from '../actions/dialogue.js';
 import { Learning }                                     from '../actions/learning.js';
 import { Waveform }                                     from '../actions/waveform.js';
 import { MemoryAction }                                  from '../actions/memory.js';
@@ -2926,6 +2930,9 @@ function _renderSettings() {
   document.getElementById('set-reduce').checked = !!st.reduceMotion;
   document.getElementById('set-home').checked = Onboarding.homeOnLaunch();
   document.getElementById('set-boot').checked = Boot.enabled();
+  document.getElementById('set-tone').innerHTML = Dialogue.TONES.map(t =>
+    `<option value="${t.id}" ${t.id === Dialogue.getTone() ? 'selected' : ''}>${t.label}</option>`).join('');
+  document.getElementById('set-tone-sample').textContent = '“' + Dialogue.sample(Dialogue.getTone()) + '”  How BOSS replies to small talk. With an engine connected it also shapes open chat.';
   document.getElementById('set-wave').innerHTML = Waveform.MODES.map(m =>
     `<option value="${m.id}" ${m.id === Waveform.getMode() ? 'selected' : ''}>${m.label}</option>`).join('');
   _renderLearning();
@@ -2987,6 +2994,7 @@ function _renderLearning() {
       (l.preferences.length ? 'Learned: ' + l.preferences.map(p => `${p.pair} → ${p.winner}`).join(' · ') : 'No learned preferences yet.')
     : 'Learning is off — BOSS uses its default behaviour.';
 }
+window.setTone = id => { Dialogue.setTone(id); document.getElementById('set-tone-sample').textContent = '“' + Dialogue.sample(id) + '”  How BOSS replies to small talk. With an engine connected it also shapes open chat.'; clog('🎭 Personality: ' + id, 'log-sys'); };
 window.setWave = m => { Waveform.setMode(m); if (m !== 'off') { clog('〰 Speaking animation: ' + m, 'log-sys'); } };
 window.setLearning = on => { Learning.setEnabled(on); _renderLearning(); };
 window.resetLearning = () => { Learning.reset(); _renderLearning(); clog('🎓 Learning reset', 'log-sys'); };
@@ -6136,6 +6144,9 @@ function claimIntent(intent) {
 window.BOSS_route = function(intent) {
   if (Onboarding.isHelpIntent(intent)) return { outcome: 'help', node: null, via: 'help' };
   if (Onboarding.isHomeIntent(intent)) return { outcome: 'help', node: null, via: 'home' };
+  { const d = Dialogue.peek(intent);
+    if (d.kind === 'reply' || d.kind === 'ask') return { outcome: 'chat', node: 'CHAT', via: 'chat:' + d.tag };
+    if (d.kind === 'strip') intent = d.intent; }
   const nat = Registry.matchNativeOnly(intent);
   if (nat) return { outcome: 'native', node: nat.node || null, via: 'native:' + nat.id };
   const scored = nodes
@@ -6170,10 +6181,11 @@ window.BOSS_heat = function(name, w) { nodes.forEach(n => { n.warmth = (n.name =
 
 async function firePulse() {
   const el     = document.getElementById('pulse-input');
-  const intent = el.value.trim();
+  let intent = el.value.trim();
   if (!intent) return;
   if (limpMode) { clog('🩼 LIMP MODE — tap Recover', 'log-grief'); return; }
   Voice.cancel();   // a new intent interrupts any reply still being spoken
+  Dialogue.hideChips();
   // Don't pulse if a modal prompt input has focus — those have their own handlers
   const activeEl = document.activeElement;
   if (activeEl && activeEl !== el &&
@@ -6215,6 +6227,21 @@ async function firePulse() {
     Feedback.record({ intent, node: null, via: 'home', handled: true });
     Onboarding.openHome();
     return;
+  }
+
+  // Conversation layer (not a node — no warmth/bonds): small talk, thanks, follow-ups,
+  // a missing detail ("for how long?"). Anything it doesn't own continues below unchanged.
+  let _dlgAfter = null;
+  {
+    const d = Dialogue.process(intent);
+    if (d.kind === 'reply' || d.kind === 'ask') {
+      clog(d.text, 'log-action');
+      Dialogue.showChips(d.chips);
+      Feedback.record({ intent: d.private ? '[private]' : intent, node: null, via: 'chat:' + d.tag, handled: true });
+      return;
+    }
+    if (d.kind === 'rewrite') { clog(`   ↪ understood as "${d.intent}"`, 'log-vec'); intent = d.intent; }
+    else if (d.kind === 'strip') { intent = d.intent; _dlgAfter = d.after || null; }
   }
 
   // Known native-only request (flashlight, screen recording, contacts…):
@@ -6322,6 +6349,8 @@ async function firePulse() {
   }
   const handled = await winner.igniteAsync(fireIntent);
   Feedback.settleLast(intent, handled);
+  Dialogue.noteAction(intent, winner.name, handled);
+  if (_dlgAfter && handled !== false) clog(_dlgAfter, 'log-action');
 
   // Kernel-level gap-fill fallback (v0.9). CORTEX already runs its own
   // full-catalogue check internally when it wins — but a near-zero-match
@@ -7188,6 +7217,11 @@ Onboarding.init({
   openSettings: () => openSettings(),
   enterField: () => {},
   nativeItems: () => Registry.getAllPresets().filter(p => p.nativeOnly).map(p => ({ icon: p.icon, label: p.label, reason: p._nativeReason })),
+});
+Dialogue.init({
+  getName: () => { try { return (getUserProfile().name || '').trim(); } catch (_) { return ''; } },
+  hasEngine: () => !!(enginePool && enginePool.some(n => n.tier === 1 && n.apiKey)),
+  run: phrase => { document.getElementById('pulse-input').value = phrase; firePulse(); },
 });
 Waveform.init({
   voice: Voice,
