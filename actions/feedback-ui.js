@@ -25,7 +25,7 @@ let _expected = null;
 
 const CSS = `
 #fb-miss-chip{display:none;margin:0 0 6px;padding:5px 10px;font:calc(10px * var(--ts,1)) 'Share Tech Mono',monospace;
-  color:#ffcc88;background:rgba(40,25,0,.7);border:1px solid #5a4010;border-radius:14px;cursor:pointer;align-self:flex-start}
+  color:#ffcc88;background:rgba(40,25,0,.7);border:1px solid #5a4010;border-radius:14px;cursor:pointer;align-self:flex-start;position:relative;z-index:8;pointer-events:auto}
 #fb-miss-chip.show{display:inline-block}
 .fb-overlay{display:none;position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);
   align-items:center;justify-content:center;padding:12px}
@@ -153,8 +153,14 @@ function _saveMiss() {
     try { _cfg.onMiss && _cfg.onMiss({ routedTo: _last.node, via: _last.via, expected: _expected }); } catch (_) {}
     _cfg.log('✋ Thanks — saved. It will be in your tester report.');
   }
-  document.getElementById('fb-miss-chip').classList.remove('show');
+  const chip = document.getElementById('fb-miss-chip');
   closeMiss();
+  if (chip && _last) {                       // visible confirmation, then hide
+    clearTimeout(_chipTimer);
+    chip.textContent = '✓ Saved — thank you';
+    chip.classList.add('show');
+    _chipTimer = setTimeout(() => { chip.classList.remove('show'); chip.textContent = '✋ Not what I meant'; }, 1800);
+  } else if (chip) chip.classList.remove('show');
 }
 
 // ── report flow ───────────────────────────────────────────────────────────────
