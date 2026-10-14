@@ -2375,6 +2375,8 @@ if ('serviceWorker' in navigator) {
     document.body.appendChild(b);
   });
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  // An already-running worker only announces its version on activation, so ask for it.
+  navigator.serviceWorker.ready.then(r => { const w = navigator.serviceWorker.controller || r.active; if (w) w.postMessage({ type: 'GET_BUILD' }); }).catch(() => {});
 }
 </script>
 
@@ -6076,6 +6078,11 @@ const INTENT_CLAIMS = [
   // Phrase-level claims added by the phrase-corpus pass (tests/phrases.tsv)
   { node: 'SOMA',    reason: 'voice/identity', test: i => isSomaClaim(i) },
   { node: 'CHRONOS', reason: 'weather',   test: i => Weather.isWeatherIntent(i) && !/\b(clipboard|text|document|file|article|report)\b/i.test(i) },
+  // Timers and alarms are CHRONOS's alone (real reports: a warm CORTEX/MEMORY won "set a timer for 5 minutes").
+  { node: 'CHRONOS', reason: 'timer',     test: i => /\b(?:timers?|countdown|stopwatch)\b/i.test(i) && !/\b(clipboard|text|document|file|article|report|video|song|music|note|notes)\b/i.test(i) },
+  { node: 'CHRONOS', reason: 'alarm',     test: i => /\balarms?\b/i.test(i) && !/\b(clipboard|text|document|file|video|song|music|note|notes)\b/i.test(i) },
+  // Open-ended opinion/feeling questions are the thinker's (with an engine); the dialogue layer answers honestly without one.
+  { node: 'CORTEX',  reason: 'opinion',   test: i => Dialogue.isOpinion(i) },
   { node: 'CHRONOS', reason: 'reminder-in', test: i => /\bremind(?:er|ed)?\b.*\b(?:in|after)\s+(?:\d+|an?|one|two|three|five|ten|fifteen|twenty|thirty|half|quarter)\b/i.test(i) },
   { node: 'CORE',    reason: 'location/backup', test: i => /\bwhere am i\b|\bwhere i am\b|\bmy (?:current )?location\b|\bmy coordinates\b/i.test(i) ||
                                                       /^(?:please\s+)?(?:create|make|take|run|do)?\s*(?:a\s+|my\s+)?back-?up(?:\s+(?:now|of (?:my )?(?:data|boss|everything)))?$/i.test(i.trim()) ||
@@ -6237,7 +6244,9 @@ async function firePulse() {
     if (d.kind === 'reply' || d.kind === 'ask') {
       clog(d.text, 'log-action');
       Dialogue.showChips(d.chips);
-      Feedback.record({ intent: d.private ? '[private]' : intent, node: null, via: 'chat:' + d.tag, handled: true });
+      Feedback.record({ intent: d.private ? '[private]' : intent, node: null, via: 'chat:' + d.tag, handled: !d.gap });
+      if (d.gap && window.logCapabilityGap) window.logCapabilityGap(intent, false);   // honest "can't do that here" → a visible gap for the team
+      if (!d.private) FeedbackUI.noteLastPulse({ intent, node: null, via: 'chat:' + d.tag });   // lets "Not what I meant" apply to chat replies too
       return;
     }
     if (d.kind === 'rewrite') { clog(`   ↪ understood as "${d.intent}"`, 'log-vec'); intent = d.intent; }

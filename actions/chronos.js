@@ -111,6 +111,37 @@ function _notify(title, body) {
   }
 }
 
+// ── Number words ("two minutes", "twenty five seconds", "at nine") ───────────
+const _NW = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12,
+  thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19,
+  twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90 };
+const _NW_RE = '(?:' + Object.keys(_NW).join('|') + ')';
+/** "nine" → "9", "nine thirty" → "9:30", "six forty five" → "6:45", "nine oh five" → "9:05", "twenty three" → "23". */
+function clockWords(w) {
+  const t = w.toLowerCase().split(/[\s-]+/).filter(x => x && x !== "o'clock");
+  const n = x => _NW[x];
+  let h = n(t.shift());
+  if (h >= 20 && t.length && n(t[0]) >= 1 && n(t[0]) <= 3 && h === 20) h += n(t.shift());   // "twenty three" → 23
+  if (!t.length) return String(h);
+  let m = 0;
+  if (t[0] === 'oh') { t.shift(); m = t.length ? n(t.shift()) || 0 : 0; }
+  else { m = n(t.shift()) || 0; if (t.length && m >= 20 && n(t[0]) < 10) m += n(t.shift()); }
+  return h + ':' + String(m).padStart(2, '0');
+}
+/** Replace number words with digits, but only where a time unit (or "at") makes the meaning
+ *  unambiguous, so ordinary words like "one" elsewhere in a sentence are left alone. */
+function _numberWords(s) {
+  const val = w => {
+    const parts = w.split(/[\s-]+/).filter(Boolean);
+    return parts.reduce((a, p) => a + (_NW[p] ?? 0), 0);
+  };
+  const seq = `${_NW_RE}(?:[\\s-]+${_NW_RE})?`;
+  return s
+    .replace(new RegExp(`\\b(${seq})(\\s*(?:sec(?:ond)?s?|min(?:ute)?s?|hours?|hrs?)\\b)`, 'g'), (_, w, u) => val(w) + u)
+    .replace(new RegExp(`\\bat ((?:${_NW_RE}|oh|o'clock)(?:[\\s-]+(?:${_NW_RE}|oh|o'clock))*)\\b(?!\\s*(?:sec|min|hour|hr))`, 'g'), (_, w) => 'at ' + clockWords(w))
+    .replace(/\b(\d+) and a half (hours?|minutes?)\b/g, (_, n, u) => (+n + 0.5) + ' ' + u);
+}
+
 // ── Intent parser ─────────────────────────────────────────────────────────────
 /**
  * Parses a natural language intent for time expressions.
@@ -124,7 +155,7 @@ function _notify(title, body) {
  *   Query:     "what timers", "timer status", "active timers"
  */
 function _parseIntent(intent) {
-  const s = intent.toLowerCase().trim();
+  const s = _numberWords(intent.toLowerCase().trim());
 
   // Stopwatch
   if (/\bstopwatch\b/.test(s)) {
@@ -171,25 +202,21 @@ function _parseIntent(intent) {
     return { type: 'elapsed' };
   }
 
-  // Duration — seconds
-  const secMatch = s.match(/(\d+)\s*sec(?:ond)?s?/);
-  if (secMatch) {
-    const n = parseInt(secMatch[1]);
-    return { type: 'timer', ms: n * 1000, label: `${n} second${n !== 1 ? 's' : ''}` };
-  }
-
-  // Duration — minutes
-  const minMatch = s.match(/(\d+)\s*min(?:ute)?s?/);
-  if (minMatch) {
-    const n = parseInt(minMatch[1]);
-    return { type: 'timer', ms: n * 60 * 1000, label: `${n} minute${n !== 1 ? 's' : ''}` };
-  }
-
-  // Duration — hours (numeric)
-  const hourMatch = s.match(/(\d+(?:\.\d+)?)\s*hours?/);
-  if (hourMatch) {
-    const n = parseFloat(hourMatch[1]);
-    return { type: 'timer', ms: n * 3600 * 1000, label: `${n} hour${n !== 1 ? 's' : ''}` };
+  // Duration — hours / minutes / seconds, summed ("2 hours 30 minutes", "1.5 hours", "90 seconds")
+  {
+    const h  = s.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b/);
+    const m  = s.match(/(\d+(?:\.\d+)?)\s*min(?:ute)?s?\b/);
+    const sc = s.match(/(\d+(?:\.\d+)?)\s*sec(?:ond)?s?\b/);
+    if (h || m || sc) {
+      const hh = h ? parseFloat(h[1]) : 0, mm = m ? parseFloat(m[1]) : 0, ss = sc ? parseFloat(sc[1]) : 0;
+      const ms = Math.round((hh * 3600 + mm * 60 + ss) * 1000);
+      const bits = [];
+      const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+      if (hh) bits.push(pl(hh, 'hour'));
+      if (mm) bits.push(pl(mm, 'minute'));
+      if (ss) bits.push(pl(ss, 'second'));
+      if (ms > 0) return { type: 'timer', ms, label: bits.join(' ') };
+    }
   }
 
   // Duration — "an hour" / "half an hour" / "a minute"

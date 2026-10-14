@@ -1,0 +1,52 @@
+# Phrases from the first real tester reports (build 0.14.0, iPhone + Windows Chrome), 2026-10-14.
+# Expected: node name, CHAT (answered by the conversation layer), NATIVE, HELP. Alternatives: A|B.
+CHRONOS	set a timer for 5 minutes
+CHRONOS	set a timer for two minutes
+CHRONOS	Set a 10 minute timer
+CHRONOS	can you remind me in ten minutes
+CHRONOS	wake me up at 9am
+CHRONOS	alarm at nine thirty
+CHRONOS	alarm at six forty five
+CHRONOS	what time is it in inn london
+CHRONOS	how hot is it outside
+CHRONOS	i hope its sunny tomorrow
+COMMS	Text Sarah 'I'm running 5 minutes late
+COMMS	text sarah i'm running late
+COMMS	i want to call my brother
+COMMS	call dad
+MEDIA	play the video from my clipboard
+CORTEX	open spotify
+CORTEX	who won the game last night
+CORTEX	i was thinking about what to do
+CHAT	i had a great day
+CHAT	i'm so happy
+CHAT	i got a promotion at work
+CHAT	i got engaged
+CHAT	i lost my job
+CHAT	my dad died
+CHAT	i hope tomorrow goes better
+CHAT	today i had a long day
+CHAT	how many unread messages do i have
+CHAT	do i have any new emails
+CHAT	do i have any meetings this afternoon
+CHAT	what's on my calendar today
+CHAT	what missed calls do i have
+CHAT	who called me
+CHAT	what do you think about turtles
+CHAT	what do you think about dogs
+CHAT	how do you feel
+CHAT	do you like music
+CHAT	how many ounces in a cup
+CHAT	how many minutes in an hour
+CHAT	convert 5 km to miles
+CHAT	what is 100 f in c
+CHAT	thanks, how many ounces in a cup
+CHAT	https://youtu.be/dQw4w9WgXcQ
+# traps: look chatty or like data questions but are real requests
+CHRONOS	what time is it in tokyo
+CHRONOS	set a timer for 10 minutes please
+COMMS	send an email to anna
+CORTEX	what events happened in 1969
+MEMORY	remember my meeting is at 3
+MEDIA	play music
+CHRONOS	set an alarm for my meeting at 3

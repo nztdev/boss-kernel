@@ -12,7 +12,7 @@
 //     this file is also what makes browsers install the new worker.
 // The Python Cortex (port 5000) is a live connection and is never cached.
 
-const BUILD      = '0.14.1';
+const BUILD      = '0.14.2';
 const CACHE_NAME = 'boss-' + BUILD;
 
 const SHELL = [
@@ -52,6 +52,11 @@ self.addEventListener('activate', event => {
     const clients = await self.clients.matchAll();
     clients.forEach(c => c.postMessage({ type: 'SW_ACTIVATED', build: BUILD }));
   })());
+});
+
+// The page asks which version is running (the activation message is only sent once).
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'GET_BUILD' && event.source) event.source.postMessage({ type: 'SW_ACTIVATED', build: BUILD });
 });
 
 self.addEventListener('fetch', event => {

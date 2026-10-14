@@ -108,10 +108,19 @@ export function parse(intent) {
     // number (with spaces) followed by optional body
     const nm = /^(\+?\d[\d\s().-]*\d)(?:\s*(?:saying|that says|with|:)\s*|\s+)?(.*)$/i.exec(rest);
     if (nm && cleanPhone(nm[1])) return { kind: 'sms', to: cleanPhone(nm[1]), body: (nm[2] || '').trim() };
-    // name [saying body]
-    const sp = /^(.+?)(?:\s+(?:saying|that says|with)\s+|\s*:\s*)(.+)$/i.exec(rest);
-    const who = (sp ? sp[1] : rest).trim();
-    const body = sp ? sp[2].trim() : '';
+    // name [saying body] — body may follow "saying", "that", a colon, or an opening quote
+    const sp = /^(.+?)(?:\s+(?:saying|that says|that|with|telling (?:him|her|them)|to say|and say|and tell (?:him|her|them))\s+|\s*:\s*|\s+["'“‘]\s*)(.+)$/i.exec(rest);
+    let who = (sp ? sp[1] : rest).trim();
+    let body = sp ? sp[2].trim() : '';
+    if (!sp) {   // "text Sarah I'm running late" / "text mum see you at 6": a leading name, then the message
+      const fm = /^([A-Z][\w'’-]*|mum|mom|mam|mummy|mommy|dad|daddy|papa|brother|sister|wife|husband|partner|boss|grandma|grandpa|nan|gran)\s+(\S.{2,})$/.exec(rest);
+      if (fm && !_NOT_A_NAME.test(fm[1])) { who = fm[1]; body = fm[2].trim(); }
+      else {   // lower-case (voice transcripts): "text sarah i'm running late" — only when the rest reads like a message
+        const lm = /^([a-z][\w'’-]{1,20})\s+((?:i|i'm|im|i'll|ill|i've|we|we're|you|you're|are|can|could|will|would|where|when|what|how|hey|hi|hello|hope|happy|thanks|thank|please|call|see|on my way|running|be|don't|dont|good|sorry|love|miss)\b.*)$/.exec(rest);
+        if (lm && !_NOT_A_NAME.test(lm[1])) { who = lm[1]; body = lm[2].trim(); }
+      }
+    }
+    body = body.replace(/^["'“‘]+\s*/, '').replace(/\s*["'”’]+$/, '').trim();
     if (_looksLikeName(who)) return { kind: 'sms', name: who, body };
     return null;
   }

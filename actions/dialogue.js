@@ -172,6 +172,62 @@ const B = {
     ['Certainly{n}. I\'m best at tasks, but I\'m glad to talk. What would you like to discuss?'],
     ['Alright. I\'m better at tasks than small talk, but go on.'],
   ],
+  goodnews: [
+    ['That\'s wonderful{n}! Congratulations — I\'m really glad for you. Want some music to celebrate?'],
+    ['Great news. Congratulations.'],
+    ['Yes! Cue the confetti{n}! Want a celebration soundtrack?'],
+    ['Congratulations{n}. That is excellent news. Shall I play some music?'],
+    ['Well, that\'s nice. Congratulations. Music?'],
+  ],
+  goodday: [
+    ['I\'m glad to hear that{n}! Days like that are worth savouring.', 'That\'s lovely to hear{n}. Hold on to that feeling!'],
+    ['Good to hear.', 'Glad to hear it.'],
+    ['Love that for you{n}! The field is pleased.', 'Excellent! Bank that one for a rainy day.'],
+    ['I\'m pleased to hear it{n}.', 'That is good to hear.'],
+    ['Good. Noted for the record.', 'Nice. Don\'t let it go to your head.'],
+  ],
+  badnews: [
+    ['I\'m so sorry{n}. That\'s a lot to take in. I\'m not a substitute for someone who can really listen, but I\'m here — want something calming on, or a short breather timer? Talking to someone you trust can help.'],
+    ['I\'m so sorry. Want something calming, or a short breather timer? Talking to someone you trust can help.'],
+    ['Oh no — I\'m really sorry{n}. Calm music, or a short breather timer? And please lean on someone you trust.'],
+    ['I am very sorry to hear that{n}. Would calm music or a short break timer help? Speaking with someone you trust may also help.'],
+    ['I\'m sorry. That\'s genuinely hard. Calm music or a breather timer? And do talk to someone you trust.'],
+  ],
+  hope: [
+    ['Me too{n}. Fingers crossed — and I\'m here if you want a hand with anything.', 'I hope so too. One step at a time.'],
+    ['Me too.', 'Fingers crossed.'],
+    ['Fingers, toes and nodes all crossed{n}!', 'Here\'s hoping! I\'ll keep the field warm.'],
+    ['I share that hope{n}.', 'Let us hope so.'],
+    ['Optimism. Bold. I\'ll allow it.', 'Fingers crossed. Metaphorically.'],
+  ],
+  opinion: [
+    ['That\'s a fun one{n}. Open-ended chat needs an AI engine, and none is connected (Settings → Engine keys). Offline I\'m best at timers, notes, music, weather and calls.'],
+    ['Needs an AI engine (Settings → Engine keys). Offline I do tasks.'],
+    ['Ooh, big questions! My deep-thinking brain is an optional extra and it isn\'t plugged in (Settings → Engine keys). Tasks, though? Hit me.'],
+    ['Open-ended discussion requires an AI engine, which is not configured. You may add one under Settings → Engine keys. I remain at your service for tasks.'],
+    ['Deep thoughts need an engine, and mine isn\'t plugged in. Settings → Engine keys. Meanwhile: timers, notes, music.'],
+  ],
+  cant_msgs: [
+    ['I can\'t see your messages or email from here — BOSS runs in the browser, and those live in your phone\'s own apps. I can start a text or an email for you, though.'],
+    ['Can\'t read messages or email from the browser. I can start a text or email.'],
+    ['Peeking in your inbox is above my pay grade — the browser keeps me out. I can start a text or an email though!'],
+    ['I am unable to access your messages or email from the browser. I can, however, start a text or an email for you.'],
+    ['Your inbox is off-limits to a browser app. Starting a text or email, I can do.'],
+  ],
+  cant_cal: [
+    ['I can\'t see your calendar from here — it lives in your phone\'s own app. I can set timers, alarms and reminders for you while BOSS is open, though.'],
+    ['Can\'t read your calendar from the browser. Timers, alarms and reminders I can do.'],
+    ['Your calendar is behind a locked door I don\'t have the key to! Timers, alarms and reminders, though — those I can do.'],
+    ['I am unable to access your calendar from the browser. I can set timers, alarms and reminders while BOSS is open.'],
+    ['Your calendar is out of my reach. Timers and alarms are not.'],
+  ],
+  cant_calls: [
+    ['I can\'t see your call history or voicemail from here — that stays in your phone\'s own apps. I can start a call for you, though.'],
+    ['Can\'t see call history or voicemail from the browser. I can start a call.'],
+    ['Call history is beyond my reach in the browser! I can start a call though.'],
+    ['I am unable to access your call history or voicemail from the browser. I can start a call for you.'],
+    ['Call history: not my department, not in a browser. Placing a call: yes.'],
+  ],
   joke_intro: [['Here\'s one:'], [''], ['Brace yourself:'], ['If I may:'], ['Fine. You asked for it:']],
   ask_timer: [
     ['Sure — for how long?'], ['How long?'], ['Timer it is! How long are we timing?'], ['Certainly. For what duration?'], ['For how long?'],
@@ -207,6 +263,8 @@ const CHIPS = {
   low: [['Calm music', 'play music'], ['Break · 10 min', 'set a timer for 10 minutes']],
   timer: [['1 min', 'set a timer for 1 minute'], ['5 min', 'set a timer for 5 minutes'], ['10 min', 'set a timer for 10 minutes'], ['30 min', 'set a timer for 30 minutes']],
   joke: [['Another one', 'another one']],
+  celebrate: [['Play music', 'play music']],
+  opinion: [['What can you do?', 'what can you do'], ['Tell me a joke', 'tell me a joke']],
 };
 const chips = k => (CHIPS[k] || []).map(([label, phrase]) => ({ label, phrase }));
 
@@ -291,8 +349,14 @@ const RX = {
   tired: /^(?:i'?m|im|i am|i feel|feeling)?\s*(?:so |really |very |a bit |kind of |kinda |sooo+ )?(?:tired|sleepy|exhausted|drained|worn out|knackered|beat|shattered)(?: today| right now| tonight)?$|^i need (?:a |some )?(?:nap|sleep|rest|break|breather)$|^i (?:could|need to) (?:use|take) a (?:nap|break)$/,
   low: /\b(?:i(?:'?m| am| feel| feel so|'?m feeling| am feeling)\s+(?:so |really |very |a bit |kind of |kinda )?(?:stressed|stressed out|anxious|overwhelmed|sad|depressed|lonely|down|upset|miserable|burnt out|burned out|low|hopeless|worthless)|feeling (?:so |really |very |a bit )?(?:down|low|sad|anxious|stressed|overwhelmed|lonely)|(?:rough|bad|terrible|awful|horrible|hard|tough|long) day|my day (?:was|has been) (?:rough|bad|terrible|awful|horrible|hard|tough|long)|i had a (?:rough|bad|terrible|awful|horrible|hard|tough) day|nobody (?:likes|cares about|loves) me)\b/,
   joke: /^(?:tell me|give me|got|do you (?:know|have)|know) (?:a |any |another |one more |some )?(?:funny )?jokes?$|^(?:make me laugh|say something funny|tell me something funny|another joke|one more joke|joke|jokes|joke please|tell a joke|crack a joke)$/,
+  goodnews: /^(?:i (?:just )?(?:got|received|landed|won|passed|aced|finished|graduated|got into)\b(?: a| an| the| my| into)? ?(?:promotion|raise|new job|job|offer|place|scholarship|degree|licen[cs]e|visa|puppy|kitten|house|flat|apartment|exam|test|interview|award|prize|accepted|engaged|married|promoted)|i(?:'m| am) (?:getting |now )?(?:engaged|married|promoted|pregnant)|(?:great|good|amazing|wonderful|big|exciting|fantastic) news|we won|i won|i passed|i did it|i got the job|i got promoted|i got engaged|i got married)\b/,
+  goodday: /^(?:i(?:'m| am) (?:so |really |very |super )?(?:happy|excited|thrilled|proud|pumped|delighted|stoked|over the moon|feeling (?:great|good|happy|amazing|fantastic))|i feel (?:so |really |very )?(?:great|good|happy|amazing|fantastic|wonderful)|i had (?:a|an) (?:really |very |truly )?(?:great|good|wonderful|amazing|fantastic|lovely|nice|brilliant|perfect) (?:day|time|week|weekend|morning|evening)|(?:today|my day|it|the day|this week) (?:was|has been|is) (?:great|good|amazing|wonderful|fantastic|lovely|brilliant))$/,
+  badnews: /^(?:i (?:just )?lost my (?:job|home|house)|i(?:'ve| have)? (?:just )?(?:been |got )?(?:fired|laid off|dumped|let go|made redundant|evicted)|i (?:just )?got (?:fired|laid off|dumped|let go|evicted|bad news)|i (?:just )?(?:failed|flunked|bombed) (?:my|the|an?) \w+(?: \w+)?|i didn'?t (?:get|pass) (?:the|that|my) (?:job|promotion|exam|test|interview|visa)|(?:my|our) (?:\w+ ){0,2}(?:died|passed away|is dying|has died|is in hospital|is in the hospital|got sick|is ill|is sick)|someone (?:close to me )?(?:died|passed away)|(?:bad|terrible|sad|awful) news|i broke up with .+|we broke up|my (?:partner|boyfriend|girlfriend|wife|husband) (?:left|dumped|broke up with) me|i(?:'m| am) (?:getting )?divorc\w+|i got divorced)$/,
+  hope: /^i (?:really |do |just )?(?:hope|wish) (?:that )?(?:tomorrow|today|things|it|the (?:day|week|weekend)|this|everything|next (?:week|time)|i|we|they|he|she)\b.*$/,
   jokemore: /^(?:another(?: one)?|one more|more|again|another please|one more please|next|next one|tell me another|give me another|haha another|do another)$/,
 };
+const TASKY = /\b(timer|alarm|remind|reminder|play|set|open|call|text|note|notes|music|video)\b/;
+const WEATHERY = /\b(sunny|sun|rain|raining|rainy|snow|snowing|weather|warm|hot|cold|windy|storm|cloudy|forecast)\b/;
 const SOCIAL_ORDER = ['greet', 'tod', 'night', 'howareyou', 'thanks', 'bye', 'compliment', 'frustrated', 'sorry', 'nevermind', 'letschat', 'joke', 'bored', 'tired', 'ack', 'yesno'];
 
 /** Which small-talk class (if any) a request is. Pure. */
@@ -301,6 +365,11 @@ export function classify(raw) {
   if (!s) return null;
   if (RX.crisis.test(s)) return { kind: 'crisis' };
   if (s.split(' ').length <= 12 && RX.low.test(s) && !/\b(timer|alarm|remind|play|set|open|call|text|weather|note)\b/.test(s)) return { kind: 'low' };
+  if (s.split(' ').length <= 14 && !TASKY.test(s)) {
+    for (const k of ['badnews', 'goodnews', 'goodday', 'hope']) {
+      if (RX[k].test(s) && !(k === 'hope' && WEATHERY.test(s))) return { kind: k };
+    }
+  }
   for (const k of SOCIAL_ORDER) if (RX[k].test(s)) { const m = k === 'tod' ? s.match(RX.tod) : null; return { kind: k, tod: m ? m[1] : null }; }
   return null;
 }
@@ -321,6 +390,113 @@ function _strip(raw) {
   const t = s.match(TRAIL);
   if (t && s.length > t[0].length + 3) { if (/thank|thx/i.test(t[0])) ack = ack || 'thanks'; s = s.slice(0, s.length - t[0].length).trim(); changed = true; }
   return { text: s, ack, greet, changed };
+}
+
+
+// ── things BOSS can't see from a browser (messages, calendar, call history) ──
+const _ASK = /^(?:what|what's|whats|do i|did i|have i|am i|is there|are there|any|how many|who|when|which|can you (?:read|check|tell)|could you (?:read|check|tell)|read|tell me)\b/;
+const _TOPIC_MSGS = /\b(?:messages?|texts|e-?mails?|emails|inbox|whatsapps?|dms|notifications?|unread)\b/;
+const _TOPIC_CAL = /\b(?:calendar|schedule|agenda|appointments?|meetings?|events?)\b/;
+const _TOPIC_CALLS = /\b(?:missed calls?|voicemails?|call (?:history|log)|recent calls|who (?:called|rang)(?: me)?)\b/;
+const _NOT_READ = /\b(?:send|write|compose|draft|set|play|open|call|make|create|add|new message to)\b/;
+/** 'msgs' | 'cal' | 'calls' | null — questions about data that lives in the phone's own apps. */
+export function cantRead(raw) {
+  const s = norm(raw);
+  if (!s || s.split(' ').length > 14 || !_ASK.test(s)) return null;
+  if (_TOPIC_CALLS.test(s)) return 'calls';
+  if (/\bwho (?:texted|messaged|emailed)\b/.test(s)) return 'msgs';
+  if (_NOT_READ.test(s.replace(/^(?:can|could) you (?:read|check|tell)/, ''))) return null;
+  if (_TOPIC_MSGS.test(s)) return 'msgs';
+  if (_TOPIC_CAL.test(s) && /\b(?:my|i have|do i|am i|i've|i am)\b/.test(s)) return 'cal';
+  return null;
+}
+
+// ── open-ended opinion / feeling questions (an engine's job) ─────────────────
+export function isOpinion(raw) {
+  const s = norm(raw);
+  return /^(?:what do you (?:think|feel|reckon)(?: about| of)?|what(?:'s| is) your (?:opinion|view|take|favou?rite)|do you (?:like|love|hate|think|believe|enjoy|prefer|dream|get|ever)\b|how do you feel|are you (?:happy|sad|alive|real|conscious|sentient|human|lonely|afraid|scared|a robot|an ai)\b|would you rather|what would you do|which do you prefer|do you have (?:feelings|emotions|a (?:soul|body|family|name))|who is your (?:favou?rite|best)|what do you (?:like|love|hate|want|dream))/.test(s);
+}
+
+// ── offline unit conversion ──────────────────────────────────────────────────
+// [dimension, factor to the dimension's base unit, id, singular, plural, aliases]
+const _UD = [
+  ['len', 0.001, 'mm', 'millimetre', 'millimetres', ['mm', 'millimeter', 'millimeters', 'millimetre', 'millimetres']],
+  ['len', 0.01, 'cm', 'centimetre', 'centimetres', ['cm', 'centimeter', 'centimeters', 'centimetre', 'centimetres']],
+  ['len', 1, 'm', 'metre', 'metres', ['m', 'meter', 'meters', 'metre', 'metres']],
+  ['len', 1000, 'km', 'kilometre', 'kilometres', ['km', 'kms', 'kilometer', 'kilometers', 'kilometre', 'kilometres']],
+  ['len', 0.0254, 'inch', 'inch', 'inches', ['inch', 'inches']],
+  ['len', 0.3048, 'ft', 'foot', 'feet', ['ft', 'foot', 'feet']],
+  ['len', 0.9144, 'yd', 'yard', 'yards', ['yd', 'yds', 'yard', 'yards']],
+  ['len', 1609.344, 'mi', 'mile', 'miles', ['mi', 'mile', 'miles']],
+  ['mass', 0.001, 'mg', 'milligram', 'milligrams', ['mg', 'milligram', 'milligrams']],
+  ['mass', 1, 'g', 'gram', 'grams', ['g', 'gram', 'grams']],
+  ['mass', 1000, 'kg', 'kilogram', 'kilograms', ['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms']],
+  ['mass', 28.349523, 'oz', 'ounce', 'ounces', []],
+  ['mass', 453.59237, 'lb', 'pound', 'pounds', ['lb', 'lbs', 'pound', 'pounds']],
+  ['mass', 6350.29318, 'st', 'stone', 'stone', ['st', 'stone', 'stones']],
+  ['vol', 1, 'ml', 'millilitre', 'millilitres', ['ml', 'milliliter', 'milliliters', 'millilitre', 'millilitres']],
+  ['vol', 1000, 'l', 'litre', 'litres', ['l', 'liter', 'liters', 'litre', 'litres']],
+  ['vol', 4.92892, 'tsp', 'teaspoon', 'teaspoons', ['tsp', 'teaspoon', 'teaspoons']],
+  ['vol', 14.78676, 'tbsp', 'tablespoon', 'tablespoons', ['tbsp', 'tablespoon', 'tablespoons']],
+  ['vol', 29.57353, 'floz', 'US fluid ounce', 'US fluid ounces', ['floz', 'fl oz', 'fluid ounce', 'fluid ounces']],
+  ['vol', 236.58824, 'cup', 'US cup', 'US cups', ['cup', 'cups']],
+  ['vol', 473.17647, 'pint', 'US pint', 'US pints', ['pint', 'pints', 'pt']],
+  ['vol', 946.35295, 'quart', 'US quart', 'US quarts', ['quart', 'quarts', 'qt']],
+  ['vol', 3785.41178, 'gal', 'US gallon', 'US gallons', ['gal', 'gallon', 'gallons']],
+  ['time', 1, 'sec', 'second', 'seconds', ['s', 'sec', 'secs', 'second', 'seconds']],
+  ['time', 60, 'min', 'minute', 'minutes', ['min', 'mins', 'minute', 'minutes']],
+  ['time', 3600, 'hr', 'hour', 'hours', ['h', 'hr', 'hrs', 'hour', 'hours']],
+  ['time', 86400, 'day', 'day', 'days', ['day', 'days']],
+  ['time', 604800, 'week', 'week', 'weeks', ['week', 'weeks']],
+  ['temp', 1, 'c', 'degree Celsius', 'degrees Celsius', ['c', 'celsius', 'centigrade']],
+  ['temp', 1, 'f', 'degree Fahrenheit', 'degrees Fahrenheit', ['f', 'fahrenheit']],
+  ['temp', 1, 'k', 'kelvin', 'kelvin', ['k', 'kelvin']],
+];
+const _UMAP = new Map();
+for (const d of _UD) for (const a of d[5]) _UMAP.set(a, { dim: d[0], f: d[1], id: d[2], one: d[3], many: d[4] });
+const _OZ = new Set(['ounce', 'ounces', 'oz']);
+function _unitOf(name) {
+  const n = String(name || '').trim().replace(/^(?:an? |one |the |of )/, '').trim();
+  return _UMAP.get(n) || null;
+}
+const _fmtNum = n => { const v = Number(Number(n).toPrecision(4)); return String(v); };
+function _ct(v, a, b) {
+  if (a.dim === 'temp') {
+    const c = a.id === 'c' ? v : a.id === 'f' ? (v - 32) * 5 / 9 : v - 273.15;
+    return b.id === 'c' ? c : b.id === 'f' ? c * 9 / 5 + 32 : c + 273.15;
+  }
+  return v * a.f / b.f;
+}
+/** "how many ounces in a cup" / "convert 5 km to miles" → "1 US cup = 8 US fluid ounces." or null. */
+export function convert(raw) {
+  const s = String(raw || '').toLowerCase().replace(/[’‘`]/g, '\'').replace(/°/g, ' ').replace(/\bdegrees?\b/g, ' ')
+    .replace(/[?!,;:]+/g, ' ').replace(/\.(?!\d)/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!s || s.split(' ').length > 9) return null;
+  let m, val, from, to;
+  if ((m = s.match(/^(?:how many|how much) (.+?) (?:are |is )?(?:there )?(?:in|per) (?:an? |one |the )?(\d+(?:\.\d+)?)? ?(.+)$/))) {
+    val = m[2] ? parseFloat(m[2]) : 1; from = m[3]; to = m[1];
+  } else if ((m = s.match(/^(?:convert |what is |what's |whats |how much is |how many is )?(\d+(?:\.\d+)?|an?|one) ?([a-z]+(?: [a-z]+)?) (?:to|in|into|as) ([a-z]+(?: [a-z]+)?)$/))) {
+    val = /^\d/.test(m[1]) ? parseFloat(m[1]) : 1; from = m[2]; to = m[3];
+  } else return null;
+  let a = _unitOf(from), b = _unitOf(to);
+  // "ounce" means fluid ounces next to a volume unit and weight ounces next to a weight unit
+  const OZ = { dim: 'mass', f: 28.349523, id: 'oz', one: 'ounce', many: 'ounces' };
+  const isOz = n => _OZ.has(String(n).trim().replace(/^(?:an? |one |the )/, ''));
+  if (isOz(from) && b) a = b.dim === 'vol' ? _UMAP.get('floz') : OZ;
+  if (isOz(to) && a) b = a.dim === 'vol' ? _UMAP.get('floz') : OZ;
+  if (!a || !b || a.dim !== b.dim || !isFinite(val)) return null;
+  if (a.dim === 'time' && a.id === b.id) return null;
+  const r = _ct(val, a, b);
+  const lab = (u, n) => (n === 1 ? u.one : u.many);
+  let out = `${_fmtNum(val)} ${lab(a, val)} = ${_fmtNum(r)} ${lab(b, Number(_fmtNum(r)))}.`;
+  return out;
+}
+
+const _MEDIA_LINK = /^https?:\/\/(?:[\w-]+\.)*(?:youtube\.com|youtu\.be|vimeo\.com|soundcloud\.com|twitch\.tv|dailymotion\.com)\/\S*$|^https?:\/\/\S+\.(?:mp4|webm|mp3|m4a|ogg|wav|mov)(?:\?\S*)?$/i;
+
+/** Does the dialogue layer answer this itself (so a stripped "thanks, …" should be answered, not routed)? */
+function _owned(t) {
+  return !!(classify(t) || cantRead(t) || convert(t) || (isOpinion(t) && !_cfg.hasEngine()));
 }
 
 // ── what BOSS last did (for follow-ups) ──────────────────────────────────────
@@ -371,8 +547,7 @@ export function process(raw, { dry = false } = {}) {
   const st = _strip(orig);
   let body = orig;
   if (st.changed && st.text) {
-    const core = classify(st.text);
-    if (core) body = st.text;
+    if (_owned(st.text)) body = st.text;
     else if (norm(st.text).split(' ').length >= 2) {
       const out = { kind: 'strip', intent: st.text, pre: null, after: null };
       if (st.ack && !dry) out.after = _say('thanks', dry);
@@ -411,7 +586,23 @@ export function process(raw, { dry = false } = {}) {
     if (c.kind === 'tired') return _reply('tired', dry, 'tired', {}, chips('tired'));
     if (c.kind === 'low') { const r = _reply('low', dry, 'low', {}, chips('low')); r.private = true; return r; }
     if (c.kind === 'nevermind') { if (!dry) _pending = null; return _reply('nevermind', dry, 'nevermind'); }
+    if (c.kind === 'badnews') { const r = _reply('badnews', dry, 'badnews', {}, chips('low')); r.private = true; return r; }
+    if (c.kind === 'goodnews') return _reply('goodnews', dry, 'goodnews', {}, chips('celebrate'));
+    if (c.kind === 'goodday') return _reply('goodday', dry, 'goodday');
+    if (c.kind === 'hope') return _reply('hope', dry, 'hope');
     return _reply(c.kind, dry, c.kind);
+  }
+
+  // 5b) things BOSS can't see from a browser, offline conversions, open-ended opinions with no engine, a bare media link
+  {
+    const cr = cantRead(body);
+    if (cr) { const r = _reply('cant_' + cr, dry, 'cant-' + cr); r.gap = true; return r; }
+    const cv = convert(body);
+    if (cv) { _remember(dry, 'convert'); return { kind: 'reply', text: cv, chips: [], tag: 'convert' }; }
+    if (isOpinion(body) && !_cfg.hasEngine()) { const r = _reply('opinion', dry, 'opinion', {}, chips('opinion')); r.gap = true; return r; }
+    if (_MEDIA_LINK.test(orig)) {
+      return { kind: 'ask', text: 'That looks like a media link — want me to play it?', chips: [{ label: '▶ Play it', phrase: 'play ' + orig }], tag: 'ask-link' };
+    }
   }
 
   // 6) a request that is missing its one detail
@@ -495,5 +686,5 @@ export function reset() { _last = null; _pending = null; _history = []; _bags.cl
 export function sample(toneId) { const i = IDX[toneId] ?? 0; return B.greet[i][0].replace(/\{n\}/g, ''); }
 
 export const Dialogue = { TONES, getTone, setTone, process, peek, classify, noteAction, noteEngine, promptContext,
-  showChips, hideChips, init, reset, sample, parseDuration, parseClock, norm };
+  showChips, hideChips, init, reset, sample, parseDuration, parseClock, norm, isOpinion, cantRead, convert };
 if (typeof window !== 'undefined') window.BOSS_DIALOGUE = Dialogue;

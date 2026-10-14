@@ -83,6 +83,11 @@ BOSS now handles everyday small talk and follow-ups. Try these in order (give ea
 | G8 | Settings → **Personality**: switch to *Dry*, *Playful*, *Formal*, *Concise* and say `hello` and `thanks` each time. | The replies change tone. |
 | G9 | Say something chatty that BOSS can't know, e.g. `what do you think about cats`. | No engine: a clear message that open chat needs an AI engine. With an engine key: a short answer in the chosen tone. |
 | G10 | Try 3–5 ordinary chit-chat lines of your own. | Anything that gets a strange reply or triggers the wrong feature: tap ✋ **Not what I meant**. |
+| G11 | Say or type: "I got a promotion", "I had a great day", "I hope tomorrow goes better". | Each gets a fitting reply (not a "which did you mean?" question). |
+| G12 | Say: "how many unread messages do I have", then "what's on my calendar". | BOSS says plainly it can't see those from the browser and offers what it can do. |
+| G13 | Say: "how many ounces in a cup", then "convert 5 km to miles". | A direct answer (1 US cup = 8 US fluid ounces; 5 km = 3.107 miles). |
+| G14 | Say: "alarm at nine thirty", "set a timer for two minutes". | 09:30 alarm and a 2-minute timer. |
+| G15 | After any reply, tap ✋ **Not what I meant**. | A sheet opens; after Save the chip briefly says "✓ Saved". |
 
 *(Please don't test the distress response with real feelings. If you want to check it exists, a tester can ask the dev team.)*
 
@@ -162,6 +167,11 @@ Copy this table into a note or email (or just attach the report file from D3 —
 | G8 | | |
 | G9 | | |
 | G10 | | |
+| G11 | | |
+| G12 | | |
+| G13 | | |
+| G14 | | |
+| G15 | | |
 | D1 | | |
 | D2 | | |
 | D3 | | |

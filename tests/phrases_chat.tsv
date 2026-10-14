@@ -130,7 +130,7 @@ MEDIA	stop
 MEDIA	stop the music
 MEDIA	turn the volume down
 # these look chatty but are real requests
-CORTEX	what do you think about cats
+CHAT	what do you think about cats
 CORTEX	explain how rainbows form
 CORTEX	why is the sky blue
 CORTEX	what is the capital of france
