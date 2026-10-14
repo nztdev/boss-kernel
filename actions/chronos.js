@@ -142,6 +142,17 @@ function _numberWords(s) {
     .replace(/\b(\d+) and a half (hours?|minutes?)\b/g, (_, n, u) => (+n + 0.5) + ' ' + u);
 }
 
+/** Tidies spoken/typed alarm times into the "at H:MM" form the parser understands:
+ *  "alarm at 9.30" → "at 9:30" (a dot between hour and TWO-digit minutes is a clock time, not a decimal like "1.25 hours"),
+ *  "alarm 8:05" / "alarm 7pm" → "alarm at …", "alarm for 6:45 am" → "alarm at 6:45 am". */
+function _alarmNorm(t) {
+  t = t.replace(/\b(at|for|@)\s*(\d{1,2})\.(\d{2})(?![\d.])(?!\s*(?:sec|min|hour|hr))/g, '$1 $2:$3')
+       .replace(/\balarm\s+(\d{1,2})\.(\d{2})(?![\d.])(?!\s*(?:sec|min|hour|hr))/g, 'alarm at $1:$2')
+       .replace(/\balarm\s+(\d{1,2}:\d{2}\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm)\b)/g, 'alarm at $1');
+  if (/\balarm\b/.test(t)) t = t.replace(/\bfor\s+(\d{1,2}(?::\d{2}\s*(?:am|pm)?|\s*(?:am|pm))\b)/, 'at $1');
+  return t;
+}
+
 // ── Intent parser ─────────────────────────────────────────────────────────────
 /**
  * Parses a natural language intent for time expressions.
@@ -155,7 +166,7 @@ function _numberWords(s) {
  *   Query:     "what timers", "timer status", "active timers"
  */
 function _parseIntent(intent) {
-  const s = _numberWords(intent.toLowerCase().trim());
+  const s = _numberWords(_alarmNorm(intent.toLowerCase().trim()));
 
   // Stopwatch
   if (/\bstopwatch\b/.test(s)) {

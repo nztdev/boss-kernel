@@ -469,9 +469,22 @@ function _ct(v, a, b) {
 }
 /** "how many ounces in a cup" / "convert 5 km to miles" → "1 US cup = 8 US fluid ounces." or null. */
 export function convert(raw) {
-  const s = String(raw || '').toLowerCase().replace(/[’‘`]/g, '\'').replace(/°/g, ' ').replace(/\bdegrees?\b/g, ' ')
+  let s = String(raw || '').toLowerCase().replace(/[’‘`]/g, '\'').replace(/°/g, ' ').replace(/\bdegrees?\b/g, ' ')
     .replace(/[?!,;:]+/g, ' ').replace(/\.(?!\d)/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!s || s.split(' ').length > 9) return null;
+  if (!s || s.split(' ').length > 11) return null;
+  // fractions: "a quarter cup", "half a litre", "three quarters of a mile", "1/2 cup", "2 and a half miles"
+  const FR = { 'quarter': .25, 'a quarter': .25, 'half': .5, 'a half': .5, 'third': 1 / 3, 'a third': 1 / 3, 'three quarters': .75, 'three quarter': .75 };
+  let fr = null;
+  const fm = s.match(/\b(\d+) and (?:a )?(half|quarter)\b/);
+  if (fm) { fr = Number(fm[1]) + FR[fm[2]]; s = s.replace(fm[0], String(fr)); }
+  else {
+    const f2 = s.match(/\b(\d+)\/(\d+)\b/);
+    if (f2 && Number(f2[2])) { s = s.replace(f2[0], String(Number(f2[1]) / Number(f2[2]))); }
+    else {
+      const f3 = s.match(/\b(three quarters?|an? quarter|an? half|an? third|quarter|half|third)(?: of)?(?: an?)? (?=[a-z])/);
+      if (f3) s = s.replace(f3[0], FR[f3[1].replace(/^an? /, '')] + ' ');
+    }
+  }
   let m, val, from, to;
   if ((m = s.match(/^(?:how many|how much) (.+?) (?:are |is )?(?:there )?(?:in|per) (?:an? |one |the )?(\d+(?:\.\d+)?)? ?(.+)$/))) {
     val = m[2] ? parseFloat(m[2]) : 1; from = m[3]; to = m[1];

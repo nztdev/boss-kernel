@@ -50,3 +50,17 @@ CORTEX	what events happened in 1969
 MEMORY	remember my meeting is at 3
 MEDIA	play music
 CHRONOS	set an alarm for my meeting at 3
+# --- second round of tester reports (build 0.14.2), 2026-10-15 ---
+CORTEX	tell me a quick random fact
+CORTEX	what's the best thing that happened this month
+CORTEX	what is 15% tip on $45
+CORTEX	translate that into spanish
+CHAT	what's your favorite thing about today
+CHAT	how many tablespoons are in a quarter cup
+CHAT	how many teaspoons in half a tablespoon
+CHAT	convert 5km to miles
+CHRONOS	alarm at 9.30
+CHRONOS	alarm at 7.15pm
+CHRONOS	alarm 8:05
+CHRONOS	alarm 7pm
+CHRONOS	set an alarm for 6:45 am
