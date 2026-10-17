@@ -5247,6 +5247,10 @@ const DISSONANCE_CUT = 0.55;
 const VECTOR_WEIGHT  = 2.0;
 // Birth Protocol threshold: max(match) below this → no existing node is relevant
 const BIRTH_THRESHOLD = 0.15;
+/** v0.14.4 amendment — ceiling on how much a node's warmth counts in SCORING. The warmth value itself
+ *  (glow, decay, bonds) is untouched; the lock "warmth × match" is unchanged. Measured: with any node
+ *  recently used, uncapped warmth made it steal phrases it barely matched (tests/measure_recency.py). */
+const WARM_CAP = 0.3;
 let   confThreshold  = 1.5;   // legacy ceiling (kept; Arbiter now gated by the decisive margin below)
 
 // ── Orbital preset UI state ───────────────────────────────────────────────────
@@ -5408,7 +5412,7 @@ class Node {
   score(intent, chain, allNodes, vectorBoost = 0) {
     // LOCK: warmth × match — multiplication, not addition
     const match        = semanticSim(intent, this.specialty);
-    const thermal      = this.warmth * match;
+    const thermal      = Math.min(this.warmth, WARM_CAP) * match;   // v0.14.4 amendment: recency can nudge, never decide (see README §XVI-b)
     const phase        = Math.sin(2 * Math.PI * this.resonance);
     // matchGate: prevents high-resonance nodes from dominating low-match intents.
     // CORE's resonance was originally 2.0, a clear outlier above every other
@@ -6134,11 +6138,16 @@ const NOISE_FLOOR = 0.245;
 /** No node resonates but it isn't novel enough to birth one → the general thinker. */
 const CONVERSATIONAL = /^(?:hey\s+|ok\s+|please\s+)?(?:what|why|how|who|when|where|which|can you|could you|would you|tell me|give me|show me how|write|explain|help|suggest|recommend|describe|define|teach|think|should i|do you|are you|is it|i need|i want|i'd like)\b/i;
 function noSignalClaim(scored, intent) {
-  if (!scored.length || scored[0].total >= NOISE_FLOOR) return null;
+  if (!scored.length) return null;
   const novel = Math.max(...scored.map(x => x.match)) < BIRTH_THRESHOLD;
-  // A question/request in plain language is for the generalist, not a new-node proposal.
+  const conversational = !!(intent && CONVERSATIONAL.test(String(intent).trim()));
+  // v0.14.4 amendment: if no node's WORDS resemble a plain-language question/request, it is the
+  // generalist's — whatever is warm. (Before, the test used the total score, which includes warmth, so a
+  // recently used node lifted the total over the floor and the phrase became a pointless clarification.)
+  if (novel && conversational) return { node: 'CORTEX', reason: 'no-signal' };
+  if (scored[0].total >= NOISE_FLOOR) return null;
   // Statements with no signal at all stay with the Birth Protocol (unchanged).
-  if (novel && !(intent && CONVERSATIONAL.test(String(intent).trim()))) return null;
+  if (novel) return null;
   return { node: 'CORTEX', reason: 'no-signal' };
 }
 function claimIntent(intent) {
