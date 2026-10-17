@@ -64,3 +64,11 @@ CHRONOS	alarm at 7.15pm
 CHRONOS	alarm 8:05
 CHRONOS	alarm 7pm
 CHRONOS	set an alarm for 6:45 am
+# --- open-ended questions: must go straight to the thinker, even when another node is warm (recency amendment, 0.14.4) ---
+CORTEX	what's the most interesting thing you know
+CORTEX	give me a fun fact about space
+CORTEX	how many days until christmas
+CORTEX	what is the tallest mountain
+CORTEX	is it going to be a good week
+CORTEX	what should i have for dinner
+CORTEX	tell me something interesting
