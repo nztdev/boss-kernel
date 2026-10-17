@@ -88,6 +88,7 @@ BOSS now handles everyday small talk and follow-ups. Try these in order (give ea
 | G13 | Say: "how many ounces in a cup", then "convert 5 km to miles". | A direct answer (1 US cup = 8 US fluid ounces; 5 km = 3.107 miles). |
 | G14 | Say: "alarm at nine thirty", "set a timer for two minutes". | 09:30 alarm and a 2-minute timer. |
 | G15 | After any reply, tap ✋ **Not what I meant**. | A sheet opens; after Save the chip briefly says "✓ Saved". |
+| G16 | Do two or three normal things (play music, set a timer), then ask an open question: "tell me a quick random fact", "what's the tallest mountain". | BOSS answers (or says it needs an engine) straight away — it should NOT ask "which did you mean?". |
 
 *(Please don't test the distress response with real feelings. If you want to check it exists, a tester can ask the dev team.)*
 
@@ -172,6 +173,7 @@ Copy this table into a note or email (or just attach the report file from D3 —
 | G13 | | |
 | G14 | | |
 | G15 | | |
+| G16 | | |
 | D1 | | |
 | D2 | | |
 | D3 | | |
