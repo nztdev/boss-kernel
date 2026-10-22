@@ -165,7 +165,38 @@ function _alarmNorm(t) {
  *   Elapsed:   "how long", "elapsed", "how long has it been"
  *   Query:     "what timers", "timer status", "active timers"
  */
+/** The first duration in a string: "5 minutes", "2 hours 30 minutes", "half an hour", "an hour" → { ms, label } | null. */
+function _durationOf(s) {
+  const h  = s.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b/);
+  const m  = s.match(/(\d+(?:\.\d+)?)\s*min(?:ute)?s?\b/);
+  const sc = s.match(/(\d+(?:\.\d+)?)\s*sec(?:ond)?s?\b/);
+  if (h || m || sc) {
+    const hh = h ? parseFloat(h[1]) : 0, mm = m ? parseFloat(m[1]) : 0, ss = sc ? parseFloat(sc[1]) : 0;
+    const ms = Math.round((hh * 3600 + mm * 60 + ss) * 1000);
+    const bits = [];
+    const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+    if (hh) bits.push(pl(hh, 'hour'));
+    if (mm) bits.push(pl(mm, 'minute'));
+    if (ss) bits.push(pl(ss, 'second'));
+    if (ms > 0) return { ms, label: bits.join(' ') };
+  }
+  // fractions first — "half an hour" must not be read as "an hour"
+  if (/half\s+an?\s+hour/.test(s))   return { ms: 1800000, label: '30 minutes' };
+  if (/quarter\s+(?:of\s+an?\s+)?hour/.test(s)) return { ms: 900000, label: '15 minutes' };
+  if (/\ban?\s+hour\b/.test(s))      return { ms: 3600000, label: '1 hour' };
+  if (/\ban?\s+minute\b/.test(s))    return { ms: 60000,   label: '1 minute' };
+  return null;
+}
+
+/** Words that mean "swap the running timer for this one" rather than "add another". */
+const _REPLACE_RX = /\b(?:instead|replace|replacing|rather)\b|\b(?:change|switch|update|reset|swap)\b.*\btimer\b/;
 function _parseIntent(intent) {
+  const p = _parseIntentCore(intent);
+  if (p && p.type === 'timer' && _REPLACE_RX.test(intent.toLowerCase())) p.replace = true;
+  return p;
+}
+
+function _parseIntentCore(intent) {
   const s = _numberWords(_alarmNorm(intent.toLowerCase().trim()));
 
   // Stopwatch
@@ -195,10 +226,17 @@ function _parseIntent(intent) {
     return { type: 'current_time' };
   }
 
-  // Cancel
-  if (/\b(cancel|stop|clear|dismiss)\b.*\btimer\b/.test(s) ||
-      /\btimer\b.*\b(cancel|stop|clear)\b/.test(s)) {
-    return { type: 'cancel' };
+  // Cancel — "cancel timer", "cancel all timers", "cancel the latest timer", "cancel the 5 minute timer", "cancel my alarm"
+  if (/\b(cancel|stop|clear|dismiss|delete|remove|kill)\b.*\b(timers?|alarms?)\b/.test(s) ||
+      /\b(timers?|alarms?)\b.*\b(cancel|stop|clear)\b/.test(s)) {
+    const kind = /\balarms?\b/.test(s) && !/\btimers?\b/.test(s) ? 'alarm' : 'timer';
+    let scope = null;
+    if (/\b(?:all|every|both|everything)\b/.test(s)) scope = 'all';
+    else if (/\b(?:last|latest|newest|most recent|recent)\b/.test(s)) scope = 'latest';
+    else if (/\b(?:first|oldest)\b/.test(s)) scope = 'oldest';
+    const d = scope ? null : _durationOf(s);
+    if (d) return { type: 'cancel', kind, scope: 'match', ms: d.ms, label: d.label };
+    return { type: 'cancel', kind, scope };
   }
 
   // Query
@@ -213,28 +251,8 @@ function _parseIntent(intent) {
     return { type: 'elapsed' };
   }
 
-  // Duration — hours / minutes / seconds, summed ("2 hours 30 minutes", "1.5 hours", "90 seconds")
-  {
-    const h  = s.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b/);
-    const m  = s.match(/(\d+(?:\.\d+)?)\s*min(?:ute)?s?\b/);
-    const sc = s.match(/(\d+(?:\.\d+)?)\s*sec(?:ond)?s?\b/);
-    if (h || m || sc) {
-      const hh = h ? parseFloat(h[1]) : 0, mm = m ? parseFloat(m[1]) : 0, ss = sc ? parseFloat(sc[1]) : 0;
-      const ms = Math.round((hh * 3600 + mm * 60 + ss) * 1000);
-      const bits = [];
-      const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
-      if (hh) bits.push(pl(hh, 'hour'));
-      if (mm) bits.push(pl(mm, 'minute'));
-      if (ss) bits.push(pl(ss, 'second'));
-      if (ms > 0) return { type: 'timer', ms, label: bits.join(' ') };
-    }
-  }
-
-  // Duration — "an hour" / "half an hour" / "a minute"
-  if (/\ban?\s+hour\b/.test(s))      return { type: 'timer', ms: 3600000,  label: '1 hour' };
-  if (/half\s+an?\s+hour/.test(s))   return { type: 'timer', ms: 1800000,  label: '30 minutes' };
-  if (/quarter\s+(?:of\s+an?\s+)?hour/.test(s)) return { type: 'timer', ms: 900000, label: '15 minutes' };
-  if (/\ban?\s+minute\b/.test(s))    return { type: 'timer', ms: 60000,    label: '1 minute' };
+  // Duration — "2 hours 30 minutes", "1.5 hours", "90 seconds", "half an hour", "an hour"
+  { const d = _durationOf(s); if (d) return { type: 'timer', ms: d.ms, label: d.label }; }
 
   // Clock time — "at 3pm", "at 14:30", "at 9:00am", "at 3:30 pm"
   const clockMatch = s.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
@@ -354,7 +372,28 @@ function _handleStopwatchCheck(clog) {
   _laps.forEach((l, i) => clog(`   lap ${i+1}: ${_formatStopwatch(l)}`, 'log-action'));
 }
 
+function _dropAlarmCfg(id) {
+  try {
+    const cfg = JSON.parse(localStorage.getItem(CHRONOS_CONFIG_KEY) || '{}');
+    cfg.alarms = (cfg.alarms || []).filter(a => a.id !== id);
+    localStorage.setItem(CHRONOS_CONFIG_KEY, JSON.stringify(cfg));
+  } catch (_) {}
+}
+function _removeTimer(t) {
+  clearTimeout(t.timeoutId);
+  const i = _timers.indexOf(t); if (i >= 0) _timers.splice(i, 1);
+  if (t.kind === 'alarm') _dropAlarmCfg(t.id);
+}
+const _isTimer = t => (t.kind || 'timer') === 'timer';
+
 function _handleTimer(parsed, intent, clog, Nervous, EVENT) {
+  // "change the timer to 10 minutes" / "…instead": swap the most recent timer for this one
+  let replaced = null;
+  if (parsed.replace) {
+    const prev = _timers.filter(_isTimer).pop();
+    if (prev) { replaced = prev.label; _removeTimer(prev); }
+  }
+  const others = _timers.filter(_isTimer).map(t => t.label);
   const fireAt = new Date(Date.now() + parsed.ms);
   const timeStr = fireAt.toLocaleTimeString('en', { hour12: false });
   const id = Date.now();
@@ -375,8 +414,10 @@ function _handleTimer(parsed, intent, clog, Nervous, EVENT) {
     }
   }, parsed.ms);
 
-  _timers.push({ id, label: parsed.label, fireAt, timeoutId, intent });
+  _timers.push({ id, kind: 'timer', ms: parsed.ms, label: parsed.label, fireAt, timeoutId, intent });
   clog(`⏱ Timer set: ${parsed.label} → fires at ${timeStr}`, 'log-action');
+  if (replaced) clog(`   ↺ replaced the ${replaced} timer`, 'log-action');
+  else if (others.length) clog(`   (also running: ${others.join(', ')} — say "cancel the ${others[others.length - 1].replace(/\b(minute|hour|second)s\b/g, '$1')} timer" or "change the timer to …")`, 'log-action');
 }
 
 function _handleAlarm(parsed, intent, clog, Nervous, EVENT) {
@@ -398,7 +439,7 @@ function _handleAlarm(parsed, intent, clog, Nervous, EVENT) {
     }
   }, parsed.ms);
 
-  _timers.push({ id, label: parsed.label, fireAt: parsed.fireAt, timeoutId, intent });
+  _timers.push({ id, kind: 'alarm', ms: parsed.ms, label: parsed.label, fireAt: parsed.fireAt, timeoutId, intent });
   clog(`⏰ Alarm set: ${parsed.label} (fires at ${timeStr})`, 'log-action');
 
   // Persist alarm to config so modal can list it
@@ -410,15 +451,21 @@ function _handleAlarm(parsed, intent, clog, Nervous, EVENT) {
   } catch(_) {}
 }
 
-function _handleCancel(clog) {
-  if (!_timers.length) {
-    clog('⏱ No active timers to cancel', 'log-action');
-    return;
+function _handleCancel(clog, p) {
+  const kind = p ? p.kind : null;                       // null = everything (clearAll)
+  const pool = _timers.filter(t => !kind || (t.kind || 'timer') === kind);
+  const noun = kind === 'alarm' ? 'alarm' : 'timer';
+  if (!pool.length) { clog(`⏱ No ${noun}s running`, 'log-action'); return; }
+  let victims = pool, scope = p && p.scope;
+  if (scope === 'latest') victims = [pool[pool.length - 1]];
+  else if (scope === 'oldest') victims = [pool[0]];
+  else if (scope === 'match') {
+    const hit = pool.filter(t => t.ms === p.ms || t.label === p.label);
+    if (!hit.length) { clog(`⏱ I don't have a ${p.label} ${noun} running — I have: ${pool.map(t => t.label).join(', ')}`, 'log-action'); return; }
+    victims = [hit[hit.length - 1]];
   }
-  _timers.forEach(t => clearTimeout(t.timeoutId));
-  const count = _timers.length;
-  _timers.length = 0;
-  clog(`⏱ Cancelled ${count} timer${count !== 1 ? 's' : ''}`, 'log-action');
+  victims.forEach(_removeTimer);
+  clog(victims.length === 1 ? `⏱ Cancelled the ${victims[0].label} ${noun}` : `⏱ Cancelled ${victims.length} ${noun}s`, 'log-action');
 }
 
 function _handleQuery(clog) {
@@ -531,7 +578,7 @@ export const ChronosAction = {
     switch (parsed.type) {
       case 'timer':            _handleTimer(parsed, intent, clog, Nervous, EVENT); break;
       case 'alarm':            _handleAlarm(parsed, intent, clog, Nervous, EVENT); break;
-      case 'cancel':           _handleCancel(clog);                                break;
+      case 'cancel':           _handleCancel(clog, parsed);                        break;
       case 'query':            _handleQuery(clog);                                 break;
       case 'elapsed':          _handleElapsed(clog);                               break;
       case 'current_time':     _handleCurrentTime(clog);                           break;
@@ -548,6 +595,8 @@ export const ChronosAction = {
 
   // Expose timer state for Soma inspection
   getTimers()  { return [..._timers]; },
+  /** Only the running timers (not alarms), oldest first — { id, label, ms, fireAt } — for the conversation layer. */
+  getRunningTimers() { return _timers.filter(_isTimer).map(t => ({ id: t.id, label: t.label, ms: t.ms, fireAt: t.fireAt })); },
   getLaps()    { return _laps.map((ms, i) => _formatStopwatch(ms)); },
   isSwRunning(){ return _stopwatchRunning; },
   clearAll()   { _handleCancel(() => {}); },
