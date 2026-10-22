@@ -137,6 +137,9 @@ export function parse(intent) {
       else { body = tail.replace(/^(?:saying|body|message|:)\s*/i, ''); }
       return { kind: 'email', to: cleanEmail(em[1]), subject, body };
     }
+    // "send an email to John Reaper saying when is the meeting" — a name, then what to say
+    const nb = /^(.+?)\s+(?:saying|that says|telling (?:him|her|them)|to say|about)\s+(.+)$/i.exec(rest);
+    if (nb && _looksLikeName(nb[1].trim())) return { kind: 'email', name: nb[1].trim(), body: nb[2].trim() };
     if (_looksLikeName(rest)) return { kind: 'email', name: rest };
     return null;
   }
