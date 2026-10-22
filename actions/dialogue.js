@@ -46,7 +46,7 @@ const FRESH_MS = 10 * 60 * 1000;     // a "last action" stays usable this long
 const PENDING_MS = 60 * 1000;        // a "for how long?" stays open this long
 const JOKE_MS = 3 * 60 * 1000;
 
-let _cfg = { getName: () => '', hasEngine: () => false, run: () => {} };
+let _cfg = { getName: () => '', hasEngine: () => false, run: () => {}, getTimers: () => [] };
 let _last = null;                    // { type:'action'|'chat', kind, intent, family, place, at }
 let _pending = null;                 // { kind:'timer'|'alarm', at }
 let _history = [];                   // recent engine turns [{u, b}]
@@ -228,6 +228,13 @@ const B = {
     ['I am unable to access your call history or voicemail from the browser. I can start a call for you.'],
     ['Call history: not my department, not in a browser. Placing a call: yes.'],
   ],
+  plans: [
+    ['Sounds good{n}! Want me to note it down, or set a timer so you don\'t miss it?', 'Nice — want me to jot that down, or set a timer?'],
+    ['Want me to note it or set a timer?'],
+    ['Ooh, big plans{n}! Shall I note it down, or set a timer to keep you on schedule?'],
+    ['Understood. Shall I make a note of it, or set a timer?'],
+    ['Riveting schedule. Note it, or timer it?'],
+  ],
   joke_intro: [['Here\'s one:'], [''], ['Brace yourself:'], ['If I may:'], ['Fine. You asked for it:']],
   ask_timer: [
     ['Sure — for how long?'], ['How long?'], ['Timer it is! How long are we timing?'], ['Certainly. For what duration?'], ['For how long?'],
@@ -331,6 +338,7 @@ export function parseClock(text) {
 
 // ── classification ───────────────────────────────────────────────────────────
 const RX = {
+  plans: /^i(?:'ve| have| got) (?:a|an|my|the) [a-z' -]{2,40}? (?:later|today|tonight|tomorrow|this (?:morning|afternoon|evening|weekend)|next week)(?: [a-z ]*)?$/,
   crisis: /\b(kill myself|killing myself|end my life|end it all|want to die|wanna die|dont want to (?:live|be here|exist)|don'?t want to (?:live|be here|exist)|suicid\w*|hurt myself|harm myself|self ?harm|no reason to live|better off dead|take my own life)\b/,
   greet: /^(?:hey|hi|hello|hiya|howdy|yo|heya|hola|ciao|greetings|sup|wassup|hey there|hi there|hello there|yo there)(?: (?:there|boss|everyone|again))*$|^(?:hey|hi|hello|yo) (?:b ?o ?s ?s|boss)$/,
   tod: /^(?:good )?(morning|afternoon|evening)(?: boss| there| everyone)?$/,
@@ -512,6 +520,29 @@ function _owned(t) {
   return !!(classify(t) || cantRead(t) || convert(t) || (isOpinion(t) && !_cfg.hasEngine()));
 }
 
+// ── timers: which one do you mean? ───────────────────────────────────────────
+function _timersNow() { try { return (_cfg.getTimers && _cfg.getTimers()) || []; } catch (_) { return []; } }
+function _cancelAsk(T) {
+  const now = Date.now();
+  const left = t => { const r = Math.max(0, t.fireAt.getTime() - now), m = Math.floor(r / 60000), sc = Math.floor((r % 60000) / 1000); return m ? `${m}m left` : `${sc}s left`; };
+  const latest = T[T.length - 1];
+  const ch = [{ label: 'Latest · ' + latest.label, phrase: 'cancel the latest timer' }, { label: 'All', phrase: 'cancel all timers' }];
+  const seen = new Set([latest.label]);
+  for (const t of T) { if (seen.has(t.label) || ch.length >= 5) continue; seen.add(t.label); ch.push({ label: t.label, phrase: `cancel the ${t.label} timer` }); }
+  return { kind: 'ask', text: `You have ${T.length} timers running: ${T.map(t => `${t.label} (${left(t)})`).join(', ')}. Which should I cancel?`, chips: ch, tag: 'ask-cancel' };
+}
+function _durIn(intent) {   // the first "N minutes" in a whole request → { n, unit } | null
+  const m = norm(intent || '').match(/(\d+(?:\.\d+)?)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\b/);
+  return m ? parseDuration(m[1] + ' ' + m[2]) : null;
+}
+function _anotherTimer(dry, lastIntent) {
+  const d = _durIn(lastIntent);
+  if (!dry) _pending = { kind: 'timer', at: Date.now() };
+  const ch = chips('timer');
+  if (d) ch.unshift({ label: 'Same · ' + fmtDur(d), phrase: `set a timer for ${fmtDur(d)}` });
+  return { kind: 'ask', text: d ? `Another timer — how long? (the last one was ${fmtDur(d)})` : _say('ask_timer', dry), chips: ch, tag: 'ask-timer' };
+}
+
 // ── what BOSS last did (for follow-ups) ──────────────────────────────────────
 function _family(raw) {
   const s = norm(raw);
@@ -569,9 +600,20 @@ export function process(raw, { dry = false } = {}) {
   }
   const sb = norm(body);
 
+  // 4a) "cancel the timer" while several are running → ask which (one running or none: the request goes straight through)
+  if (/^(?:please )?(?:cancel|stop|clear|delete|remove|dismiss|kill|turn off)(?: the| my| that| this| those| these| running| active| current)* timers?$/.test(sb)) {
+    const T = _timersNow();
+    if (T.length >= 2) return _cancelAsk(T);
+  }
+
   // 4) follow-ups that lean on the last thing BOSS did
   if (!dry && _fresh()) {
     const L = _last;
+    // "and dogs?" right after an opinion question (no engine): the same honest answer, not a random node's help list
+    if (L.kind === 'opinion' && !_cfg.hasEngine()) {
+      const fm = sb.match(/^(?:and |what about |how about |and what about |and how about )(?:the |a |an )?([a-z][a-z' -]{1,30})$/);
+      if (fm && fm[1].trim().split(' ').length <= 3) { const r = _reply('opinion', dry, 'opinion', {}, chips('opinion')); r.gap = true; return r; }
+    }
     if (L.kind === 'joke' && RX.jokemore.test(sb) && Date.now() - L.at < JOKE_MS) return _joke(dry);
     if (L.type === 'action') {
       let m = sb.match(/^(?:and |what about |how about |and what about |same for |and for )(?:in |for )?([a-z][a-z .'-]{1,30})$/);
@@ -581,9 +623,10 @@ export function process(raw, { dry = false } = {}) {
         return { kind: 'rewrite', intent: L.family === 'clock' ? `what time is it in ${place}` : `weather in ${place}` };
       }
       m = sb.match(/^(?:make it|change it to|set it to|no make it|actually make it|actually|make that|change that to|make the timer|no)\s+(.+)$/);
-      if (m && L.family === 'timer') { const d = parseDuration(m[1].replace(/^to /, '')); if (d) return { kind: 'rewrite', intent: `set a timer for ${fmtDur(d)}` }; }
+      if (m && L.family === 'timer') { const d = parseDuration(m[1].replace(/^to /, '')); if (d) return { kind: 'rewrite', intent: `change the timer to ${fmtDur(d)}` }; }
       if (/^(?:again|do (?:it|that) again|one more time|repeat(?: that| it)?|same again|do the same|do the same again)$/.test(sb)) return { kind: 'rewrite', intent: L.intent };
-      if (/^(?:cancel (?:it|that)|undo(?: that)?|stop it|stop that|never ?mind(?: that)?|scratch that|forget (?:it|that))$/.test(sb) && L.family === 'timer') return { kind: 'rewrite', intent: 'cancel timer' };
+      if (/^(?:cancel (?:it|that)|undo(?: that)?|stop it|stop that|never ?mind(?: that)?|scratch that|forget (?:it|that))$/.test(sb) && L.family === 'timer') return { kind: 'rewrite', intent: 'cancel the latest timer' };
+      if (L.family === 'timer' && /^(?:set |start |make |add )?(?:me )?(?:another|one more|a second|a new)(?: one| timer| countdown)?$/.test(sb)) return _anotherTimer(dry, L.intent);
     }
   }
 
@@ -612,6 +655,10 @@ export function process(raw, { dry = false } = {}) {
     if (cr) { const r = _reply('cant_' + cr, dry, 'cant-' + cr); r.gap = true; return r; }
     const cv = convert(body);
     if (cv) { _remember(dry, 'convert'); return { kind: 'reply', text: cv, chips: [], tag: 'convert' }; }
+    if (RX.plans.test(sb) && !/\b(?:timer|alarm|call|text|remind|remember|note)\b/.test(sb)) {
+      const r = _reply('plans', dry, 'plans', {}, [{ label: '📝 Note it', phrase: 'remember ' + orig }, { label: '⏱ Set a timer', phrase: 'set a timer' }]);
+      return r;
+    }
     if (isOpinion(body) && !_cfg.hasEngine()) { const r = _reply('opinion', dry, 'opinion', {}, chips('opinion')); r.gap = true; return r; }
     if (_MEDIA_LINK.test(orig)) {
       return { kind: 'ask', text: 'That looks like a media link — want me to play it?', chips: [{ label: '▶ Play it', phrase: 'play ' + orig }], tag: 'ask-link' };
@@ -619,6 +666,10 @@ export function process(raw, { dry = false } = {}) {
   }
 
   // 6) a request that is missing its one detail
+  if (/^(?:set |start |make |add )?(?:me )?(?:another|one more|a second|a new|a different) (?:timer|countdown)$/.test(sb)) {
+    const L = _last;
+    return _anotherTimer(dry, L && L.family === 'timer' ? L.intent : null);
+  }
   if (/^(?:set|start|create|make|add)(?: me)?(?: a| an)?(?: new)? (?:timer|countdown)$|^(?:a )?(?:timer|countdown)$/.test(sb)) {
     if (!dry) _pending = { kind: 'timer', at: Date.now() };
     return { kind: 'ask', text: _say('ask_timer', dry), chips: chips('timer'), tag: 'ask-timer' };
