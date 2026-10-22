@@ -238,8 +238,11 @@ boss-kernel/
 │   ├── phrases_more.tsv   — ~90 casual / edge-case requests, same format
 │   ├── phrases_chat.tsv   — ~130 chit-chat phrases (EXPECTED = CHAT) plus trap phrases that must still reach their action
 │   ├── phrases_reports.tsv — phrases taken from real tester reports (kept as regression tests; add new ones from each report)
+│   ├── measure_bonds.py   — same idea for bond strength: gives nodes realistic bonds and counts wrong routings / needless questions
 │   ├── measure_recency.py — measures how often a recently used ("warm") node misroutes phrases; run before/after any scoring change
+│   ├── experiments/embeddings/ — offline experiment for the Understanding Layer (embed_experiment.py, fresh_paraphrases.tsv); changes nothing in BOSS
 │   └── run_corpus.py      — Runner: loads core/index.html in headless Chromium, calls BOSS_route() per phrase
+├── docs/UNDERSTANDING-LAYER.md — design note: the proposed understanding layer (post-v1.0), contract, manifest, shadow mode, evidence
 ├── cortex/cortex.py       — Semantic bridge v0.8
 ├── .env.example           — Cortex configuration template
 └── README.md
@@ -264,6 +267,7 @@ boss-kernel/
 | 9b | Pre-wrap capability build: state backup, encryption, location, weather, voice, vision/clipboard, app launcher + Shortcuts bridge, COMMS-light, native-only layer, BROWSER stub | ✅ Complete (device-tested) |
 | 10 | Native wrap (Capacitor): implement the 📱 Native items, DEVICES adapters, BOSS Browser, silent app launching, reliable alarms, Tailscale guide | Pending |
 | 11 | v1.0 stabilisation + PyInstaller + first-run setup wizard | Pending |
+| 12 | Understanding Layer (post-v1.0): capability manifest, in-app embeddings, shadow mode, personal memory — see §XVII and `docs/UNDERSTANDING-LAYER.md` | Design note written; not started |
 
 ---
 
@@ -493,7 +497,65 @@ Also: COMMS parses polite/long forms ("can you send an email for me", "make a ph
 
 **Amendment (build 0.14.4) — recency ceiling and match-based no-signal.** Two small changes to scoring, approved after measurement (`tests/measure_recency.py`; 455 phrases, each node made warm in turn). *Problem:* the thermal term is `warmth × match`, and warmth can reach 10, so a node used a few seconds ago could out-score nodes whose words matched the request better, and it also lifted the total above NOISE_FLOOR on phrases nothing recognised — so "tell me a quick random fact" went straight to CORTEX on a fresh start but became a pointless "which did you mean?" mid-session. *Changes:* (1) **`WARM_CAP = 0.3`** — in `score()` the thermal term uses `min(warmth, WARM_CAP) × match`. The lock "warmth × match" is unchanged and the warmth value itself (glow, decay, bonds) is untouched; only its ceiling in scoring is new, so recent use can nudge a result but not decide it. (2) **match-based no-signal** — `noSignalClaim` now sends a plain-language question/request to CORTEX whenever *no node's words resemble it* (every match < BIRTH_THRESHOLD), instead of testing the total score (which includes warmth); phrases that any node genuinely matches are unaffected. *Measured (warmth = one recent use):* wrong routings 60/3,136 → 12/3,185; needless clarifications 42% → 0%; all 455 phrases still correct on a fresh start. *Known residuals:* a warm CORTEX can still take a few real requests ("how is the battery", "status", "open a file") before the Arbiter resolves them (in a live test "battery level" was resolved correctly by the Arbiter), and a warm SOMA can take two open-ended phrases. The cap value is a single number: 0.2 measured slightly better but nearly switches recency off; 0.3 was chosen to keep it a real, modest influence. Re-measure with real tester phrases before changing it.
 
-## XVII. Related
+**Amendment (build 0.14.5) — bond rebalancing, and timers that follow your intent.** *Problem:* `bondSignal × 2` was added to a node's score whether or not its words matched the request at all; bonds grow +0.1 per node-to-node transition, never decay and have no ceiling (runaway Hebbian strengthening with no homeostasis). In the 0.14.4 iPhone report, one mis-route to CORE grew its score to 1.0–1.85 on unrelated phrases, which then mis-routed "Set a time for 5 minutes", "And dogs?" and "I have a football match later today". *Change:* in `score()` the bond term is scaled by `min(1, match / BOND_FULL_MATCH)` with `BOND_FULL_MATCH = 0.5` — a bond counts in full only when the node's words genuinely fit, and proportionally less below that. The lock (`bondSignal × 2`) and the bond mechanics themselves (formation, lookback, decay constant) are unchanged; only what a bond is allowed to *carry* is. *Measured* (`tests/measure_bonds.py`: every node given two partners at bond strength 0.4, every "last node" used, 455 phrases): wrong routings 504 → 172 of 9,555 and needless "which did you mean?" 812 → 0; at the 470-phrase corpus on 0.14.5, wrong 175/9,870 and needless questions 0 (bond strength 0 → 0 wrong). A residual ~1.8% remains with strong bonds and is the next thing to watch in tester reports. *Timers (CHRONOS + dialogue, no scoring change):* a plain "set a timer for N" **adds**; "change the timer to N", "…instead", "replace…" and the follow-up "make it N" **replace** the latest; "cancel timer" with one running cancels it, with several **asks which** (Latest / All / each); "cancel all / the latest / the 5 minute timer" and "cancel the alarm" act on exactly that (timers and alarms are no longer cancelled together); "set another timer" asks how long and offers the last length. *Also in 0.14.5:* a places question ("best fish soup near me") is no longer read as "where am I" (new `places` claim → CORTEX); "send an email to <name> saying …" is handled by COMMS; "and dogs?" after an opinion question repeats the honest no-engine answer; a plan ("I have a football match later today") gets a friendly reply with Note it / Set a timer; "half an hour" is now 30 minutes (it was read as one hour).
+
+## XVII. Direction After v1.0 — The Intelligence Structure
+
+*Status: design direction, not built. Full design: `docs/UNDERSTANDING-LAYER.md`.*
+
+**The question.** BOSS recognises requests by counting shared *words* between a phrase and each node's
+vocabulary, plus hand-written rules. That is excellent for wording we planned for and weak for wording we
+didn't. Three tester rounds showed two different problems — **mechanism bugs** (dynamic state distorting
+scores) and the **long tail of language** — and only the second needs new intelligence.
+
+**The answer, in BOSS's own terms: a layered nervous system.** Bodies do not use one intelligence for
+everything; they use cheap, fast, reliable layers first and escalate only when those are unsure. BOSS already
+has most of the layers. What it lacks is *perception by meaning*.
+
+| Biology | Role in a body | In BOSS | Status |
+|---|---|---|---|
+| **Reflexes / innate immunity** | Fixed, fast, identical in every body | Claims (`INTENT_CLAIMS`), parsers, the Dialogue layer | ✅ Built |
+| **Thalamus / sensory cortex** | Relays raw input to the right place **by meaning**; gates attention | **Understanding Layer** — embedding similarity over a capability manifest | ⬜ Proposed |
+| **Hippocampus / adaptive immunity** | Remembers *this* individual; repetition consolidates into lasting knowledge | Personal phrase memory (user-visible, resettable); the Learning module | 🟨 Partial |
+| **Synapses (Hebbian learning)** | Strengthen with use — *and are rebalanced so they cannot run away* (homeostatic scaling) | Bonds and warmth | 🟨 Bonds lack rebalancing (below) |
+| **Prefrontal cortex** | Slow, costly, flexible reasoning | CORTEX + deliberation layer (remote API now; a local model is just another backend mode) | ✅ Built |
+| **Self / non-self discrimination** | Refuses what would harm the body | Arbiter, risk tiers, confirmation for side-effect actions | ✅ Built |
+| **Genome vs lifetime** | What every body is born with vs what this one learns | Shipped model + capability manifest (identical everywhere) vs personal memory (different on every BOSS) | ⬜ Proposed |
+
+**Escalation rule:** act at the cheapest layer that is confident; escalate only when it isn't —
+*reflex → perception → memory → deliberation.* The costly layers therefore see the fewest requests.
+The metaphor is a design guide, not evidence: every claim that a layer *works* rests on measurement.
+
+**The Understanding Layer is an operator, not a governor.** It reads a request, proposes which part of BOSS
+should handle it, and the kernel decides — exactly as today. It is consulted **only where routing currently
+gives up** (conflict, no signal, Arbiter tie-break), so nothing that works today is touched. Per-user learning
+is a *visible memory of confirmed phrases*, not hidden retraining. It enters in **shadow mode** (records what
+it would have proposed, changes nothing) and is promoted only on real tester data.
+
+**Embeddings already exist in BOSS — on PC.** The optional Python cortex feeds `vectorBoost` from the same
+`all-MiniLM-L6-v2` model. A phone has no cortex, so there `vectorBoost` is always 0. The proposal brings that
+capability into the app itself so it works everywhere; it extends an existing mechanism.
+
+**Evidence so far** (`tests/experiments/embeddings/`; reference phrases only from data BOSS already ships):
+on 73 fresh paraphrases today's routing is directly correct on 46 (63%); consulting embeddings *only where it
+gives up* raises that to 53–54 (73–74%) with **0 broken**, and 454 of 455 existing corpus phrases are
+unchanged. Embeddings alone (84% on the tuned corpora) do **not** beat the tuned rules, so nothing is replaced.
+Caveat: the fresh set was written by one person after seeing the failures — your tester rounds are the
+independent check.
+
+**Applied in build 0.14.5 — bond rebalancing.** `bondSignal × 2` was added to a node's score whether or not its words matched the request; bonds grow +0.1 per node-to-node transition, never decay and have no ceiling. In the 0.14.4 iPhone report one mis-route to CORE grew its score to 1.0–1.85 on unrelated phrases, which then mis-routed other requests. This is runaway Hebbian potentiation without homeostasis. The bond term is now scaled by `min(1, match/0.5)`, so a bond nudges a close call but can no longer carry a node that does not fit. Measured with realistic bonds of 0.4: wrong routings 504 → 172 of 9,555, needless "which did you mean?" 812 → 0. Details: §XVI-b, amendment 0.14.5.
+
+**Language.** English first, kept modular: language-specific wording lives in data (a *locale pack*) separate from language-neutral logic, and the capability manifest stores examples per language from day one. A language counts as supported when its pack passes its own corpus at the same bar as English. See design note §16.
+
+**Roadmap for this direction** (each step gated; see the design note §13): 0.14.5 bond fix (done) → test pass and v1.0 →
+capability manifest and the `understand()` contract (no behaviour change) → in-browser model spike on a real
+iPhone → shadow mode → promote the fallback tier → personal memory → *conditionally* a trained classifier, a PC
+"judge" model (e.g. OpenJev-style) for Arbiter conflicts, or a local generative mode — only if measurements show
+the lightweight approach has plateaued.
+
+---
+
+## XVIII. Related
 
 **boss-deliberate** — https://github.com/nztdev/boss-deliberate
 The deliberation layer as a standalone product. Ask once, filter many — multi-model consensus with a full transparency trace.
