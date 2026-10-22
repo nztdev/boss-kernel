@@ -89,6 +89,11 @@ BOSS now handles everyday small talk and follow-ups. Try these in order (give ea
 | G14 | Say: "alarm at nine thirty", "set a timer for two minutes". | 09:30 alarm and a 2-minute timer. |
 | G15 | After any reply, tap ✋ **Not what I meant**. | A sheet opens; after Save the chip briefly says "✓ Saved". |
 | G16 | Do two or three normal things (play music, set a timer), then ask an open question: "tell me a quick random fact", "what's the tallest mountain". | BOSS answers (or says it needs an engine) straight away — it should NOT ask "which did you mean?". |
+| G17 | `set a timer for 5 minutes`, then `set a timer for 10 minutes`, then `cancel timer`. | BOSS asks which: **Latest · 10 minutes / All / 5 minutes**. Tap one — only that one is cancelled. |
+| G18 | With a timer running: `change the timer to 3 minutes`, then `set a timer for 4 minutes instead`. Then a plain `set a timer for 10 minutes`. | The first two **replace** the running timer (“↺ replaced …”). The plain one **adds** another and mentions what else is running. |
+| G19 | `set another timer` → tap **Same · …** or a duration. Then `cancel the 5 minute timer`, `cancel all timers`; set an alarm and say `cancel timer` / `cancel the alarm`. | “Another timer” asks how long (offering the last length). Each cancel affects only what you named; cancelling timers never cancels the alarm. |
+| G20 | `what do you think about birds` → `and dogs?`. Then `I have a football match later today`. | The second question gets the same honest “needs an engine” answer (no list of unrelated commands). The match gets a friendly reply with **Note it / Set a timer**. |
+| G21 | `send an email to John Reaper saying when is the meeting`; `find the best fish soup near me`; `where am I`. | The email is handled by Phone/Email (it says it can’t look up contacts — never a timer question). The fish-soup question is **not** treated as “where am I” (open question → engine message). `where am I` still finds your location. |
 
 *(Please don't test the distress response with real feelings. If you want to check it exists, a tester can ask the dev team.)*
 
@@ -174,6 +179,11 @@ Copy this table into a note or email (or just attach the report file from D3 —
 | G14 | | |
 | G15 | | |
 | G16 | | |
+| G17 | | |
+| G18 | | |
+| G19 | | |
+| G20 | | |
+| G21 | | |
 | D1 | | |
 | D2 | | |
 | D3 | | |
