@@ -5251,6 +5251,8 @@ const BIRTH_THRESHOLD = 0.15;
  *  (glow, decay, bonds) is untouched; the lock "warmth × match" is unchanged. Measured: with any node
  *  recently used, uncapped warmth made it steal phrases it barely matched (tests/measure_recency.py). */
 const WARM_CAP = 0.3;
+/** v0.14.5 amendment — match at which a bond counts in full; below it the bond is scaled down proportionally. */
+const BOND_FULL_MATCH = 0.5;
 let   confThreshold  = 1.5;   // legacy ceiling (kept; Arbiter now gated by the decisive margin below)
 
 // ── Orbital preset UI state ───────────────────────────────────────────────────
@@ -5430,7 +5432,12 @@ class Node {
         bondSignal += prev.bonds[this.id] * Math.pow(BOND_DECAY_K, i);
     });
     this.lastVecBoost = vectorBoost;
-    const total = thermal + standingWave + (bondSignal * 2) + (vectorBoost * VECTOR_WEIGHT);
+    // v0.14.5 amendment (README §XVI-b): a bond counts only in proportion to how well the node's WORDS match the request
+    // (full strength from match 0.5). Bonds grow +0.1 per node-to-node transition, never decay and have no ceiling, and were
+    // added whether or not the node matched at all — after one mis-route a node could score 1.0–1.85 on unrelated phrases.
+    // Recent partnership can now nudge a close call; it can no longer carry a node that doesn't fit.
+    const bondEff = bondSignal * Math.min(1, match / BOND_FULL_MATCH);
+    const total = thermal + standingWave + (bondEff * 2) + (vectorBoost * VECTOR_WEIGHT);
     return { total, match, thermal, standingWave, bondSignal, vectorBoost };
   }
 
@@ -6088,7 +6095,10 @@ const INTENT_CLAIMS = [
   // Open-ended opinion/feeling questions are the thinker's (with an engine); the dialogue layer answers honestly without one.
   { node: 'CORTEX',  reason: 'opinion',   test: i => Dialogue.isOpinion(i) },
   { node: 'CHRONOS', reason: 'reminder-in', test: i => /\bremind(?:er|ed)?\b.*\b(?:in|after)\s+(?:\d+|an?|one|two|three|five|ten|fifteen|twenty|thirty|half|quarter)\b/i.test(i) },
-  { node: 'CORE',    reason: 'location/backup', test: i => /\bwhere am i\b|\bwhere i am\b|\bmy (?:current )?location\b|\bmy coordinates\b/i.test(i) ||
+  // v0.14.5: "best fish soup near me", "find a good cafe in my area" — a question about PLACES, not "where am I" → the generalist
+  { node: 'CORTEX',  reason: 'places',    test: i => /\b(?:find|best|good|nearest|closest|recommend(?:ed)?|where can i|looking for)\b/i.test(i) &&
+                                                      /\b(?:my (?:location|area|neighbou?rhood|city|town)|near me|nearby|around here|restaurants?|cafes?|coffee shops?|bars?|pubs?|shops?|stores?|pharmacy|hotels?)\b/i.test(i) },
+  { node: 'CORE',    reason: 'location/backup', test: i => (/\bwhere am i\b|\bwhere i am\b|\bmy (?:current )?location\b|\bmy coordinates\b/i.test(i) && !/\b(?:find|best|nearest|closest|near|nearby|restaurants?|cafes?|shops?|stores?|recommend|good|places?)\b/i.test(i)) ||
                                                       /^(?:please\s+)?(?:create|make|take|run|do)?\s*(?:a\s+|my\s+)?back-?up(?:\s+(?:now|of (?:my )?(?:data|boss|everything)))?$/i.test(i.trim()) ||
                                                       /^(?:back ?up|restore)\b.*\b(?:data|boss|everything|settings|backup)\b/i.test(i.trim()) ||
                                                       /^restore (?:from )?(?:a |my )?backup$/i.test(i.trim()) },
@@ -6193,6 +6203,11 @@ window.BOSS_route = function(intent) {
 };
 
 /** Test hook: set a node's warmth (simulates recent use) — used by tests/run_corpus.py --stress. */
+/** Test hook (like BOSS_heat): give every node sparse bonds of strength b to two other nodes and make `prev` the last node used. */
+window.BOSS_bonds = function(prev, b, seed) {
+  nodes.forEach((n, i) => { n.warmth = 0.1; n.bonds = {}; if (b) for (let j = 1; j <= 2; j++) { const m = nodes[(i * 3 + j * (1 + (seed | 0))) % nodes.length]; if (m !== n) n.bonds[m.id] = b; } });
+  const pn = nodes.find(n => n.name === prev); chain.length = 0; if (pn) chain.push(pn.id);
+};
 window.BOSS_heat = function(name, w) { nodes.forEach(n => { n.warmth = (n.name === name ? w : 0.1); }); };
 
 async function firePulse() {
@@ -7240,6 +7255,7 @@ Dialogue.init({
   getName: () => { try { return (getUserProfile().name || '').trim(); } catch (_) { return ''; } },
   hasEngine: () => !!(enginePool && enginePool.some(n => n.tier === 1 && n.apiKey)),
   run: phrase => { document.getElementById('pulse-input').value = phrase; firePulse(); },
+  getTimers: () => { try { return ChronosAction.getRunningTimers(); } catch (_) { return []; } },
 });
 Waveform.init({
   voice: Voice,
