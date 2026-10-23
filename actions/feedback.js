@@ -56,6 +56,18 @@ export function redact(text) {
   return t;
 }
 
+/** Mask one line of the console log. Beyond redact(): location and weather RESULTS (place names, coordinates) are removed
+ *  entirely, and the leading HH:MM:SS timestamp is kept intact (the phone-number pattern used to chew into it). */
+export function redactLog(line) {
+  const s = String(line == null ? '' : line);
+  const tm = s.match(/^(\d{2}:\d{2}:\d{2})\s?([\s\S]*)$/);
+  const stamp = tm ? tm[1] + ' ' : '', body = tm ? tm[2] : s;
+  if (/📍|🌤|±\s*\d+\s*m\b|\bcoordinates?\b|\bkept in memory only\b/i.test(body)) {
+    return stamp + (/🌤/.test(body) ? '🌤 [weather result removed]' : '📍 [location removed]');
+  }
+  return stamp + redact(body).replace(/-?\d{1,3}\.\d{3,}\s*,\s*-?\d{1,3}\.\d{3,}/g, '[coords]');
+}
+
 // ── request log ───────────────────────────────────────────────────────────────
 /**
  * Called once per pulse by the kernel.
@@ -188,7 +200,7 @@ function build(o = {}) {
     report.gaps = _load(GAPS_KEY).map(g => ({ t: g.timestamp, intent: m(g.intent), engineConfigured: !!g.engineConfigured, native: g.native || null }));
   }
   if (inc.console && o.consoleText) {
-    report.console = String(o.consoleText).split('\n').slice(-80).map(m).join('\n');
+    report.console = String(o.consoleText).split('\n').slice(-80).map(l => (mask ? redactLog(l) : l)).join('\n');
   }
   report.counts = {
     requests: (report.requests || []).length,
