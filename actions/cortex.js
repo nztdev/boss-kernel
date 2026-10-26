@@ -175,13 +175,21 @@ function _handlePoolStatus(clog, Immune, Registry) {
 }
 
 async function _handleDeliberate(type, subject, intent, clog, Nervous, EVENT, enginePool, deliberateFn) {
+  // v0.14.7: no engine → one friendly, tone-aware line (and a logged gap) instead of technical wording
+  const _noEngine = () => {
+    if (window.logCapabilityGap) window.logCapabilityGap(intent, false);
+    if (window.BOSS_noEngine) { window.BOSS_noEngine(intent); return true; }
+    return false;
+  };
   if (!enginePool || !deliberateFn) {
+    if (_noEngine()) return;
     clog('🔬 CORTEX: engine not configured — add API keys via cortex pill', 'log-vec');
     return;
   }
 
   const activeTier1 = enginePool.filter(n => n.tier === 1 && n.apiKey);
   if (!activeTier1.length) {
+    if (_noEngine()) return;
     clog('🔬 CORTEX: no Tier 1 engine models configured', 'log-vec');
     clog('   Add Groq or Gemini keys via the cortex pill → Engine Keys', 'log-vec');
     return;
