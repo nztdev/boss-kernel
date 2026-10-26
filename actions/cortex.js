@@ -324,6 +324,9 @@ export const CortexAction = {
       // this signal just evaporating each time.
       if (window.logCapabilityGap) window.logCapabilityGap(intent, engineReady);
 
+      // v0.14.7: with no engine, say so in one friendly line (in the user's chosen tone) instead of dumping the command menu.
+      if (!engineReady && window.BOSS_noEngine) { window.BOSS_noEngine(intent); return false; }
+
       clog(`🔬 CORTEX: no recognised action in "${intent}"`, 'log-vec');
       if (!engineReady) {
         clog('   💡 Open questions ("tell me a joke", "why is the sky blue") need an AI engine key —', 'log-vec');
