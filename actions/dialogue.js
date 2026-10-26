@@ -228,6 +228,13 @@ const B = {
     ['I am unable to access your call history or voicemail from the browser. I can start a call for you.'],
     ['Call history: not my department, not in a browser. Placing a call: yes.'],
   ],
+  noengine: [
+    ['I can\'t answer that one on my own{n} — open questions need an AI engine, and none is connected (Settings → Engine keys). Offline I\'m good at timers, notes, music, weather and calls.', 'That one needs an AI engine, and none is connected yet (Settings → Engine keys). Timers, notes, music, weather and calls I can do right now.'],
+    ['Needs an AI engine (Settings → Engine keys).'],
+    ['That\'s a job for my deep-thinking brain, and it\'s not plugged in{n}! Add one under Settings → Engine keys. Meanwhile: timers, notes, music — ask away.'],
+    ['I am unable to answer that without an AI engine, which is not configured. You may add one under Settings → Engine keys.'],
+    ['That needs an engine. I don\'t have one. Settings → Engine keys. Timers, I can do.'],
+  ],
   plans: [
     ['Sounds good{n}! Want me to note it down, or set a timer so you don\'t miss it?', 'Nice — want me to jot that down, or set a timer?'],
     ['Want me to note it or set a timer?'],
@@ -680,6 +687,8 @@ export function process(raw, { dry = false } = {}) {
   }
   return { kind: 'pass' };
 }
+/** The friendly "that needs an AI engine" reply (tone-aware) for requests that reach CORTEX with no engine connected. */
+export function noEngine() { return { text: _say('noengine', false), chips: chips('opinion') }; }
 /** Side-effect-free preview for the routing test harness. */
 export function peek(raw) { return process(raw, { dry: true }); }
 
@@ -750,5 +759,5 @@ export function reset() { _last = null; _pending = null; _history = []; _bags.cl
 export function sample(toneId) { const i = IDX[toneId] ?? 0; return B.greet[i][0].replace(/\{n\}/g, ''); }
 
 export const Dialogue = { TONES, getTone, setTone, process, peek, classify, noteAction, noteEngine, promptContext,
-  showChips, hideChips, init, reset, sample, parseDuration, parseClock, norm, isOpinion, cantRead, convert };
+  showChips, hideChips, init, reset, sample, parseDuration, parseClock, norm, isOpinion, cantRead, convert, noEngine };
 if (typeof window !== 'undefined') window.BOSS_DIALOGUE = Dialogue;
