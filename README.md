@@ -501,6 +501,8 @@ Also: COMMS parses polite/long forms ("can you send an email for me", "make a ph
 
 **Build 0.14.6 — feedback-report privacy fix.** The optional console section of a feedback report masked phone-number-like digits with a pattern that also ate part of the timestamp and missed coordinates: a PC report exported after "where am i" still carried the longitude, accuracy and city. New `redactLog()` (actions/feedback.js): the timestamp is kept intact; any line carrying a location or weather *result* (📍 / 🌤 / coordinates / accuracy) is replaced by a placeholder; coordinate pairs are masked everywhere. Request text masking (emails, numbers, links, `remember …`) is unchanged.
 
+**Build 0.14.7 — one friendly line instead of the CORTEX menu.** When a request reaches CORTEX, nothing local recognises it and no AI engine is connected, BOSS used to print "no recognised action" followed by a four-line command menu (Analyse / Explain / Reason / Status) and pop the orbital. It now says in one line, in the user's chosen tone, that the question needs an AI engine (Settings → Engine keys) and what BOSS can do offline, with *What can you do?* / *Tell me a joke* chips. The gap is still logged exactly as before (so reports and the gap log are unchanged); with an engine connected nothing changes. New hook: `window.BOSS_noEngine` (index.html) ← `Dialogue.noEngine()` (new `noengine` bank, five tones).
+
 ## XVII. Direction After v1.0 — The Intelligence Structure
 
 *Status: design direction, not built. Full design: `docs/UNDERSTANDING-LAYER.md`.*
