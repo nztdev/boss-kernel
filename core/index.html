@@ -6414,7 +6414,7 @@ async function firePulse() {
     }
   }
 
-  if (stillUnhandled) activateOrbital(winner);
+  { const _ne = window._noEngineShown; window._noEngineShown = false; if (stillUnhandled && !_ne) activateOrbital(winner); }
   clog(`📡 ${winner.name} | freq=${top.total.toFixed(3)} Δ=${delta===Infinity?'∞':delta.toFixed(3)}`, 'log-win');
 
   // Engine response takes priority — set by Arbiter engine escalation path
@@ -7257,6 +7257,8 @@ Dialogue.init({
   run: phrase => { document.getElementById('pulse-input').value = phrase; firePulse(); },
   getTimers: () => { try { return ChronosAction.getRunningTimers(); } catch (_) { return []; } },
 });
+// v0.14.7: CORTEX with no engine → one friendly, tone-aware line + chips (no menu dump, no orbital pop-up)
+window.BOSS_noEngine = () => { const r = Dialogue.noEngine(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; };
 Waveform.init({
   voice: Voice,
   getAnchor: () => {
