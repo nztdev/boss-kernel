@@ -1,0 +1,824 @@
+{
+ "schema": "boss-capabilities/1",
+ "generated": "2026-10-27",
+ "locale": "en",
+ "entries": [
+  {
+   "id": "chronos_weather",
+   "kind": "supported",
+   "node": "CHRONOS",
+   "label": "Weather",
+   "examples": [
+    "Weather",
+    "weather",
+    "forecast",
+    "rain",
+    "temperature"
+   ]
+  },
+  {
+   "id": "chronos_timer",
+   "kind": "supported",
+   "node": "CHRONOS",
+   "label": "Timer",
+   "examples": [
+    "Timer",
+    "set a timer",
+    "timer"
+   ]
+  },
+  {
+   "id": "chronos_stopwatch",
+   "kind": "supported",
+   "node": "CHRONOS",
+   "label": "Stopwatch",
+   "examples": [
+    "Stopwatch",
+    "stopwatch"
+   ]
+  },
+  {
+   "id": "chronos_alarms",
+   "kind": "supported",
+   "node": "CHRONOS",
+   "label": "Alarms",
+   "examples": [
+    "Alarms",
+    "alarms",
+    "alarm"
+   ]
+  },
+  {
+   "id": "media_play",
+   "kind": "supported",
+   "node": "MEDIA",
+   "label": "Music",
+   "examples": [
+    "Music",
+    "play music",
+    "audio",
+    "music"
+   ]
+  },
+  {
+   "id": "media_video",
+   "kind": "supported",
+   "node": "MEDIA",
+   "label": "Video",
+   "examples": [
+    "Video",
+    "play video",
+    "video"
+   ]
+  },
+  {
+   "id": "media_photo",
+   "kind": "supported",
+   "node": "MEDIA",
+   "label": "Photo",
+   "examples": [
+    "Photo",
+    "show image",
+    "image",
+    "photo"
+   ]
+  },
+  {
+   "id": "soma_identity",
+   "kind": "supported",
+   "node": "SOMA",
+   "label": "Who are you",
+   "examples": [
+    "Who are you",
+    "who are you",
+    "identity",
+    "self"
+   ]
+  },
+  {
+   "id": "soma_mood",
+   "kind": "supported",
+   "node": "SOMA",
+   "label": "How are you",
+   "examples": [
+    "How are you",
+    "how are you",
+    "personality",
+    "mood"
+   ]
+  },
+  {
+   "id": "soma_themes",
+   "kind": "supported",
+   "node": "SOMA",
+   "label": "Themes",
+   "examples": [
+    "Themes",
+    "list themes",
+    "theme",
+    "appearance"
+   ]
+  },
+  {
+   "id": "soma_profile",
+   "kind": "supported",
+   "node": "SOMA",
+   "label": "Profile",
+   "examples": [
+    "Profile",
+    "profile",
+    "preferences",
+    "identity"
+   ]
+  },
+  {
+   "id": "soma_voice",
+   "kind": "supported",
+   "node": "SOMA",
+   "label": "Voice",
+   "examples": [
+    "Voice",
+    "voice settings",
+    "voice",
+    "speech",
+    "dictation",
+    "speak"
+   ]
+  },
+  {
+   "id": "core_status",
+   "kind": "supported",
+   "node": "CORE",
+   "label": "System status",
+   "examples": [
+    "System status",
+    "check system status",
+    "system",
+    "status"
+   ]
+  },
+  {
+   "id": "core_battery",
+   "kind": "supported",
+   "node": "CORE",
+   "label": "Battery level",
+   "examples": [
+    "Battery level",
+    "check battery level",
+    "battery",
+    "power"
+   ]
+  },
+  {
+   "id": "core_network",
+   "kind": "supported",
+   "node": "CORE",
+   "label": "Network",
+   "examples": [
+    "Network",
+    "network",
+    "connectivity"
+   ]
+  },
+  {
+   "id": "core_gaps",
+   "kind": "supported",
+   "node": "CORE",
+   "label": "Gaps",
+   "examples": [
+    "Gaps",
+    "gaps",
+    "backlog",
+    "capabilities"
+   ]
+  },
+  {
+   "id": "core_backup",
+   "kind": "supported",
+   "node": "CORE",
+   "label": "Backup",
+   "examples": [
+    "Backup",
+    "backup restore",
+    "backup",
+    "restore",
+    "export",
+    "import",
+    "migrate"
+   ]
+  },
+  {
+   "id": "core_location",
+   "kind": "supported",
+   "node": "CORE",
+   "label": "Location",
+   "examples": [
+    "Location",
+    "where am i",
+    "location",
+    "position",
+    "coordinates"
+   ]
+  },
+  {
+   "id": "memory_vault",
+   "kind": "supported",
+   "node": "MEMORY",
+   "label": "Vault",
+   "examples": [
+    "Vault",
+    "vault",
+    "memory",
+    "recall"
+   ]
+  },
+  {
+   "id": "memory_notes",
+   "kind": "supported",
+   "node": "MEMORY",
+   "label": "Notes",
+   "examples": [
+    "Notes",
+    "notes",
+    "memory",
+    "lists"
+   ]
+  },
+  {
+   "id": "memory_security",
+   "kind": "supported",
+   "node": "MEMORY",
+   "label": "Security",
+   "examples": [
+    "Security",
+    "lock vault encrypt security",
+    "security",
+    "encrypt",
+    "lock",
+    "passphrase",
+    "biometric"
+   ]
+  },
+  {
+   "id": "cortex_texttools",
+   "kind": "supported",
+   "node": "CORTEX",
+   "label": "Text Tools",
+   "examples": [
+    "Text Tools",
+    "text tools",
+    "summarise",
+    "translate",
+    "rewrite",
+    "analyse",
+    "explain"
+   ]
+  },
+  {
+   "id": "cortex_calculate",
+   "kind": "supported",
+   "node": "CORTEX",
+   "label": "Calculate",
+   "examples": [
+    "Calculate",
+    "calculate",
+    "calculation",
+    "convert",
+    "math"
+   ]
+  },
+  {
+   "id": "cortex_look",
+   "kind": "supported",
+   "node": "CORTEX",
+   "label": "Look",
+   "examples": [
+    "Look",
+    "look at this photo",
+    "camera",
+    "photo",
+    "vision",
+    "scan",
+    "describe"
+   ]
+  },
+  {
+   "id": "cortex_engine_status",
+   "kind": "supported",
+   "node": "CORTEX",
+   "label": "Engine status",
+   "examples": [
+    "Engine status",
+    "engine status",
+    "engine",
+    "status"
+   ]
+  },
+  {
+   "id": "comms_call",
+   "kind": "supported",
+   "node": "COMMS",
+   "label": "Call",
+   "examples": [
+    "Call",
+    "call",
+    "phone",
+    "comms"
+   ]
+  },
+  {
+   "id": "comms_text",
+   "kind": "supported",
+   "node": "COMMS",
+   "label": "Text",
+   "examples": [
+    "Text",
+    "send a text",
+    "phone",
+    "comms",
+    "text"
+   ]
+  },
+  {
+   "id": "comms_email",
+   "kind": "supported",
+   "node": "COMMS",
+   "label": "Email",
+   "examples": [
+    "Email",
+    "send an email",
+    "phone",
+    "comms",
+    "email"
+   ]
+  },
+  {
+   "id": "files_recent",
+   "kind": "supported",
+   "node": "FILES",
+   "label": "Recent files",
+   "examples": [
+    "Recent files",
+    "recent files",
+    "files",
+    "recent"
+   ]
+  },
+  {
+   "id": "files_open",
+   "kind": "supported",
+   "node": "FILES",
+   "label": "Open file",
+   "examples": [
+    "Open file",
+    "open file",
+    "files",
+    "open",
+    "pick"
+   ]
+  },
+  {
+   "id": "files_url",
+   "kind": "supported",
+   "node": "FILES",
+   "label": "Open URL",
+   "examples": [
+    "Open URL",
+    "open url",
+    "files",
+    "link"
+   ]
+  },
+  {
+   "id": "comms_contacts",
+   "kind": "native",
+   "node": "COMMS",
+   "label": "Contacts",
+   "reason": "Looking people up by name needs access to your contacts.",
+   "risk": "low",
+   "examples": [
+    "Contacts",
+    "contacts",
+    "contact list",
+    "address book",
+    "phone book"
+   ]
+  },
+  {
+   "id": "comms_send_sms",
+   "kind": "native",
+   "node": "COMMS",
+   "label": "Send SMS directly",
+   "reason": "Sending a message without opening Messages needs the native SMS permission.",
+   "risk": "high",
+   "examples": [
+    "Send SMS directly",
+    "send sms directly",
+    "send a text without",
+    "text without opening"
+   ]
+  },
+  {
+   "id": "comms_call_direct",
+   "kind": "native",
+   "node": "COMMS",
+   "label": "Place call directly",
+   "reason": "Placing or controlling calls needs the native phone permission.",
+   "risk": "high",
+   "examples": [
+    "Place call directly",
+    "place call directly",
+    "place a call directly",
+    "call without opening",
+    "hang up",
+    "end the call",
+    "answer the call"
+   ]
+  },
+  {
+   "id": "core_flashlight",
+   "kind": "native",
+   "node": "CORE",
+   "label": "Flashlight",
+   "reason": "The torch can only be switched by a native app.",
+   "risk": "low",
+   "examples": [
+    "Flashlight",
+    "flashlight",
+    "torch",
+    "turn on the light",
+    "turn on my light"
+   ]
+  },
+  {
+   "id": "core_screen_record",
+   "kind": "native",
+   "node": "CORE",
+   "label": "Record screen",
+   "reason": "Screen recording needs the operating system's capture permission.",
+   "risk": "high",
+   "examples": [
+    "Record screen",
+    "record screen",
+    "record my screen",
+    "screen recording",
+    "record the screen",
+    "screen record"
+   ]
+  },
+  {
+   "id": "core_bluetooth",
+   "kind": "native",
+   "node": "CORE",
+   "label": "Bluetooth on/off",
+   "reason": "Switching Bluetooth needs system settings access.",
+   "risk": "high",
+   "examples": [
+    "Bluetooth on/off",
+    "bluetooth on/off",
+    "turn on bluetooth",
+    "turn off bluetooth",
+    "bluetooth on",
+    "bluetooth off",
+    "toggle bluetooth"
+   ]
+  },
+  {
+   "id": "core_wifi_toggle",
+   "kind": "native",
+   "node": "CORE",
+   "label": "Wi-Fi / airplane",
+   "reason": "Changing Wi-Fi or airplane mode needs system settings access.",
+   "risk": "high",
+   "examples": [
+    "Wi-Fi / airplane",
+    "wi-fi / airplane",
+    "turn off wifi",
+    "turn on wifi",
+    "turn off wi-fi",
+    "turn on wi-fi",
+    "airplane mode",
+    "flight mode"
+   ]
+  },
+  {
+   "id": "devices_smarthome",
+   "kind": "native",
+   "node": "DEVICES",
+   "label": "Smart home & security",
+   "reason": "Controlling lights, locks, ovens and security systems needs smart-home access (Matter / vendor APIs) — a native-app capability.",
+   "risk": "high",
+   "examples": [
+    "Smart home & security",
+    "smart home & security",
+    "lock the front door",
+    "lock the door",
+    "unlock the door",
+    "unlock the front door",
+    "arm the security system",
+    "disarm the security system",
+    "security system",
+    "turn on the lights",
+    "turn off the lights",
+    "flash the lights",
+    "dim the lights",
+    "living room lights",
+    "preheat the oven",
+    "preheat oven",
+    "preheat kitchen oven",
+    "turn on the oven",
+    "thermostat",
+    "smart plug",
+    "garage door"
+   ]
+  },
+  {
+   "id": "core_dnd_brightness",
+   "kind": "native",
+   "node": "CORE",
+   "label": "Do Not Disturb / brightness",
+   "reason": "Changing Do Not Disturb or screen brightness needs system settings access.",
+   "risk": "high",
+   "examples": [
+    "Do Not Disturb / brightness",
+    "do not disturb / brightness",
+    "do not disturb",
+    "dnd mode",
+    "focus mode",
+    "screen brightness",
+    "brightness down",
+    "brightness up",
+    "lower the brightness",
+    "raise the brightness",
+    "dim my screen",
+    "dim the screen"
+   ]
+  },
+  {
+   "id": "media_cast",
+   "kind": "native",
+   "node": "MEDIA",
+   "label": "Cast / mirror screen",
+   "reason": "Casting or mirroring the screen needs the operating system's cast / AirPlay access.",
+   "risk": "low",
+   "examples": [
+    "Cast / mirror screen",
+    "cast / mirror screen",
+    "cast my screen",
+    "cast my current mobile screen",
+    "cast to the tv",
+    "cast to my tv",
+    "screen mirroring",
+    "mirror my screen",
+    "mirror the screen",
+    "airplay",
+    "chromecast",
+    "screen cast"
+   ]
+  },
+  {
+   "id": "files_external_drive",
+   "kind": "native",
+   "node": "FILES",
+   "label": "External drives & photo library",
+   "reason": "Reading your photo library or writing to an external drive needs file-system access the browser doesn't have.",
+   "risk": "high",
+   "examples": [
+    "External drives & photo library",
+    "external drives & photo library",
+    "external hard drive",
+    "external drive",
+    "usb drive",
+    "usb stick",
+    "flash drive",
+    "photo gallery",
+    "photo library",
+    "camera roll"
+   ]
+  },
+  {
+   "id": "media_transcribe",
+   "kind": "native",
+   "node": "MEDIA",
+   "label": "Audio & video transcription",
+   "reason": "Recording, transcribing or captioning audio and video needs on-device audio access and speech models — a native-app capability.",
+   "risk": "low",
+   "examples": [
+    "Audio & video transcription",
+    "audio & video transcription",
+    "transcribe",
+    "transcription",
+    "subtitles",
+    "audio recording",
+    "voice memo",
+    "voice memos",
+    "recording i just made",
+    "recording i made"
+   ]
+  },
+  {
+   "id": "devices_wake_pc",
+   "kind": "native",
+   "node": "DEVICES",
+   "label": "Wake / control another computer",
+   "reason": "Waking or controlling another computer needs the BOSS Cortex running on it (Settings → Cortex) or the native app.",
+   "risk": "high",
+   "examples": [
+    "Wake / control another computer",
+    "wake / control another computer",
+    "wake my office desktop",
+    "wake my desktop",
+    "wake my computer",
+    "wake up my computer",
+    "wake up my desktop",
+    "wake up my laptop",
+    "wake my laptop",
+    "wake on lan",
+    "wake-on-lan",
+    "sleep mode"
+   ]
+  },
+  {
+   "id": "chronos_reliable_alarms",
+   "kind": "native",
+   "node": "CHRONOS",
+   "label": "Reliable alarms",
+   "reason": "Alarms only ring while BOSS is open here; the native app can schedule real system alarms.",
+   "risk": "low",
+   "examples": [
+    "Reliable alarms",
+    "reliable alarms",
+    "reliable alarm",
+    "alarm when the app is closed",
+    "alarm while closed"
+   ]
+  },
+  {
+   "id": "group_time_weather",
+   "kind": "supported",
+   "node": "CHRONOS",
+   "label": "Time & weather",
+   "examples": [
+    "Set a timer for 15 minutes",
+    "Alarm at 7:30",
+    "What time is it in Tokyo?",
+    "Will it rain tomorrow?"
+   ]
+  },
+  {
+   "id": "group_memory",
+   "kind": "supported",
+   "node": "MEMORY",
+   "label": "Memory",
+   "examples": [
+    "Remember my locker code is 4821",
+    "Show my notes",
+    "What do you remember?",
+    "Lock the vault"
+   ]
+  },
+  {
+   "id": "group_media",
+   "kind": "supported",
+   "node": "MEDIA",
+   "label": "Media",
+   "examples": [
+    "Play music",
+    "Volume down",
+    "Play the video from my clipboard",
+    "Stop"
+   ]
+  },
+  {
+   "id": "group_files",
+   "kind": "supported",
+   "node": "FILES",
+   "label": "Files",
+   "examples": [
+    "Open a file",
+    "Show my recent downloads"
+   ]
+  },
+  {
+   "id": "group_phone",
+   "kind": "supported",
+   "node": "COMMS",
+   "label": "Phone",
+   "examples": [
+    "Call +34 600 123 456",
+    "Text +34 600 123 456 saying hi",
+    "Send an email"
+   ]
+  },
+  {
+   "id": "group_open_apps",
+   "kind": "supported",
+   "node": "CORTEX",
+   "label": "Open apps",
+   "examples": [
+    "Open Spotify",
+    "Open calendar",
+    "List apps",
+    "Run shortcut Good morning"
+   ]
+  },
+  {
+   "id": "group_look_text_tools",
+   "kind": "supported",
+   "node": "CORTEX",
+   "label": "Look & text tools",
+   "examples": [
+    "Describe this photo",
+    "Summarise my clipboard",
+    "Open text tools",
+    "Take a photo"
+   ]
+  },
+  {
+   "id": "group_ask_anything",
+   "kind": "supported",
+   "node": "CORTEX",
+   "label": "Ask anything",
+   "examples": [
+    "Why is the sky blue?",
+    "Write me a short poem",
+    "Give me an idea for dinner"
+   ]
+  },
+  {
+   "id": "group_device_settings",
+   "kind": "supported",
+   "node": "CORE",
+   "label": "Device & settings",
+   "examples": [
+    "Battery",
+    "Back up my data",
+    "Voice on",
+    "Change theme",
+    "Open settings"
+   ]
+  },
+  {
+   "id": "x_calendar",
+   "kind": "unsupported",
+   "node": null,
+   "label": "Your calendar",
+   "reason": "I can't see your calendar from here — it lives in your phone's own app.",
+   "examples": [
+    "what is on my calendar today",
+    "am I free on Friday afternoon",
+    "schedule a meeting with Anna next week",
+    "reply based on my calendar availability"
+   ]
+  },
+  {
+   "id": "x_inbox",
+   "kind": "unsupported",
+   "node": null,
+   "label": "Your inbox",
+   "reason": "I can't read your email or messages.",
+   "examples": [
+    "read my latest emails",
+    "summarise my inbox",
+    "do I have any new messages from my boss"
+   ]
+  },
+  {
+   "id": "x_booking",
+   "kind": "unsupported",
+   "node": null,
+   "label": "Bookings & purchases",
+   "reason": "I can't book or buy things for you.",
+   "examples": [
+    "book me a table for two tonight",
+    "order a pizza",
+    "buy tickets for the concert",
+    "book a flight to Madrid"
+   ]
+  },
+  {
+   "id": "x_payments",
+   "kind": "unsupported",
+   "node": null,
+   "label": "Payments & banking",
+   "reason": "I can't move money or see your accounts.",
+   "examples": [
+    "send 20 euros to Sam",
+    "what is my bank balance",
+    "pay my electricity bill"
+   ]
+  },
+  {
+   "id": "x_social",
+   "kind": "unsupported",
+   "node": null,
+   "label": "Social media",
+   "reason": "I can't post to or read your social accounts.",
+   "examples": [
+    "post this on instagram",
+    "tweet that I am home",
+    "check my facebook notifications"
+   ]
+  }
+ ]
+}
