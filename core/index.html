@@ -5769,6 +5769,8 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
   // The higher-scoring node fires immediately; the toast is an FYI allowing
   // after-the-fact correction, since firing the "wrong" passive node just
   // means a wrong answer, trivially corrected.
+  // v0.14.9: two near-zero scores (nothing matched the words) — no "X or Y?" toast; the winner's handler gives the friendly "couldn't match" line
+  if ((top.match ?? 1) < BIRTH_THRESHOLD && (second.match ?? 1) < BIRTH_THRESHOLD) return top.node;
   clog(`   ⚠ OPPOSED — Clarification requested`, 'log-arbiter');
   showClarificationToast(top.node, second.node, intent);
   return top.node;

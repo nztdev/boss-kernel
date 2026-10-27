@@ -1,7 +1,7 @@
 # B.O.S.S. — v1.0 Exit Checklist (the free, open-source version)
 
 **Purpose:** turn "are we done?" into a yes/no. v1.0 is declared when every **required** gate below is ✅ — not before, and not because it feels close.
-**Status date:** 2026-10-26 · build under test: 0.14.9 (A4 fix delivered; awaiting tester confirmation) · last two tester reports: PC (clean), iPhone (normal flows clean; stress set failed — see Gate A).
+**Status date:** 2026-10-26 · build under test: 0.14.10 (A4 confirmed on iPhone 0.14.9; one toast leftover fixed) · last two tester reports: PC (clean), iPhone (normal flows clean; stress set failed — see Gate A).
 **Legend:** ✅ met · 🟡 partly met · ⬜ not started / not verified · **Required** = blocks v1.0 · *Nice* = can ship in v1.x.
 
 ---
@@ -24,7 +24,7 @@ It is **not** required to be: smart (the Understanding Layer beyond its design n
 | A1 | All four corpora pass at 100% on the release build | `tests/run_corpus.py` on each `.tsv` | ✅ 470/470 on 0.14.8 |
 | A2 | Recency and bond stress stay within bounds | `tests/measure_recency.py` (wrong ≤ 1%, needless "which did you mean?" = 0); `tests/measure_bonds.py` (wrong ≤ 2% at bond 0.4, needless questions = 0) | ✅ recency 13/3,290 (0.4%) · bonds 175/9,870 (1.8%), 0 needless |
 | A3 | Two consecutive tester rounds (≥ 1 iPhone **and** ≥ 1 PC, ≥ 35 requests each, covering TESTING G1–G22) with **zero silent wrong actions** — a request answered by an unrelated action and reported as handled | Tester reports (`boss-feedback/1`) | 🟡 PC 0.14.8 clean; iPhone 0.14.8 normal flows clean, **stress set not** (A4) |
-| A4 | **Out-of-scope requests are answered honestly.** For a request BOSS cannot do in the web version it must say so (can't do / needs the native app / needs an AI engine / needs the PC Cortex) — never run an unrelated action, never print another node's command menu, never ask for a duration it doesn't need | The "ambitious requests" set below, to be added as a regression corpus | 🟡 **Fix shipped in 0.14.9** — 10/10 honest in the local UI run; `tests/phrases_oos.tsv` 21/21; awaiting iPhone confirmation (TESTING G23) |
+| A4 | **Out-of-scope requests are answered honestly.** For a request BOSS cannot do in the web version it must say so (can't do / needs the native app / needs an AI engine / needs the PC Cortex) — never run an unrelated action, never print another node's command menu, never ask for a duration it doesn't need | The "ambitious requests" set below, to be added as a regression corpus | ✅ iPhone 0.14.9: all G23 requests answered honestly, 0 silent wrong actions; `tests/phrases_oos.tsv` 21/21 (0.14.10 removes a stray toast on gibberish) |
 | A5 | No unexplained "which did you mean?" on plain, unambiguous requests | Reports: `clarifications` ≈ 0 for ordinary phrases | ✅ 0 in the last five reports |
 | A6 | Timers, alarms and follow-ups behave by intent (add / replace / cancel / "set another") | TESTING G17–G19 on both devices | ✅ both devices, 0.14.7–0.14.8 |
 
