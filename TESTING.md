@@ -96,6 +96,7 @@ BOSS now handles everyday small talk and follow-ups. Try these in order (give ea
 | G21 | `send an email to John Reaper saying when is the meeting`; `find the best fish soup near me`; `where am I`. | The email is handled by Phone/Email (it says it can’t look up contacts — never a timer question). The fish-soup question is **not** treated as “where am I” (open question → engine message). `where am I` still finds your location. |
 | G22 | Say `where am i` (allow location). Then ⚙ Settings → 💬 Send feedback → tick the console option → **👁 Preview file**. | The preview shows no place name, coordinates or accuracy — only “📍 [location removed]”. Timestamps are intact. |
 | G23 | Say each, one at a time: `Lock the front door and arm the security system` · `Cast my current mobile screen to the TV` · `Turn on Do Not Disturb and lower brightness to 10%` · `Wake my office desktop` · `Search my offline notes for confirmation numbers` · `Draft an email based on my calendar availability` · `blorp the zindle`. Then `set a timer for the oven for 5 minutes`. | The first six get an honest answer (needs the native app / vault empty / can't see your calendar); gibberish gets one "couldn't match" line. **None** shows a network/status report, "idle", a command menu or "choose a duration". The oven timer still sets. |
+| G24 | ⚙ Settings → **Smarter understanding (preview)** → switch on (Wi-Fi). Wait for “ready”. Then say ~15 varied requests (a few ordinary, a few odd or out of scope). Then Send feedback → Preview file. | BOSS behaves exactly as before. The preview shows a `shadow` entry on each request (capability ids and numbers only — **no request text**) and a `device.understand` block (state `ready`, load time, avg query ms, heapMB). Then switch airplane mode on, close and reopen BOSS: the layer still starts (from cache). Switching it off stops the shadow entries. |
 
 *(Please don't test the distress response with real feelings. If you want to check it exists, a tester can ask the dev team.)*
 
@@ -188,6 +189,7 @@ Copy this table into a note or email (or just attach the report file from D3 —
 | G21 | | |
 | G22 | | |
 | G23 | | |
+| G24 | | |
 | D1 | | |
 | D2 | | |
 | D3 | | |

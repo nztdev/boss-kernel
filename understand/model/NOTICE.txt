@@ -1,0 +1,6 @@
+Files in this folder and their origin
+- model_int8.onnx   : sentence-transformers/all-MiniLM-L6-v2 (Apache-2.0), ONNX export (revision c9745ed1d9f207416be6d2e6f8de32d1f16199bf),
+                      dynamically quantised to int8 for B.O.S.S. sha256 64d95decae7a8f071f6fa2e554ccc47c93e49e208c22df52e6af4e69addf06ac
+- tokenizer.json    : the model's matching WordPiece tokenizer (Apache-2.0). sha256 be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037
+- ort.wasm.min.mjs, ort-wasm-simd-threaded.{mjs,wasm} : ONNX Runtime Web 1.20.1 (MIT, © Microsoft), unmodified.
+The model is redistributed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0).

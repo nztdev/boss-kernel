@@ -1864,6 +1864,10 @@ textarea.profile-input {
     <div class="set-row"><span>Adapt to how I use BOSS</span><input type="checkbox" id="set-learn" onchange="setLearning(this.checked)"></div>
     <div class="set-about" id="set-learn-info"></div>
     <button class="set-btn" style="width:100%;margin-top:8px" onclick="resetLearning()">↺ Forget what BOSS has learned</button>
+    <div class="set-sec">SMARTER UNDERSTANDING (PREVIEW)</div>
+    <div class="set-row"><span>Watch &amp; learn how to understand</span><input type="checkbox" id="set-und" onchange="setUnderstand(this.checked)"></div>
+    <div class="set-about" id="set-und-info"></div>
+    <div class="set-note">Downloads a small language model once (about 35&nbsp;MB — best on Wi-Fi) and keeps it for offline use. For now it only <b>watches</b>: it never changes what BOSS does, and nothing you type leaves this device. Test reports include how well it would have understood each request.</div>
     <div class="set-note">BOSS only learns from your answers to "which did you mean?" and your "Not what I meant" flags. It stays on this device, and switching it off restores the default behaviour.</div>
 
     <div class="set-sec">PERMISSIONS</div>
@@ -2397,6 +2401,7 @@ import { Onboarding }                                   from '../actions/onboard
 import { Boot }                                         from '../actions/boot.js';
 import { Dialogue }                                     from '../actions/dialogue.js';
 import { Learning }                                     from '../actions/learning.js';
+import { Understand }                                   from '../understand/understand.js';
 import { Waveform }                                     from '../actions/waveform.js';
 import { MemoryAction }                                  from '../actions/memory.js';
 import { CoreAction }                                    from '../actions/core.js';
@@ -2937,7 +2942,7 @@ function _renderSettings() {
   document.getElementById('set-tone-sample').textContent = '“' + Dialogue.sample(Dialogue.getTone()) + '”  How BOSS replies to small talk. With an engine connected it also shapes open chat.';
   document.getElementById('set-wave').innerHTML = Waveform.MODES.map(m =>
     `<option value="${m.id}" ${m.id === Waveform.getMode() ? 'selected' : ''}>${m.label}</option>`).join('');
-  _renderLearning();
+  _renderLearning(); _renderUnderstand();
   document.getElementById('set-style').innerHTML = UI.listStyles().map(x =>
     `<option value="${x.id}" ${x.id === st.style ? 'selected' : ''}>${x.label}</option>`).join('');
   const t = id => (document.getElementById(id) || {}).textContent || '–';
@@ -2998,6 +3003,18 @@ function _renderLearning() {
 }
 window.setTone = id => { Dialogue.setTone(id); document.getElementById('set-tone-sample').textContent = '“' + Dialogue.sample(id) + '”  How BOSS replies to small talk. With an engine connected it also shapes open chat.'; clog('🎭 Personality: ' + id, 'log-sys'); };
 window.setWave = m => { Waveform.setMode(m); if (m !== 'off') { clog('〰 Speaking animation: ' + m, 'log-sys'); } };
+function _renderUnderstand() {
+  const el = document.getElementById('set-und'); if (!el) return;
+  const st = Understand.stats(); el.checked = st.enabled;
+  const info = document.getElementById('set-und-info');
+  info.textContent = !st.enabled ? 'Off.' : st.state === 'ready' ? `Ready · model ${st.modelMB || '?'} MB · loaded in ${((st.readyMs || 0) / 1000).toFixed(1)} s · ${st.queries || 0} requests watched`
+    : st.state === 'loading' ? 'Downloading / starting the model…' : st.state === 'error' ? 'Could not start: ' + st.error : 'Starting…';
+}
+window.setUnderstand = on => {
+  Understand.setEnabled(on); _renderUnderstand();
+  if (on) { clog('🧠 Understanding layer (preview): loading the model…', 'log-sys'); Understand.load().then(() => { clog('🧠 Understanding layer ready — watching only.', 'log-sys'); _renderUnderstand(); }).catch(e => { clog('🧠 Understanding layer could not start: ' + e.message, 'log-err'); _renderUnderstand(); }); }
+  else clog('🧠 Understanding layer off.', 'log-sys');
+};
 window.setLearning = on => { Learning.setEnabled(on); _renderLearning(); };
 window.resetLearning = () => { Learning.reset(); _renderLearning(); clog('🎓 Learning reset', 'log-sys'); };
 window.settingsUpdate = function() {
@@ -7247,6 +7264,7 @@ FeedbackUI.init({
       engineConfigured: !!engineConfigured(), nodes: nodes.length,
       learning: (() => { const l = Learning.summary(); return { on: l.enabled, margin: l.margin, prefs: l.preferences.length, confirmed: l.confirmed, overridden: l.overridden }; })(),
       ua: navigator.userAgent.slice(0, 160),
+      understand: Understand.stats(),
     };
   },
   log: m => clog(m, 'log-vec'),
@@ -7271,6 +7289,9 @@ window.BOSS_noMatch = () => {
   const r = Dialogue.noMatch(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; return true;
 };
 window.BOSS_noEngine = () => { const r = Dialogue.noEngine(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; };
+// v0.15.0: Understanding Layer, shadow mode — wired to the request log; loads only if the user opted in.
+Feedback.setShadow((intent, routed) => Understand.shadow(intent, routed));
+if (Understand.enabled()) setTimeout(() => { Understand.load().catch(() => {}); }, 4000);
 Waveform.init({
   voice: Voice,
   getAnchor: () => {

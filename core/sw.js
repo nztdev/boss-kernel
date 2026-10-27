@@ -12,8 +12,11 @@
 //     this file is also what makes browsers install the new worker.
 // The Python Cortex (port 5000) is a live connection and is never cached.
 
-const BUILD      = '0.14.11';
+const BUILD      = '0.15.0';
 const CACHE_NAME = 'boss-' + BUILD;
+// The on-device understanding model (~35 MB) lives in its OWN cache that survives app updates —
+// re-downloading it on every build bump would be unkind. Only changes if the model itself changes (bump the suffix).
+const MODEL_CACHE = 'boss-understand-1';
 
 const SHELL = [
   './', './index.html', './manifest.json', './bosslogo.jpg', './bosslogo-192.png', './bosslogo-512.png', './bosslogo-maskable-512.png',
@@ -26,6 +29,7 @@ const SHELL = [
   '../actions/soma.js',     '../actions/vision.js',  '../actions/voice.js',  '../actions/ui.js',
   '../actions/feedback.js', '../actions/feedback-ui.js', '../actions/onboarding.js', '../actions/learning.js', '../actions/waveform.js', '../actions/boot.js', '../actions/dialogue.js',
   '../actions/weather.js',
+  '../understand/understand.js', '../understand/manifest.json',   // the heavy model files are NOT pre-cached: they load on demand when the user enables it
 ];
 
 self.addEventListener('install', event => {
@@ -47,7 +51,7 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     // Remove every older cache version
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+    await Promise.all(keys.filter(k => k !== CACHE_NAME && k !== MODEL_CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
     const clients = await self.clients.matchAll();
     clients.forEach(c => c.postMessage({ type: 'SW_ACTIVATED', build: BUILD }));
@@ -74,8 +78,20 @@ self.addEventListener('fetch', event => {
   // Everything off-site (engine APIs, weather, fonts…) is the browser's business
   if (new URL(req.url).origin !== self.location.origin) return;
 
+  // Model, tokenizer and WebAssembly runtime: immutable files → cache-first from the persistent model cache.
+  if (new URL(req.url).pathname.includes('/understand/model/')) { event.respondWith(modelFirst(req)); return; }
+
   event.respondWith(networkFirst(req));
 });
+
+async function modelFirst(req) {
+  const cache = await caches.open(MODEL_CACHE);
+  const hit = await cache.match(req);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res && res.ok) cache.put(req, res.clone());
+  return res;
+}
 
 async function networkFirst(req) {
   const cache = await caches.open(CACHE_NAME);

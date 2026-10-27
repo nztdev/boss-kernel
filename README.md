@@ -512,6 +512,8 @@ Also: COMMS parses polite/long forms ("can you send an email for me", "make a ph
 
 **Build 0.14.11 — the Birth Signal no longer pops up on its own.** On a non-match ("blorp the zindle") the node-birth form opened over the friendly line (seen on iPhone 0.14.10). The signal is still logged and the phrase remembered; the form now opens only when you say *teach boss this* (offered as a chip). Amendment to the Birth Protocol trigger, not to scoring.
 
+**Build 0.15.0 — the Understanding Layer, genesis version, shadow mode (phase A).** New folder `understand/`: `manifest.json` (59 capabilities — 40 supported, 14 native-only, 5 deliberately unsupported — with 312 example phrases; rebuilt with `node understand/build_manifest.mjs`), `understand.js` (the contract `understand(request, context) → proposals[]`, a WordPiece tokenizer, lazy ONNX-Runtime-Web loader) and `model/` (int8 all-MiniLM-L6-v2 ≈ 22 MB + WebAssembly runtime ≈ 11 MB, Apache-2.0 / MIT, see `model/NOTICE.txt`). **Opt-in** (⚙ Settings → Smarter understanding (preview)); off by default because of the one-time ~35 MB download; cached in its own service-worker cache that survives app updates. **It only watches:** routing is untouched; each logged request gets a text-free `shadow` field (top-3 capability ids + similarity, margin, ms) and the report's `device.understand` carries spike metrics (model size, load/session/manifest-embed times, per-query ms, heap, connection type). 0.15.1 will promote it to a fallback + abstention tier using thresholds set from that data.
+
 ## XVII. Direction After v1.0 — The Intelligence Structure
 
 *Status: design direction, not built. Full design: `docs/UNDERSTANDING-LAYER.md`.*

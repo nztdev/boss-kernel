@@ -74,11 +74,16 @@ export function redactLog(line) {
  * entry: { intent, node, via, top3?, between?, handled? }
  *   via: 'claim:<reason>' | 'score' | 'arbiter:<stage>' | 'clarification' | 'native'
  */
+let _shadow = null;
+/** v0.15.0: register the Understanding Layer's shadow hook — (intent, routed) → compact summary | null. Never affects routing. */
+function setShadow(fn) { _shadow = typeof fn === 'function' ? fn : null; }
+
 function record(entry) {
   if (!entry || !entry.intent) return;
   const list = _load(REQ_KEY);
+  const _t = Date.now();
   list.push({
-    t: Date.now(),
+    t: _t,
     intent: String(entry.intent).slice(0, 300),
     node: entry.node || null,
     via: entry.via || null,
@@ -87,6 +92,14 @@ function record(entry) {
     handled: entry.handled === undefined ? null : !!entry.handled,
   });
   _save(REQ_KEY, list.slice(-MAX_REQS));
+  if (_shadow && entry.intent !== '[private]') {
+    const intent = String(entry.intent).slice(0, 300), routed = { node: entry.node || null, via: entry.via || null };
+    Promise.resolve().then(() => _shadow(intent, routed)).then(sh => {
+      if (!sh) return;
+      const l = _load(REQ_KEY); const r = l.find(x => x.t === _t && x.intent === intent);
+      if (r) { r.shadow = sh; _save(REQ_KEY, l); }
+    }).catch(() => {});
+  }
 }
 
 /** Updates the last logged request once the action reports back. */
@@ -230,7 +243,7 @@ async function send(transportId, report) {
 }
 
 export const Feedback = {
-  record, settleLast, markMiss, build, toCorpusTsv, counts, clear,
+  record, settleLast, setShadow, markMiss, build, toCorpusTsv, counts, clear,
   registerTransport, listTransports, send,
   redact, SCHEMA,
   filename: _filename,
