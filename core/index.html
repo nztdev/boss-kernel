@@ -5758,6 +5758,8 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
   // the risk this whole mechanism exists to avoid. Scoped to this one
   // intent only — no full-kernel suspension, no manual "Recover" step.
   if (bothActive) {
+    // v0.14.9: neither node actually matched the words (a tie between two near-zero scores) — asking "SOMA or CHRONOS?" is nonsense; say "couldn't match"
+    if ((top.match ?? 1) < BIRTH_THRESHOLD && (second.match ?? 1) < BIRTH_THRESHOLD && window.BOSS_noMatch && window.BOSS_noMatch(intent)) return { deferred: true };
     clog(`   ⚠ OPPOSED — blocking clarification (action conflict, engine unavailable)`, 'log-arbiter');
     showClarificationToast(top.node, second.node, intent, true);
     return { deferred: true };
@@ -6109,6 +6111,7 @@ const INTENT_CLAIMS = [
   { node: 'FILES',   reason: 'recent-files', test: i => /\b(?:recent|latest)\s+(?:files?|downloads?)\b/i.test(i) },
   { node: 'CORTEX',  reason: 'translate', test: i => /^translate\s+.+\s+(?:into|to)\s+[a-z]+$/i.test(i.trim().replace(/[.!?]+$/,'')) && !/\b(photo|image|picture|clipboard)\b/i.test(i) },
   { node: 'MEMORY',  reason: 'notes',     test: i => /^(?:please\s+)?(?:remember|memori[sz]e|note|forget)\b/i.test(i.trim()) ||
+                                                      (/\b(?:search|find|look (?:through|in|up)|any mention of)\b.*\b(?:my\s+)?(?:offline\s+)?notes?\b/i.test(i) && !/\b(?:text|document|file|clipboard|app)\b/i.test(i)) ||
                                                       /^note\s*:/i.test(i.trim()) ||
                                                       /\bwhat did i (?:tell|ask) you to remember\b/i.test(i) ||
                                                       /\bdon'?t let me forget\b/i.test(i) ||
@@ -7258,6 +7261,11 @@ Dialogue.init({
   getTimers: () => { try { return ChronosAction.getRunningTimers(); } catch (_) { return []; } },
 });
 // v0.14.7: CORTEX with no engine → one friendly, tone-aware line + chips (no menu dump, no orbital pop-up)
+// v0.14.9: a node could not act and no engine can help → one friendly "couldn't match" line (tone-aware), no node menu, no orbital
+window.BOSS_noMatch = () => {
+  if (enginePool && enginePool.some(n => n.tier === 1 && n.apiKey)) return false;
+  const r = Dialogue.noMatch(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; return true;
+};
 window.BOSS_noEngine = () => { const r = Dialogue.noEngine(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; };
 Waveform.init({
   voice: Voice,

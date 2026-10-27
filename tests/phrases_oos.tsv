@@ -1,0 +1,24 @@
+# Out-of-scope regression corpus (0.14.9). NATIVE = honest "needs the native app / not in the web version" answer.
+# Negative controls (must keep working) are at the bottom.
+MEMORY	Search my offline notes for "confirmation numbers"
+MEMORY	find my notes about the trip
+NATIVE	Lock the front door and arm the security system
+NATIVE	unlock the door
+NATIVE	turn off the lights in the living room
+NATIVE	Cast my screen to the TV and route audio to Bluetooth speakers
+NATIVE	Cast my current mobile screen to the TV
+NATIVE	Preheat the oven to 400° and flash the lights when ready
+NATIVE	Turn on Do Not Disturb and lower brightness to 10%
+NATIVE	Back up my photo gallery to the external hard drive
+NATIVE	Summarise the action items from the 40-minute audio recording
+NATIVE	Translate the audio from this video stream into Spanish subtitles
+NATIVE	Wake my office desktop and pull up the budget spreadsheet
+NATIVE	transcribe this voice memo
+# ── negative controls: must NOT become native-only ──
+CHRONOS	set a timer for the oven for 20 minutes
+CHRONOS	set an alarm for 7am
+CORE	am I online
+CORE	system status
+MEDIA	what's playing
+MEMORY	remember my locker code is 4412
+MEMORY	what did I tell you to remember

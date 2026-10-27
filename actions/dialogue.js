@@ -228,6 +228,13 @@ const B = {
     ['I am unable to access your call history or voicemail from the browser. I can start a call for you.'],
     ['Call history: not my department, not in a browser. Placing a call: yes.'],
   ],
+  nomatch: [
+    ['Hmm, I couldn\'t match that to anything I can do{n}. Try rewording it, or say "what can you do" to see what\'s possible.'],
+    ['Couldn\'t match that. Say "what can you do".'],
+    ['You\'ve stumped me{n}! I couldn\'t match that to anything I can do. Try rewording, or ask "what can you do".'],
+    ['I was unable to match that request to a capability. You may reword it, or ask "what can you do".'],
+    ['No idea what to do with that. "What can you do" lists what I do know.'],
+  ],
   noengine: [
     ['I can\'t answer that one on my own{n} — open questions need an AI engine, and none is connected (Settings → Engine keys). Offline I\'m good at timers, notes, music, weather and calls.', 'That one needs an AI engine, and none is connected yet (Settings → Engine keys). Timers, notes, music, weather and calls I can do right now.'],
     ['Needs an AI engine (Settings → Engine keys).'],
@@ -417,6 +424,8 @@ const _NOT_READ = /\b(?:send|write|compose|draft|set|play|open|call|make|create|
 /** 'msgs' | 'cal' | 'calls' | null — questions about data that lives in the phone's own apps. */
 export function cantRead(raw) {
   const s = norm(raw);
+  // v0.14.9: a request that leans on your calendar ("…based on my calendar availability") — BOSS can't see it from a browser
+  if (s && /\b(?:based on|using|from|check|according to|looking at|per) my (?:calendar|schedule|agenda)\b|\bcalendar availability\b/.test(s)) return 'cal';
   if (!s || s.split(' ').length > 14 || !_ASK.test(s)) return null;
   if (_TOPIC_CALLS.test(s)) return 'calls';
   if (/\bwho (?:texted|messaged|emailed)\b/.test(s)) return 'msgs';
@@ -688,6 +697,7 @@ export function process(raw, { dry = false } = {}) {
   return { kind: 'pass' };
 }
 /** The friendly "that needs an AI engine" reply (tone-aware) for requests that reach CORTEX with no engine connected. */
+export function noMatch() { return { text: _say('nomatch', false), chips: [{ label: 'What can you do?', phrase: 'what can you do' }] }; }
 export function noEngine() { return { text: _say('noengine', false), chips: chips('opinion') }; }
 /** Side-effect-free preview for the routing test harness. */
 export function peek(raw) { return process(raw, { dry: true }); }
@@ -759,5 +769,5 @@ export function reset() { _last = null; _pending = null; _history = []; _bags.cl
 export function sample(toneId) { const i = IDX[toneId] ?? 0; return B.greet[i][0].replace(/\{n\}/g, ''); }
 
 export const Dialogue = { TONES, getTone, setTone, process, peek, classify, noteAction, noteEngine, promptContext,
-  showChips, hideChips, init, reset, sample, parseDuration, parseClock, norm, isOpinion, cantRead, convert, noEngine };
+  showChips, hideChips, init, reset, sample, parseDuration, parseClock, norm, isOpinion, cantRead, convert, noEngine, noMatch };
 if (typeof window !== 'undefined') window.BOSS_DIALOGUE = Dialogue;

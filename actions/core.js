@@ -46,8 +46,13 @@ function _classify(intent) {
     return { type: 'battery' };
   }
 
+  // v0.14.9: the loose keyword patterns below only apply to SHORT requests (or an explicit "am I / is my … online" question) —
+  // "search my offline notes for …" and "arm the security system" are not network / status checks.
+  const _short = s.split(/\s+/).length <= 7;
+
   // Network
-  if (/\b(network|connection|online|offline|internet|wifi|connected)\b/.test(s)) {
+  if (/\b(network|connection|online|offline|internet|wifi|connected)\b/.test(s) &&
+      (_short || /\b(am i|are we|is my|is the|do i have)\b/.test(s))) {
     return { type: 'network' };
   }
 
@@ -57,12 +62,12 @@ function _classify(intent) {
   }
 
   // Uptime
-  if (/\b(uptime|session|running|how long|started|launch)\b/.test(s)) {
+  if (_short && /\b(uptime|session|running|how long|started|launch)\b/.test(s)) {
     return { type: 'uptime' };
   }
 
   // General status — catches "check system", "system status", "how's the system"
-  if (/\b(status|health|check|vitals|system|monitor|report)\b/.test(s)) {
+  if (_short && /\b(status|health|check|vitals|system|monitor|report)\b/.test(s)) {
     return { type: 'status' };
   }
 
@@ -256,6 +261,7 @@ export const CoreAction = {
     const classified = _classify(intent);
 
     if (!classified) {
+      if (window.BOSS_noMatch && window.BOSS_noMatch(intent)) return false;   // v0.14.9: one friendly line, not this node's menu
       clog(`💻 CORE: no recognised action in "${intent}"`, 'log-action');
       clog('   Status:      "system status" · "check system" · "vitals"', 'log-action');
       clog('   Battery:     "battery level" · "check charge"', 'log-action');

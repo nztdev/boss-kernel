@@ -91,7 +91,7 @@ function _classify(intent) {
   const s = intent.toLowerCase().trim();
 
   // ── Status / what's playing ──────────────────────────────────────────────
-  if (/\b(what('s| is|s)\s+(playing|on|showing)|status|now playing|current(ly)?|whats\s+playing)\b/.test(s) ||
+  if (/\b(what('s| is|s)\s+(playing|on|showing)|status|now playing|current(?:ly)?\s+(?:playing|track|song|volume)|whats\s+playing)\b/.test(s) ||
       s === 'status' || s === 'what is playing' || s === 'whats playing') {
     return { type: 'status' };
   }
@@ -436,6 +436,7 @@ export const MediaAction = {
     const parsed = _classify(intent);
 
     if (!parsed) {
+      if (window.BOSS_noMatch && window.BOSS_noMatch(intent)) return false;   // v0.14.9: one friendly line, not this node's menu
       clog(`📀 MEDIA: no recognised action in "${intent}"`, 'log-action');
       clog('   Audio: "play music" · "pause" · "volume up" · "stop"', 'log-action');
       clog('   Image: "show image [url]"', 'log-action');

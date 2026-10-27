@@ -251,6 +251,7 @@ export const MemoryAction = {
     const classified = _classify(intent);
 
     if (!classified) {
+      if (window.BOSS_noMatch && window.BOSS_noMatch(intent)) return false;   // v0.14.9: one friendly line, not this node's menu
       clog(`🧬 MEMORY: no recognised action in "${intent}"`, 'log-mem');
       clog('   Recall:  "what do you remember" · "recall [topic]"', 'log-mem');
       clog('   Store:   "remember [text]"', 'log-mem');

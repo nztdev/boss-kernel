@@ -95,6 +95,7 @@ BOSS now handles everyday small talk and follow-ups. Try these in order (give ea
 | G20 | `what do you think about birds` → `and dogs?`. Then `I have a football match later today`. | The second question gets the same honest “needs an engine” answer (no list of unrelated commands). The match gets a friendly reply with **Note it / Set a timer**. |
 | G21 | `send an email to John Reaper saying when is the meeting`; `find the best fish soup near me`; `where am I`. | The email is handled by Phone/Email (it says it can’t look up contacts — never a timer question). The fish-soup question is **not** treated as “where am I” (open question → engine message). `where am I` still finds your location. |
 | G22 | Say `where am i` (allow location). Then ⚙ Settings → 💬 Send feedback → tick the console option → **👁 Preview file**. | The preview shows no place name, coordinates or accuracy — only “📍 [location removed]”. Timestamps are intact. |
+| G23 | Say each, one at a time: `Lock the front door and arm the security system` · `Cast my current mobile screen to the TV` · `Turn on Do Not Disturb and lower brightness to 10%` · `Wake my office desktop` · `Search my offline notes for confirmation numbers` · `Draft an email based on my calendar availability` · `blorp the zindle`. Then `set a timer for the oven for 5 minutes`. | The first six get an honest answer (needs the native app / vault empty / can't see your calendar); gibberish gets one "couldn't match" line. **None** shows a network/status report, "idle", a command menu or "choose a duration". The oven timer still sets. |
 
 *(Please don't test the distress response with real feelings. If you want to check it exists, a tester can ask the dev team.)*
 
@@ -186,6 +187,7 @@ Copy this table into a note or email (or just attach the report file from D3 —
 | G20 | | |
 | G21 | | |
 | G22 | | |
+| G23 | | |
 | D1 | | |
 | D2 | | |
 | D3 | | |

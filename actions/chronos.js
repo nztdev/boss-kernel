@@ -571,6 +571,8 @@ export const ChronosAction = {
     const parsed = _parseIntent(intent);
 
     if (!parsed) {
+      // v0.14.9: only ask "choose a duration" when the request is actually about a timer / alarm / clock
+      if (!/\b(?:timers?|alarms?|countdown|stopwatch|remind(?:er)?s?|clock|time)\b/i.test(intent) && window.BOSS_noMatch && window.BOSS_noMatch(intent)) return false;
       clog(`⏱ CHRONOS: no time expression in "${intent}" — choose a duration:`, 'log-action');
       return false;  // incomplete — show orbitals
     }

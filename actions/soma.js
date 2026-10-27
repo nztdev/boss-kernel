@@ -352,6 +352,7 @@ export const SomaAction = {
     const classified = _classify(intent);
 
     if (!classified) {
+      if (window.BOSS_noMatch && window.BOSS_noMatch(intent)) return false;   // v0.14.9: one friendly line, not this node's menu
       clog(`🎨 SOMA: no recognised action in "${intent}"`, 'log-action');
       clog('   Identity: "who are you" · "how are you"', 'log-action');
       clog('   Themes:   "switch theme to crimson" · "change theme to amber" · "list themes"', 'log-action');

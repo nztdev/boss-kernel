@@ -12,7 +12,7 @@
 //     this file is also what makes browsers install the new worker.
 // The Python Cortex (port 5000) is a live connection and is never cached.
 
-const BUILD      = '0.14.8';
+const BUILD      = '0.14.9';
 const CACHE_NAME = 'boss-' + BUILD;
 
 const SHELL = [
