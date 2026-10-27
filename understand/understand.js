@@ -137,7 +137,10 @@ async function _embedBatch(texts) {
 }
 
 async function _prepareManifest() {
-  const m = await (await fetch(new URL('manifest.json', BASE).href, { cache: 'no-cache' })).json();
+  const mr = await fetch(new URL('manifest.json', BASE).href, { cache: 'no-cache' });
+  const mt = mr.ok ? await mr.text() : '';
+  if (!mt.trim()) throw new Error('understand/manifest.json is ' + (mr.ok ? 'empty' : 'missing (HTTP ' + mr.status + ')') + ' on the server');
+  let m; try { m = JSON.parse(mt); } catch (_) { throw new Error('understand/manifest.json is not valid JSON (' + mt.length + ' bytes)'); }
   S.manifest = m; S.refs = [];
   m.entries.forEach(e => e.examples.forEach(x => S.refs.push({ e, text: x })));
   const sig = m.generated + ':' + S.refs.length + ':' + m.entries.length;
