@@ -1,7 +1,7 @@
 # B.O.S.S. — v1.0 Exit Checklist (the free, open-source version)
 
 **Purpose:** turn "are we done?" into a yes/no. v1.0 is declared when every **required** gate below is ✅ — not before, and not because it feels close.
-**Status date:** 2026-10-26 · build under test: 0.14.10 (A4 confirmed on iPhone 0.14.9; one toast leftover fixed) · last two tester reports: PC (clean), iPhone (normal flows clean; stress set failed — see Gate A).
+**Status date:** 2026-10-26 · build under test: 0.14.11 (A4 confirmed on iPhone 0.14.9; one toast leftover fixed) · last two tester reports: PC (clean), iPhone (normal flows clean; stress set failed — see Gate A).
 **Legend:** ✅ met · 🟡 partly met · ⬜ not started / not verified · **Required** = blocks v1.0 · *Nice* = can ship in v1.x.
 
 ---

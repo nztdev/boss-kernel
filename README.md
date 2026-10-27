@@ -510,6 +510,8 @@ Also: COMMS parses polite/long forms ("can you send an email for me", "make a ph
 
 **Build 0.14.10 — no "which did you mean?" toast on nonsense.** The 0.14.9 iPhone report (G23) confirmed every honest answer; one leftover: for gibberish the *passive-node* path (MEMORY vs SOMA) still raised the clarification toast alongside the "couldn't match" line. When both top scores are below the birth threshold the toast is now skipped.
 
+**Build 0.14.11 — the Birth Signal no longer pops up on its own.** On a non-match ("blorp the zindle") the node-birth form opened over the friendly line (seen on iPhone 0.14.10). The signal is still logged and the phrase remembered; the form now opens only when you say *teach boss this* (offered as a chip). Amendment to the Birth Protocol trigger, not to scoring.
+
 ## XVII. Direction After v1.0 — The Intelligence Structure
 
 *Status: design direction, not built. Full design: `docs/UNDERSTANDING-LAYER.md`.*

@@ -697,7 +697,7 @@ export function process(raw, { dry = false } = {}) {
   return { kind: 'pass' };
 }
 /** The friendly "that needs an AI engine" reply (tone-aware) for requests that reach CORTEX with no engine connected. */
-export function noMatch() { return { text: _say('nomatch', false), chips: [{ label: 'What can you do?', phrase: 'what can you do' }] }; }
+export function noMatch() { return { text: _say('nomatch', false), chips: [{ label: 'What can you do?', phrase: 'what can you do' }, { label: 'Teach BOSS this', phrase: 'teach boss this' }] }; }
 export function noEngine() { return { text: _say('noengine', false), chips: chips('opinion') }; }
 /** Side-effect-free preview for the routing test harness. */
 export function peek(raw) { return process(raw, { dry: true }); }

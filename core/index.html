@@ -5997,7 +5997,8 @@ function checkBirthProtocol(scored, intent) {
   if (maxMatch < BIRTH_THRESHOLD) {
     clog(`🌱 BIRTH SIGNAL: No node matches "${intent}" (max match=${maxMatch.toFixed(3)})`, 'log-sys');
     Nervous.emit(EVENT.BIRTH_SIGNAL, { source: 'SOMA', payload: { intent, maxMatch } });
-    showBirthModal(intent);
+    // v0.14.9: no automatic pop-up on a non-match (confusing for a newcomer). The phrase is remembered; saying "teach boss this" opens the node-birth form.
+    window._lastBirthIntent = intent;
   }
 }
 
@@ -6221,6 +6222,7 @@ async function firePulse() {
   if (!intent) return;
   if (limpMode) { clog('🩼 LIMP MODE — tap Recover', 'log-grief'); return; }
   Voice.cancel();   // a new intent interrupts any reply still being spoken
+  if (/^teach (?:boss|you) (?:this|that)\b/i.test(intent) && window._lastBirthIntent) { el.value = ''; showBirthModal(window._lastBirthIntent); return; }
   Dialogue.hideChips();
   // Don't pulse if a modal prompt input has focus — those have their own handlers
   const activeEl = document.activeElement;
