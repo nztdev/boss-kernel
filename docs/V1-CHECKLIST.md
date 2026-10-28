@@ -1,7 +1,7 @@
 # B.O.S.S. — v1.0 Exit Checklist (the free, open-source version)
 
 **Purpose:** turn "are we done?" into a yes/no. v1.0 is declared when every **required** gate below is ✅ — not before, and not because it feels close.
-**Status date:** 2026-10-26 · build under test: 0.15.1 (fallback tier; calculator in chat) (A4 confirmed on iPhone 0.14.9; one toast leftover fixed) · last two tester reports: PC (clean), iPhone (normal flows clean; stress set failed — see Gate A).
+**Status date:** 2026-10-26 · build under test: 0.16.0 (personal memory built; G26 pending) (A4 confirmed on iPhone 0.14.9; one toast leftover fixed) · last two tester reports: PC (clean), iPhone (normal flows clean; stress set failed — see Gate A).
 **Legend:** ✅ met · 🟡 partly met · ⬜ not started / not verified · **Required** = blocks v1.0 · *Nice* = can ship in v1.x.
 
 ---
@@ -71,7 +71,7 @@ These feed directly into the capability manifest in `docs/UNDERSTANDING-LAYER.md
 |---|---|---|
 | C1 | Backup file is **versioned** with a forward-compatibility check (`VERSION = 1`; newer files are refused with a clear message) | ✅ in `actions/backup.js` |
 | C2 | Backup **schema is documented and frozen** for v1.0, with a test that an old backup still restores (the native app will import this file) | ⬜ |
-| C3 | Export → erase everything → import round-trip restores notes, vault, profile, settings, learned preferences (TESTING E3) | ⬜ re-run on final build |
+| C3 | Export → erase everything → import round-trip restores notes, vault, profile, settings, learned preferences **and personal phrases** (TESTING E3, G26) | ⬜ re-run on final build |
 | C4 | Vault/Notes encryption: passphrase loss is stated plainly before enabling; no recovery promise | 🟡 verify wording |
 | C5 | **Nothing private leaves in a feedback report**: emails, phone numbers, links, `remember …` text, locations, weather results | ✅ fixed in 0.14.6; verified on PC (G22); iPhone preview to confirm |
 | C6 | API keys stay on the device and are never included in backups or reports without an explicit choice | 🟡 verify |
@@ -134,7 +134,7 @@ The native app must be able to *add* capabilities without rewiring the web versi
 
 ## Added to v1.0 scope (decision 2026-10-27)
 
-The base Understanding Layer is **in** v1.0, built in this order: **0.14.9** safety floor (done) → **0.15.0** genesis layer, shadow mode (capability manifest, `understand()` contract, lazy-loaded int8 MiniLM cached by the service worker, shadow logging, iPhone/PC size/load/memory spike) → **0.15.1** fallback tier + abstention, thresholds set from real shadow data → **≈0.15.2** personal learning memory (user-visible, resettable, in backup/export, private, with consolidation and demotion). Then the final full TESTING pass and v1.0.
+The base Understanding Layer is **in** v1.0, built in this order: **0.14.9** safety floor (done) → **0.15.0** genesis layer, shadow mode (capability manifest, `understand()` contract, lazy-loaded int8 MiniLM cached by the service worker, shadow logging, iPhone/PC size/load/memory spike) → **0.15.1** fallback tier + abstention, thresholds set from real shadow data → **0.16.0** personal learning memory (user-visible, resettable, in backup/export, private, with consolidation and demotion). Then the final full TESTING pass and v1.0.
 - A local-model mode for the deliberation layer; engine-quality offline chat.
 - The locale-pack refactor (English first; modular by rule — `UNDERSTANDING-LAYER.md` §16).
 - Home screen modernisation, corpus CI.

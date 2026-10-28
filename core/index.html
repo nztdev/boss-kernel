@@ -1864,6 +1864,14 @@ textarea.profile-input {
     <div class="set-row"><span>Adapt to how I use BOSS</span><input type="checkbox" id="set-learn" onchange="setLearning(this.checked)"></div>
     <div class="set-about" id="set-learn-info"></div>
     <button class="set-btn" style="width:100%;margin-top:8px" onclick="resetLearning()">↺ Forget what BOSS has learned</button>
+    <div class="set-sec">WHAT BOSS HAS LEARNED ABOUT HOW YOU TALK</div>
+    <div class="set-row"><span>Remember my shortcuts &amp; corrections</span><input type="checkbox" id="set-pm" onchange="setPersonal(this.checked)"></div>
+    <div class="set-about" id="set-pm-info"></div>
+    <div id="set-pm-list"></div>
+    <div class="set-row"><span>Auto-remove lessons unused for 6 months</span><input type="checkbox" id="set-pm-age" onchange="setPersonalAge(this.checked)"></div>
+    <button class="set-btn" style="width:100%;margin-top:8px" onclick="forgetPersonal()">↺ Forget everything BOSS learned about my phrases</button>
+    <div class="set-note">Teach BOSS a shortcut by saying: <b>when I say “brew time”, I mean set a timer for 4 minutes</b>. BOSS also learns from your answers to “which did you mean?” — a phrase is only trusted after you've answered the same way three times. Everything stays on this device, is included in Backup, and is never sent anywhere.</div>
+
     <div class="set-sec">SMARTER UNDERSTANDING (PREVIEW)</div>
     <div class="set-row"><span>Watch &amp; learn how to understand</span><input type="checkbox" id="set-und" onchange="setUnderstand(this.checked)"></div>
     <div class="set-about" id="set-und-info"></div>
@@ -2402,6 +2410,7 @@ import { Boot }                                         from '../actions/boot.js
 import { Dialogue }                                     from '../actions/dialogue.js';
 import { Learning }                                     from '../actions/learning.js';
 import { Understand }                                   from '../understand/understand.js';
+import { PersonalMemory }                               from '../actions/personal.js';
 import { Waveform }                                     from '../actions/waveform.js';
 import { MemoryAction }                                  from '../actions/memory.js';
 import { CoreAction }                                    from '../actions/core.js';
@@ -2942,7 +2951,7 @@ function _renderSettings() {
   document.getElementById('set-tone-sample').textContent = '“' + Dialogue.sample(Dialogue.getTone()) + '”  How BOSS replies to small talk. With an engine connected it also shapes open chat.';
   document.getElementById('set-wave').innerHTML = Waveform.MODES.map(m =>
     `<option value="${m.id}" ${m.id === Waveform.getMode() ? 'selected' : ''}>${m.label}</option>`).join('');
-  _renderLearning(); _renderUnderstand();
+  _renderLearning(); _renderUnderstand(); _renderPersonal();
   document.getElementById('set-style').innerHTML = UI.listStyles().map(x =>
     `<option value="${x.id}" ${x.id === st.style ? 'selected' : ''}>${x.label}</option>`).join('');
   const t = id => (document.getElementById(id) || {}).textContent || '–';
@@ -3010,6 +3019,20 @@ function _renderUnderstand() {
   info.textContent = !st.enabled ? 'Off.' : st.state === 'ready' ? `Ready · model ${st.modelMB || '?'} MB · loaded in ${((st.readyMs || 0) / 1000).toFixed(1)} s · ${st.queries || 0} requests watched`
     : st.state === 'loading' ? 'Downloading / starting the model…' : st.state === 'error' ? 'Could not start: ' + st.error : 'Starting…';
 }
+function _renderPersonal() {
+  const el = document.getElementById('set-pm'); if (!el) return;
+  const sm = PersonalMemory.summary(); el.checked = sm.on;
+  document.getElementById('set-pm-age').checked = sm.autoAge;
+  document.getElementById('set-pm-info').textContent = sm.count ? `${sm.count} lesson${sm.count === 1 ? '' : 's'} · ${sm.trusted} trusted` : 'Nothing learned yet.';
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  document.getElementById('set-pm-list').innerHTML = PersonalMemory.list().map(i =>
+    `<div class="set-row" style="align-items:flex-start"><span><b>“${esc(i.phrase)}”</b> → ${i.type === 'alias' ? esc('“' + i.target + '”') : esc(i.target) + ' (node)'}<br><small style="opacity:.6">${i.type === 'alias' ? 'shortcut' : (i.state === 'trusted' ? 'trusted' : `learning ${i.confirmations}/${PersonalMemory.TRUST_AFTER}`)}</small></span>` +
+    `<button class="set-btn" onclick="deletePersonal('${i.id}')">Delete</button></div>`).join('');
+}
+window.setPersonal = on => { PersonalMemory.setEnabled(on); _renderPersonal(); };
+window.setPersonalAge = on => { PersonalMemory.setAutoAge(on); _renderPersonal(); };
+window.deletePersonal = id => { PersonalMemory.remove(id); _renderPersonal(); };
+window.forgetPersonal = () => { PersonalMemory.forgetAll(); _renderPersonal(); clog('🧠 Forgot everything learned about your phrases', 'log-sys'); };
 window.setUnderstand = on => {
   Understand.setEnabled(on); _renderUnderstand();
   if (on) { clog('🧠 Understanding layer (preview): loading the model…', 'log-sys'); Understand.load().then(() => { clog('🧠 Understanding layer ready — watching only.', 'log-sys'); _renderUnderstand(); }).catch(e => { clog('🧠 Understanding layer could not start: ' + e.message, 'log-err'); _renderUnderstand(); }); }
@@ -4642,7 +4665,7 @@ async function _calcChat(raw) {
   const cc = q.match(new RegExp('([\\d.]+)\\s*(' + _CUR_CODES + ')\\s+(?:to|in|into)\\s+(' + _CUR_CODES + ')\\b', 'i'));
   let out = null;
   if (cc) out = await _fetchCurrency(parseFloat(cc[1]), cc[2], cc[3]);
-  else { const p = _parsePercentage(q); out = p || null; if (out && sym) out = out.replace(/= ([\d.]+)/, `= ${sym}$1`); if (!out) { const m = _safeEval(q.replace(/x/g, '*').replace(/\^/g, '**')); if (m !== null && m !== undefined) out = `= ${m}`; } }
+  else { const p = _parsePercentage(q); out = p || null; if (out && sym) out = out.replace(/= ([\d.]+)/, (_m, n) => `= ${sym}${n}`); if (!out) { const m = _safeEval(q.replace(/x/g, '*').replace(/\^/g, '**')); if (m !== null && m !== undefined) out = `= ${m}`; } }
   return out;
 }
 
@@ -5828,6 +5851,8 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
   // means a wrong answer, trivially corrected.
   // v0.14.9: two near-zero scores (nothing matched the words) — no "X or Y?" toast; the winner's handler gives the friendly "couldn't match" line
   if ((top.match ?? 1) < BIRTH_THRESHOLD && (second.match ?? 1) < BIRTH_THRESHOLD) return top.node;
+  // v0.15.1: no engine and CORTEX is one of the pair — CORTEX's own answer is the honest one; no "X or Y?" toast over it
+  if (!engineConfigured() && (top.node.name === 'CORTEX' || second.node.name === 'CORTEX')) return nodes.find(n => n.name === 'CORTEX');
   clog(`   ⚠ OPPOSED — Clarification requested`, 'log-arbiter');
   showClarificationToast(top.node, second.node, intent);
   return top.node;
@@ -5860,6 +5885,7 @@ function clarify(nodeId) {
     Feedback.record({ intent: pc?._intent || '', node: node.name, via: 'clarified',
                       between: pc ? [pc.top.name, pc.second.name] : null, handled: true });
     if (pc) Learning.learnClarification(pc.top.name, pc.second.name, node.name);
+    if (pc && pc._intent) PersonalMemory.learnNode(pc._intent, node.name, nm => { const n = nodes.find(x => x.name === nm); return !n || n.riskTier === 'elevated' || n.tier === 'stub'; });
   } catch (_) {}
   dismissToast();
 }
@@ -6225,6 +6251,9 @@ function noSignalClaim(scored, intent) {
   return { node: 'CORTEX', reason: 'no-signal' };
 }
 function claimIntent(intent) {
+  // v0.16.0: a trusted personal lesson ("this phrase always means that node") — never for elevated-risk nodes
+  const _pn = PersonalMemory.lookupNode(intent, nm => { const n = nodes.find(x => x.name === nm); return !n || n.riskTier === 'elevated' || n.tier === 'stub'; });
+  if (_pn) return { node: _pn, reason: 'personal' };
   const c = INTENT_CLAIMS.find(c => c.test(intent));
   return c ? { node: c.node, reason: c.reason } : null;
 }
@@ -6310,6 +6339,21 @@ async function firePulse() {
   // (old intercept removed — MEMORY node now owns vault write)
 
   if (!nodes.length) { clog('No nodes', 'log-sys'); return; }
+
+  // v0.16.0 — personal memory: "when I say X, I mean Y" teaches a shortcut; a taught shortcut rewrites X into Y,
+  // which then goes through the normal routing and confirmations (memory never widens what is allowed).
+  {
+    const tch = PersonalMemory.parseTeach(intent);
+    if (tch) {
+      const res = PersonalMemory.teach(tch.phrase, tch.target);
+      clog(res.ok ? `🧠 Got it — when you say “${tch.phrase}”, I'll treat it as “${tch.target}”. You can see or delete it in Settings → What BOSS has learned.` : `🧠 ${res.message}`, 'log-action');
+      Feedback.record({ intent: '[personal]', node: null, via: 'personal:teach', handled: res.ok });
+      _renderPersonal();
+      return;
+    }
+    const al = PersonalMemory.lookupAlias(intent);
+    if (al) { clog(`   ↪ your shortcut: “${intent}” → “${al.to}”`, 'log-vec'); intent = al.to; }
+  }
 
   // Front-door requests: "help", "what can you do", "home" — answered by the
   // onboarding layer, not by a node (no scoring, no gap logging).
@@ -7329,10 +7373,12 @@ FeedbackUI.init({
       learning: (() => { const l = Learning.summary(); return { on: l.enabled, margin: l.margin, prefs: l.preferences.length, confirmed: l.confirmed, overridden: l.overridden }; })(),
       ua: navigator.userAgent.slice(0, 160),
       understand: Understand.stats(),
+      personal: PersonalMemory.summary(),
     };
   },
   log: m => clog(m, 'log-vec'),
-  onMiss: m => Learning.learnMiss({ routedTo: m.routedTo, expected: m.expected, via: m.via }),
+  onMiss: m => { Learning.learnMiss({ routedTo: m.routedTo, expected: m.expected, via: m.via });
+    if (m.expected) PersonalMemory.learnNode(m.intent, m.expected, nm => { const n = nodes.find(x => x.name === nm); return !n || n.riskTier === 'elevated' || n.tier === 'stub'; }); },
 });
 Onboarding.init({
   run: t => { const el = document.getElementById('pulse-input'); el.value = t; firePulse(); },
@@ -7367,6 +7413,7 @@ window.BOSS_noMatch = () => {
 };
 window.BOSS_noEngine = () => { if (_undReply()) return; const r = Dialogue.noEngine(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; };
 // v0.15.0: Understanding Layer, shadow mode — wired to the request log; loads only if the user opted in.
+PersonalMemory.prune();   // only does anything if the user turned auto-removal on
 Feedback.setShadow((intent, routed) => Understand.shadow(intent, routed));
 if (Understand.enabled()) setTimeout(() => { Understand.load().catch(() => {}); }, 4000);
 Waveform.init({

@@ -412,3 +412,6 @@ Built as specified: manifest data file (`understand/manifest.json`), the `unders
 
 ### Status — 0.15.1 (phase B built: fallback tier + abstention)
 First real data (iPhone 0.15.0, PC 0.15.0; 29 watched requests): iPhone ready in 2.0 s from cache, PC 4.2 s on first load; 13–24 ms per request. Calibration: correct unsupported/native matches scored 0.66–0.99 (calendar .86, inbox .66, booking .73, smart home .67–.99); wrong ones scored ≤ 0.43 (e.g. “I got a promotion today” → calendar .43). The promoted tier therefore uses **similarity ≥ 0.60 and margin ≥ 0.15**, only for `unsupported`/`native` capabilities and only where routing has already given up; it abstains otherwise. Known limit: “Transfer $50 …” scored .36 (payments) and abstains. The sample is small — re-check the thresholds after the next tester round. Not yet promoted: routing *to supported* capabilities (candidate for 0.15.x once more shadow data exists).
+
+### Status — 0.16.0 (personal memory built)
+Implemented as `actions/personal.js` (see `docs/PERSONAL-MEMORY-PROPOSAL.md`). Exact, normalised whole-phrase matching works with no model; matching *near* phrases through embeddings (tentative proposals) is not built yet — a candidate once more shadow data exists.
