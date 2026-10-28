@@ -92,7 +92,7 @@ function record(entry) {
     handled: entry.handled === undefined ? null : !!entry.handled,
   });
   _save(REQ_KEY, list.slice(-MAX_REQS));
-  if (_shadow && entry.intent !== '[private]') {
+  if (_shadow && !/^\[(?:private|personal)\]$/.test(String(entry.intent))) {
     const intent = String(entry.intent).slice(0, 300), routed = { node: entry.node || null, via: entry.via || null };
     Promise.resolve().then(() => _shadow(intent, routed)).then(sh => {
       if (!sh) return;
