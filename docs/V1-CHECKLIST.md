@@ -1,7 +1,7 @@
 # B.O.S.S. — v1.0 Exit Checklist (the free, open-source version)
 
 **Purpose:** turn "are we done?" into a yes/no. v1.0 is declared when every **required** gate below is ✅ — not before, and not because it feels close.
-**Status date:** 2026-10-26 · build under test: 0.16.1 (personal memory; G26 passed on iPhone) (A4 confirmed on iPhone 0.14.9; one toast leftover fixed) · last two tester reports: PC (clean), iPhone (normal flows clean; stress set failed — see Gate A).
+**Status date:** 2026-10-26 · build under test: 0.17.0 (Settings regrouped; G27 pending) (A4 confirmed on iPhone 0.14.9; one toast leftover fixed) · last two tester reports: PC (clean), iPhone (normal flows clean; stress set failed — see Gate A).
 **Legend:** ✅ met · 🟡 partly met · ⬜ not started / not verified · **Required** = blocks v1.0 · *Nice* = can ship in v1.x.
 
 ---
@@ -107,7 +107,7 @@ The native app must be able to *add* capabilities without rewiring the web versi
 | F4 | Privacy page: what leaves the device and when (README §XVI) | ✅ review once more at release |
 | F5 | CHANGELOG, version tag, release notes | ⬜ |
 | F6 | LICENSE (MIT, as stated in the README), SECURITY.md (where to report), CONTRIBUTING (how to run the corpus, how to add a phrase, how to add a language pack — `UNDERSTANDING-LAYER.md` §16), issue templates | ⬜ verify what exists in the repo |
-| F8 | **Settings screen restructured for a stranger**: grouped and ordered by what people look for (e.g. Appearance · Voice & personality · Privacy & data (backup, learning, understanding) · Engines & Cortex · Help & feedback · About), plain labels, advanced/tester options tucked away. Today's list grew feature by feature and is not intuitive. Needs a short design proposal first (UI change, no behaviour change) | ⬜ **Required** (added 2026-10-28) |
+| F8 | **Settings screen restructured for a stranger**: grouped and ordered by what people look for (e.g. Appearance · Voice & personality · Privacy & data (backup, learning, understanding) · Engines & Cortex · Help & feedback · About), plain labels, advanced/tester options tucked away. Today's list grew feature by feature and is not intuitive. Proposal approved; built in 0.17.0 | 🟡 built — iPhone check (G27) pending |
 | F7 | Corpus run on GitHub Actions on every push | *Nice* ⬜ |
 
 ## Gate G — The capability map tells the truth  *(Required)*

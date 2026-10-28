@@ -12,7 +12,7 @@
 //     this file is also what makes browsers install the new worker.
 // The Python Cortex (port 5000) is a live connection and is never cached.
 
-const BUILD      = '0.16.1';
+const BUILD      = '0.17.0';
 const CACHE_NAME = 'boss-' + BUILD;
 // The on-device understanding model (~35 MB) lives in its OWN cache that survives app updates —
 // re-downloading it on every build bump would be unkind. Only changes if the model itself changes (bump the suffix).

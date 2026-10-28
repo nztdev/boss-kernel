@@ -99,6 +99,7 @@ BOSS now handles everyday small talk and follow-ups. Try these in order (give ea
 | G24 | ⚙ Settings → **Smarter understanding (preview)** → switch on (Wi-Fi). Wait for “ready”. Then say ~15 varied requests (a few ordinary, a few odd or out of scope). Then Send feedback → Preview file. | BOSS behaves exactly as before. The preview shows a `shadow` entry on each request (capability ids and numbers only — **no request text**) and a `device.understand` block (state `ready`, load time, avg query ms, heapMB). Then switch airplane mode on, close and reopen BOSS: the layer still starts (from cache). Switching it off stops the shadow entries. |
 | G25 | With *Smarter understanding* ON and ready: `What's 20% off £85` · `Convert 100 USD to Euros` · `what's 15 * 23` · `Can you order a pizza from down the street?` · `post this on instagram` · `What does my cat think of me when I leave the house?` · `Delete all system files`. Then the same calculator phrases with the setting OFF. | Calculator phrases answer inline with 🧮 (both settings). Pizza → “I can't book or buy things for you”; instagram → “I can't post to or read your social accounts”; cat → the “needs an AI engine” line (no “which did you mean?” question); delete → native-only answer. |
 | G26 | Say `when I say brew time, I mean set a timer for 4 minutes`, then `brew time`. Then `when I say my code, I mean remember my pin is 1234`. Open ⚙ Settings → **What BOSS has learned about how you talk**. Delete the shortcut; say `brew time` again. Teach it again, then ⚙ Back up → erase everything → import → check the shortcut is back. | First: “Got it…”, then “↪ your shortcut…” and a 4-minute timer. Second: refused (“I don't store anything that looks like a secret”). The list shows the shortcut with a Delete button; after deleting, `brew time` is no longer a shortcut. After the import round-trip the shortcut is restored. “Forget everything” empties the list. |
+| G27 | Open ⚙ Settings on the iPhone. Visit each of the 7 groups and back. Change text size (Look & feel); switch Personality; open Backup and AI engine keys (Privacy & data); toggle Learning and the personal-memory list (Learning & memory); open Send feedback and Update BOSS (Advanced & testing); open Erase everything but cancel (About & reset). Try text size XL and Reduce Motion. | Every group opens and returns; nothing from the old Settings is missing; each button still opens its panel; no text is cut off at XL; no animation with Reduce Motion on. |
 
 *(Please don't test the distress response with real feelings. If you want to check it exists, a tester can ask the dev team.)*
 
@@ -194,6 +195,7 @@ Copy this table into a note or email (or just attach the report file from D3 —
 | G24 | | |
 | G25 | | |
 | G26 | | |
+| G27 | | |
 | D1 | | |
 | D2 | | |
 | D3 | | |

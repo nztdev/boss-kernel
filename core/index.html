@@ -498,6 +498,12 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   font-family: 'Share Tech Mono', monospace; color: var(--glow);
 }
 .set-h { font-family: 'Orbitron', monospace; font-size: calc(11px * var(--ts, 1)); letter-spacing: .15em; margin-bottom: 12px; }
+.set-page { display: none; }
+.set-page.show { display: block; }
+.set-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #0f2a20; border-radius: 8px; cursor: pointer; font-size: calc(11px * var(--ts, 1)); }
+.set-nav:active { background: #0a1f17; }
+.set-nav small { display: block; margin-top: 3px; opacity: .6; font-size: calc(9.5px * var(--ts, 1)); }
+.set-chev { opacity: .5; font-size: calc(16px * var(--ts, 1)); }
 .set-sec { font-size: calc(9px * var(--ts, 1)); letter-spacing: .12em; color: #335544; margin: 14px 0 6px; border-top: 1px solid #0f2a20; padding-top: 10px; }
 .set-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: calc(11px * var(--ts, 1)); }
 .set-chips { display: flex; gap: 6px; margin-bottom: 8px; }
@@ -1822,7 +1828,17 @@ textarea.profile-input {
   <div class="set-box">
     <div class="set-h">⚙ SETTINGS</div>
 
-    <div class="set-sec" style="border-top:none;margin-top:0;padding-top:0">APPEARANCE</div>
+    <button class="set-btn" id="set-back" style="display:none;width:100%;margin-bottom:10px" onclick="setPage(null)">← Settings</button>
+    <div id="set-index">
+      <div class="set-nav" onclick="setPage('look')"><span><b>🎨 Look & feel</b><small>Text size, motion, themes, start-up</small></span><span class="set-chev">›</span></div>
+      <div class="set-nav" onclick="setPage('voice')"><span><b>🎙 Voice & personality</b><small>How BOSS sounds and talks, your name</small></span><span class="set-chev">›</span></div>
+      <div class="set-nav" onclick="setPage('learn')"><span><b>🧠 Learning & memory</b><small>Shortcuts you teach, what BOSS adapts to</small></span><span class="set-chev">›</span></div>
+      <div class="set-nav" onclick="setPage('privacy')"><span><b>🔐 Privacy & data</b><small>Backup, security, permissions, AI engine keys</small></span><span class="set-chev">›</span></div>
+      <div class="set-nav" onclick="setPage('help')"><span><b>❓ Help</b><small>What BOSS can do, quick intro, home screen</small></span><span class="set-chev">›</span></div>
+      <div class="set-nav" onclick="setPage('adv')"><span><b>🛠 Advanced & testing</b><small>Send feedback, things BOSS couldn’t do, update</small></span><span class="set-chev">›</span></div>
+      <div class="set-nav" onclick="setPage('about')"><span><b>ℹ About & reset</b><small>Version, reset settings, erase everything</small></span><span class="set-chev">›</span></div>
+    </div>
+    <div class="set-page" id="setp-look" data-title="🎨 Look & feel">
     <div class="set-row"><span>Text size</span></div>
     <div class="set-chips" id="set-sizes"></div>
     <div class="set-row"><span>Reduce motion</span><input type="checkbox" id="set-reduce" onchange="setReduceMotion(this.checked)"></div>
@@ -1830,11 +1846,13 @@ textarea.profile-input {
     <select class="set-sel" id="set-style" onchange="setStyle(this.value)"></select>
     <div class="set-grid">
       <button class="set-btn" onclick="settingsGo('themes')">🎨 Themes</button>
-      <button class="set-btn" onclick="settingsGo('profile')">👤 Profile</button>
     </div>
     <div class="set-note">Text size applies to panels and the console. The top bar and node labels keep a fixed size so they always fit. More styles can be added later.</div>
 
-    <div class="set-sec">SETTINGS &amp; DATA</div>
+    <div class="set-row"><span>Boot animation on launch</span><input type="checkbox" id="set-boot" onchange="BOSS_boot.setEnabled(this.checked)"></div>
+    <div class="set-row"><span>Show home screen on launch</span><input type="checkbox" id="set-home" onchange="BOSS_onboarding.setHomeOnLaunch(this.checked)"></div>
+    </div>
+    <div class="set-page" id="setp-voice" data-title="🎙 Voice & personality">
     <div class="set-row"><span>Personality</span></div>
     <select class="set-sel" id="set-tone" onchange="setTone(this.value)"></select>
     <div class="set-note" id="set-tone-sample"></div>
@@ -1843,27 +1861,17 @@ textarea.profile-input {
     <div class="set-note">A visual cue while BOSS speaks or listens. It is an animation, not the actual sound.</div>
     <div class="set-grid">
       <button class="set-btn" onclick="settingsGo('voice')">🎙 Voice</button>
-      <button class="set-btn" onclick="settingsGo('security')">🔐 Security</button>
-      <button class="set-btn" onclick="settingsGo('backup')">💾 Backup</button>
-      <button class="set-btn" onclick="settingsGo('keys')">🔑 Engine keys</button>
-      <button class="set-btn" onclick="settingsGo('gaps')">🕳 Gaps</button>
+      <button class="set-btn" onclick="settingsGo('profile')">👤 Profile</button>
     </div>
-
-    <div class="set-sec">HELP &amp; FEEDBACK</div>
-    <div class="set-grid">
-      <button class="set-btn" onclick="settingsGo('caps')">❓ What can BOSS do?</button>
-      <button class="set-btn" onclick="settingsGo('intro')">👋 Quick intro</button>
-      <button class="set-btn" onclick="settingsGo('home')">🏠 Home screen</button>
-      <button class="set-btn" onclick="settingsGo('feedback')">💬 Send feedback</button>
     </div>
-    <div class="set-row"><span>Boot animation on launch</span><input type="checkbox" id="set-boot" onchange="BOSS_boot.setEnabled(this.checked)"></div>
-    <div class="set-row"><span>Show home screen on launch</span><input type="checkbox" id="set-home" onchange="BOSS_onboarding.setHomeOnLaunch(this.checked)"></div>
-    <div class="set-note">Testing BOSS? "Send feedback" packages what you tried into a file for the team — you see exactly what's in it first.</div>
-
-    <div class="set-sec">LEARNING</div>
+    <div class="set-page" id="setp-learn" data-title="🧠 Learning & memory">
+    <div class="set-note">BOSS adapts to you only from what you tell it. Everything here stays on this device.</div>
+    <div class="set-sec">ADAPTING TO HOW YOU USE BOSS</div>
     <div class="set-row"><span>Adapt to how I use BOSS</span><input type="checkbox" id="set-learn" onchange="setLearning(this.checked)"></div>
     <div class="set-about" id="set-learn-info"></div>
     <button class="set-btn" style="width:100%;margin-top:8px" onclick="resetLearning()">↺ Forget what BOSS has learned</button>
+    <div class="set-note">BOSS only learns from your answers to "which did you mean?" and your "Not what I meant" flags. It stays on this device, and switching it off restores the default behaviour.</div>
+
     <div class="set-sec">WHAT BOSS HAS LEARNED ABOUT HOW YOU TALK</div>
     <div class="set-row"><span>Remember my shortcuts &amp; corrections</span><input type="checkbox" id="set-pm" onchange="setPersonal(this.checked)"></div>
     <div class="set-about" id="set-pm-info"></div>
@@ -1876,15 +1884,41 @@ textarea.profile-input {
     <div class="set-row"><span>Watch &amp; learn how to understand</span><input type="checkbox" id="set-und" onchange="setUnderstand(this.checked)"></div>
     <div class="set-about" id="set-und-info"></div>
     <div class="set-note">Downloads a small language model once (about 35&nbsp;MB — best on Wi-Fi) and keeps it for offline use. For now it only <b>watches</b>: it never changes what BOSS does, and nothing you type leaves this device. Test reports include how well it would have understood each request.</div>
-    <div class="set-note">BOSS only learns from your answers to "which did you mean?" and your "Not what I meant" flags. It stays on this device, and switching it off restores the default behaviour.</div>
-
+    </div>
+    <div class="set-page" id="setp-privacy" data-title="🔐 Privacy & data">
+    <div class="set-grid">
+      <button class="set-btn" onclick="settingsGo('backup')">💾 Backup</button>
+      <button class="set-btn" onclick="settingsGo('security')">🔐 Security</button>
+      <button class="set-btn" onclick="settingsGo('keys')">🔑 AI engine keys</button>
+    </div>
+    <div class="set-note">Your data stays on this device. Backup exports it to a file you control; AI engine keys are optional and are never included in a backup unless you choose.</div>
     <div class="set-sec">PERMISSIONS</div>
     <div id="set-perms"></div>
     <div class="set-note" id="set-perm-note"></div>
 
-    <div class="set-sec">UPDATE &amp; RESET</div>
+    </div>
+    <div class="set-page" id="setp-help" data-title="❓ Help">
+    <div class="set-grid">
+      <button class="set-btn" onclick="settingsGo('caps')">❓ What can BOSS do?</button>
+      <button class="set-btn" onclick="settingsGo('intro')">👋 Quick intro</button>
+      <button class="set-btn" onclick="settingsGo('home')">🏠 Home screen</button>
+    </div>
+    </div>
+    <div class="set-page" id="setp-adv" data-title="🛠 Advanced & testing">
+    <div class="set-grid">
+      <button class="set-btn" onclick="settingsGo('feedback')">💬 Send feedback</button>
+      <button class="set-btn" onclick="settingsGo('gaps')">🕳 Things BOSS couldn’t do</button>
+    </div>
+    <div class="set-note">Testing BOSS? "Send feedback" packages what you tried into a file for the team — you see exactly what's in it first.</div>
+
+    <div class="set-sec">UPDATE</div>
     <button class="set-btn" style="width:100%;margin-bottom:6px" onclick="settingsUpdate()">⟳ Update BOSS (refresh app files)</button>
     <div class="set-note">Re-downloads the app and reloads it. Your data (vault, notes, alarms, keys, settings) is not touched.</div>
+    </div>
+    <div class="set-page" id="setp-about" data-title="ℹ About & reset">
+    <div class="set-sec" style="border-top:none;margin-top:0;padding-top:0">ABOUT</div>
+    <div class="set-about" id="set-about"></div>
+    <div class="set-sec">RESET</div>
     <button class="set-btn warn" style="width:100%;margin-bottom:6px" id="set-reset-btn" onclick="settingsReset()">↺ Reset settings to default</button>
     <div class="set-note">Puts text size, motion, theme and voice back to default. Data is not touched.</div>
     <button class="set-btn danger" style="width:100%" onclick="document.getElementById('erase-panel').classList.toggle('show')">🗑 Erase everything…</button>
@@ -1895,8 +1929,7 @@ textarea.profile-input {
       <button class="set-btn danger" id="erase-go" style="width:100%" disabled onclick="settingsErase()">Erase everything now</button>
     </div>
 
-    <div class="set-sec">ABOUT</div>
-    <div class="set-about" id="set-about"></div>
+    </div>
     <button class="set-btn" style="width:100%;margin-top:12px" onclick="closeSettings()">✕ close</button>
   </div>
 </div>
@@ -2975,7 +3008,17 @@ async function _refreshPerms() {
     ? 'Something is blocked. On iPhone: Settings → Privacy & Security → Location Services / Microphone, allow BOSS (it may be listed as Safari Websites), then reopen BOSS. On other browsers use the site settings (🔒 next to the address).'
     : 'Camera access is asked for when you take a photo. "unknown" means this browser can’t report the state — tap Allow to find out.';
 }
-window.openSettings  = function() { _renderSettings(); document.getElementById('settings-modal').classList.add('show'); _refreshPerms(); };
+// v0.17.0 — Settings is grouped by what people are trying to do; the top level is a short list, each group a screen.
+window.setPage = function(id) {
+  document.querySelectorAll('#settings-modal .set-page').forEach(p => p.classList.toggle('show', p.id === 'setp-' + id));
+  document.getElementById('set-index').style.display = id ? 'none' : '';
+  document.getElementById('set-back').style.display = id ? '' : 'none';
+  const h = document.getElementById('settings-modal').querySelector('.set-h');
+  const pg = id && document.getElementById('setp-' + id);
+  h.textContent = pg ? pg.dataset.title : '⚙ SETTINGS';
+  const box = document.querySelector('#settings-modal .set-box'); if (box) box.scrollTop = 0;
+};
+window.openSettings  = function(page) { setPage(typeof page === 'string' ? page : null); _renderSettings(); document.getElementById('settings-modal').classList.add('show'); _refreshPerms(); };
 window.closeSettings = function() { document.getElementById('settings-modal').classList.remove('show'); document.getElementById('erase-panel').classList.remove('show'); };
 window.setTextSize   = function(id) { UI.set({ textSize: id }); _renderSettings(); };
 window.setReduceMotion = function(on) { UI.set({ reduceMotion: !!on }); };

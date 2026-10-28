@@ -522,6 +522,8 @@ Also: COMMS parses polite/long forms ("can you send an email for me", "make a ph
 
 **Build 0.16.1 — housekeeping from the 0.16.0 iPhone reports (G26 passed).** Teach, use, secret refusal, delete, re-teach and the export → erase → import round trip all worked (the shortcut came back trusted). One cosmetic leftover: the teaching sentences' placeholder `[personal]` was also fed to the Understanding Layer's shadow log (meaningless numbers); it is now skipped like `[private]`.
 
+**Build 0.17.0 — Settings regrouped (checklist F8; `docs/SETTINGS-PROPOSAL.md`).** The long single scroll is now a short top-level list of seven groups, each opening its own screen with a ← Settings button: *Look & feel* (text size, reduce motion, style, themes, boot animation, home screen on launch) · *Voice & personality* (personality, speaking animation, Voice, Profile) · *Learning & memory* (adapt-to-me, what BOSS has learned about how you talk, Smarter understanding) · *Privacy & data* (Backup, Security, AI engine keys, Permissions) · *Help* · *Advanced & testing* (Send feedback, Things BOSS couldn't do, Update BOSS) · *About & reset* (version, reset settings, Erase everything). UI only: every control keeps its element id, handler and storage key; `openSettings('privacy')` can open a group directly. Decisions taken: separate screens on phones; Update BOSS under Advanced & testing; Advanced & testing always visible for now.
+
 ## XVII. Direction After v1.0 — The Intelligence Structure
 
 *Status: design direction, not built. Full design: `docs/UNDERSTANDING-LAYER.md`.*
