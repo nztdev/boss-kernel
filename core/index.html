@@ -4609,6 +4609,43 @@ async function _calcOffline(query) {
   return null;  // needs engine
 }
 
+// ── v0.15.1: the offline calculator, reachable from the chat box ─────────────────────────────────
+// BOSS already computes percentages, currency and arithmetic offline (the calculator panel). Typed requests like
+// "20% off £85" or "convert 100 USD to euros" used to miss it and end in "needs an AI engine" or a nonsense question.
+const _CUR_CODES = 'USD|EUR|GBP|JPY|CHF|CAD|AUD|NZD|CNY|INR|MXN|BRL|ZAR|SGD|HKD|SEK|NOK|DKK|PLN|TRY|AED|SAR|KRW|THB|IDR';
+const _CUR_WORD_MAP = [[/\bus ?dollars?\b|\bdollars?\b|\bbucks\b/g, 'USD'], [/\beuros?\b/g, 'EUR'], [/\byen\b/g, 'JPY'], [/\bfrancs?\b/g, 'CHF'],
+  [/\byuan\b|\brenminbi\b/g, 'CNY'], [/\brupees?\b/g, 'INR'], [/\bpounds? sterling\b/g, 'GBP'], [/\bwon\b/g, 'KRW']];
+const _CUR_SYM = { '£': 'GBP', '$': 'USD', '€': 'EUR', '¥': 'JPY' };
+function _calcNormalise(raw) {
+  let s = String(raw || '').toLowerCase().replace(/[’‘`]/g, "'").replace(/[?!]+\s*$/, '').trim();
+  s = s.replace(/^(?:please\s+)?(?:can you\s+)?(?:(?:tell me\s+)?what(?:'s| is)\s+|how much is\s+|calculate\s+|calc\s+|compute\s+|convert\s+|work out\s+)/, '');
+  s = s.replace(/(\d),(?=\d{3}\b)/g, '$1').replace(/×/g, '*').replace(/÷/g, '/');
+  let sym = null;
+  if (/%/.test(s)) { s = s.replace(/([£$€¥])\s?(?=\d)/, m => { sym = m.trim(); return ''; }).replace(/(\d)\s?(?:gbp|usd|eur|pounds?|dollars?|euros?)\b/, '$1'); return { q: s, sym }; }
+  s = s.replace(/([£$€¥])\s?(\d[\d.]*)/g, (m, c, n) => `${n} ${_CUR_SYM[c]}`);
+  for (const [rx, code] of _CUR_WORD_MAP) s = s.replace(rx, code);
+  s = s.replace(/\b(usd|eur|gbp|jpy|chf|cad|aud|nzd|cny|inr|mxn|brl|zar|sgd|hkd|sek|nok|dkk|pln|try|aed|sar|krw|thb|idr)\b/g, m => m.toUpperCase());
+  if (new RegExp('\\b(?:' + _CUR_CODES + ')\\b').test(s)) s = s.replace(/\bpounds?\b/g, 'GBP');
+  return { q: s, sym };
+}
+function _calcShaped(raw) {
+  const s = String(raw || '').trim();
+  if (!s || s.split(/\s+/).length > 12 || !/\d/.test(s)) return false;
+  if (/\b(timers?|alarms?|remind(?:er)?s?|stopwatch|countdown|call|text|email|play|volume|brightness|battery|notes?|remember|minutes?|hours?|seconds?|o'clock|am|pm)\b/i.test(s)) return false;
+  if (/%\s*(?:of|off|tip|on)\b|\b\d\s*%/.test(s) && /\d/.test(s)) return true;                                  // percentages
+  const n = _calcNormalise(s).q;
+  if (new RegExp('\\d[\\d.]*\\s*(?:' + _CUR_CODES + ')\\s+(?:to|in|into)\\s+(?:' + _CUR_CODES + ')\\b').test(n)) return true;       // currency pair
+  return /^[\d\s+\-*/x().^]+$/.test(n) && /[+\-*/x^]/.test(n) && /^(?:what|calc|compute|how much|work out)/i.test(s);       // "what's 15 * 23"
+}
+async function _calcChat(raw) {
+  const { q, sym } = _calcNormalise(raw);
+  const cc = q.match(new RegExp('([\\d.]+)\\s*(' + _CUR_CODES + ')\\s+(?:to|in|into)\\s+(' + _CUR_CODES + ')\\b', 'i'));
+  let out = null;
+  if (cc) out = await _fetchCurrency(parseFloat(cc[1]), cc[2], cc[3]);
+  else { const p = _parsePercentage(q); out = p || null; if (out && sym) out = out.replace(/= ([\d.]+)/, `= ${sym}$1`); if (!out) { const m = _safeEval(q.replace(/x/g, '*').replace(/\^/g, '**')); if (m !== null && m !== undefined) out = `= ${m}`; } }
+  return out;
+}
+
 async function _calcWithEngine(query) {
   if (!window.CortexAction || !enginePool || !enginePool.length) return null;
   try {
@@ -5775,6 +5812,9 @@ Answer the intent directly and concisely. Do not mention nodes or routing.`,
   // the risk this whole mechanism exists to avoid. Scoped to this one
   // intent only — no full-kernel suspension, no manual "Recover" step.
   if (bothActive) {
+    // v0.15.1: a pointless "CORTEX or CHRONOS?" — with no engine, an open question belongs to CORTEX (whose answer is the honest "needs an AI engine"), and a confident Understanding-Layer hit says what BOSS cannot do
+    if (window._undHit && window.BOSS_noMatch && window.BOSS_noMatch(intent)) return { deferred: true };
+    if (top.node.name === 'CORTEX') return top.node;
     // v0.14.9: neither node actually matched the words (a tie between two near-zero scores) — asking "SOMA or CHRONOS?" is nonsense; say "couldn't match"
     if ((top.match ?? 1) < BIRTH_THRESHOLD && (second.match ?? 1) < BIRTH_THRESHOLD && window.BOSS_noMatch && window.BOSS_noMatch(intent)) return { deferred: true };
     clog(`   ⚠ OPPOSED — blocking clarification (action conflict, engine unavailable)`, 'log-arbiter');
@@ -6115,6 +6155,7 @@ const INTENT_CLAIMS = [
   { node: 'CHRONOS', reason: 'timer',     test: i => /\b(?:timers?|countdown|stopwatch)\b/i.test(i) && !/\b(clipboard|text|document|file|article|report|video|song|music|note|notes)\b/i.test(i) },
   { node: 'CHRONOS', reason: 'alarm',     test: i => /\balarms?\b/i.test(i) && !/\b(clipboard|text|document|file|video|song|music|note|notes)\b/i.test(i) },
   // Open-ended opinion/feeling questions are the thinker's (with an engine); the dialogue layer answers honestly without one.
+  { node: 'CORTEX',  reason: 'calc',      test: i => _calcShaped(i) },
   { node: 'CORTEX',  reason: 'opinion',   test: i => Dialogue.isOpinion(i) },
   { node: 'CHRONOS', reason: 'reminder-in', test: i => /\bremind(?:er|ed)?\b.*\b(?:in|after)\s+(?:\d+|an?|one|two|three|five|ten|fifteen|twenty|thirty|half|quarter)\b/i.test(i) },
   // v0.14.5: "best fish soup near me", "find a good cafe in my area" — a question about PLACES, not "where am I" → the generalist
@@ -6313,6 +6354,19 @@ async function firePulse() {
     return;
   }
 
+  // v0.15.1 — Understanding Layer, fallback tier (only if the user opted in and the model is loaded).
+  // It never overrides routing: it is consulted only where routing gives up ("couldn't match" / "needs an engine" /
+  // a pointless "which did you mean?"), and only for a confident match to something BOSS cannot do (native-only or
+  // deliberately unsupported). Thresholds were set from the first shadow reports, never from the phrase corpora.
+  window._undHit = null;
+  if (Understand.enabled() && Understand.status() === 'ready') {
+    try {
+      const u = await Understand.understand(intent);
+      const t = u.top;
+      if (t && (t.kind === 'unsupported' || t.kind === 'native') && t.sim >= UND_MIN_SIM && (u.margin ?? 1) >= UND_MIN_MARGIN) window._undHit = t;
+    } catch (_) { /* the layer is optional — never let it break a request */ }
+  }
+
   // Vault recall
   const memResult = searchVault(intent);
   if (memResult)
@@ -6336,6 +6390,16 @@ async function firePulse() {
   // photo": CORTEX vs MEDIA tie on the word "photo"). Scoring itself is
   // untouched — a claim only chooses the winner and skips conflict handling.
   const claim = claimIntent(intent) || noSignalClaim(scored, intent);
+  if (claim && claim.reason === 'calc') {            // v0.15.1: answer sums, percentages and currency right here, offline
+    const _ans = await _calcChat(intent);
+    if (_ans) {
+      clog(`🧮 ${_ans}`, 'log-action');
+      Feedback.record({ intent, node: 'CORTEX', via: 'claim:calc', handled: true });
+      FeedbackUI.noteLastPulse({ intent, node: 'CORTEX', via: 'claim:calc' });
+      Dialogue.noteAction(intent, 'CORTEX', true);
+      return;
+    }
+  }
   if (!claim) checkBirthProtocol(scored, intent);
 
   const top    = scored[0];
@@ -7284,11 +7348,24 @@ Dialogue.init({
 });
 // v0.14.7: CORTEX with no engine → one friendly, tone-aware line + chips (no menu dump, no orbital pop-up)
 // v0.14.9: a node could not act and no engine can help → one friendly "couldn't match" line (tone-aware), no node menu, no orbital
+const UND_MIN_SIM = 0.60, UND_MIN_MARGIN = 0.15;
+// An Understanding-Layer hit: say plainly what BOSS cannot do (specific, instead of the generic line).
+function _undReply() {
+  const t = window._undHit; if (!t) return false;
+  clog(`   🧠 understood as “${t.label}” (similarity ${t.sim.toFixed(2)})`, 'log-vec');
+  if (t.kind === 'native') { const p = Registry.getAllPresets().find(x => x.id === t.id); if (p) _explainNative(p, p.label); }
+  else { const m = (_undManifestReason(t.id) || 'That is outside what BOSS can do here.'); clog(m, 'log-action'); }
+  Dialogue.showChips(Dialogue.noMatch().chips);
+  window._noEngineShown = true;
+  return true;
+}
+function _undManifestReason(id) { try { return Understand.reasonOf(id); } catch (_) { return null; } }
 window.BOSS_noMatch = () => {
+  if (_undReply()) return true;
   if (enginePool && enginePool.some(n => n.tier === 1 && n.apiKey)) return false;
   const r = Dialogue.noMatch(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; return true;
 };
-window.BOSS_noEngine = () => { const r = Dialogue.noEngine(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; };
+window.BOSS_noEngine = () => { if (_undReply()) return; const r = Dialogue.noEngine(); clog(r.text, 'log-action'); Dialogue.showChips(r.chips); window._noEngineShown = true; };
 // v0.15.0: Understanding Layer, shadow mode — wired to the request log; loads only if the user opted in.
 Feedback.setShadow((intent, routed) => Understand.shadow(intent, routed));
 if (Understand.enabled()) setTimeout(() => { Understand.load().catch(() => {}); }, 4000);

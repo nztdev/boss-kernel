@@ -1,0 +1,15 @@
+# 0.15.1 — the offline calculator reachable from chat (claim "calc" → CORTEX), plus negative controls that must NOT be taken as sums.
+CORTEX	What's 20% off £85
+CORTEX	Convert 100 USD to Euros
+CORTEX	how much is 50 pounds in dollars
+CORTEX	what's 15 * 23
+CORTEX	15% of 340
+CORTEX	tip 15% on 120
+CORTEX	$50 in euros
+CORTEX	what is 100 yen in usd
+CHRONOS	Set a timer for 10 minutes
+CHRONOS	set an alarm for 7.30am
+CHRONOS	remind me to buy milk at 5 PM
+COMMS	call 600123456
+MEMORY	remember my locker code is 4821
+NATIVE	Delete all system files to save storage space

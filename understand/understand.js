@@ -191,5 +191,8 @@ function stats() {
 }
 async function clearCache() { try { await caches.delete(CACHE); const d = await _idb(); d.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).clear(); } catch (_) {} }
 
-export const Understand = { enabled, setEnabled, load, understand, shadow, stats, clearCache, status: () => S.state };
+/** The honest explanation stored in the manifest for a capability id (native / unsupported entries). */
+function reasonOf(id) { const e = S.manifest && S.manifest.entries.find(x => x.id === id); return e ? e.reason || null : null; }
+
+export const Understand = { reasonOf, enabled, setEnabled, load, understand, shadow, stats, clearCache, status: () => S.state };
 if (typeof window !== 'undefined') window.BOSS_understand = Understand;

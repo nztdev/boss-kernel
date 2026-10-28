@@ -639,6 +639,30 @@
    ]
   },
   {
+   "id": "files_delete_system",
+   "kind": "native",
+   "node": "FILES",
+   "label": "Deleting or wiping files",
+   "reason": "BOSS never deletes or wipes files on your device — that is done in your device's own storage settings.",
+   "risk": "high",
+   "examples": [
+    "Deleting or wiping files",
+    "deleting or wiping files",
+    "delete all system files",
+    "delete system files",
+    "delete all my files",
+    "delete all files",
+    "delete everything on my",
+    "factory reset",
+    "wipe my phone",
+    "wipe my computer",
+    "erase my phone",
+    "format my drive",
+    "format the drive",
+    "format my hard drive"
+   ]
+  },
+  {
    "id": "chronos_reliable_alarms",
    "kind": "native",
    "node": "CHRONOS",
