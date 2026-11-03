@@ -415,3 +415,10 @@ First real data (iPhone 0.15.0, PC 0.15.0; 29 watched requests): iPhone ready in
 
 ### Status — 0.16.0 (personal memory built)
 Implemented as `actions/personal.js` (see `docs/PERSONAL-MEMORY-PROPOSAL.md`). Exact, normalised whole-phrase matching works with no model; matching *near* phrases through embeddings (tentative proposals) is not built yet — a candidate once more shadow data exists.
+
+### Status — 0.17.1 (capability manifest enriched; model unchanged)
+A bigger-model comparison (MiniLM-L6 65%, bge-small 68%, multilingual-e5-small 63% top-1 on held-out paraphrases) showed 21 of ~25 misses were shared by models, i.e. the capability list lacked phrasings, not the model lacking power. So: **same model, richer data.** `understand/examples.en.json` (hand-written, English, editable without touching code) adds ~12–25 varied phrasings per capability; `build_manifest.mjs` merges it. The seven broad `group_*` cards (which mixed nodes) were dropped as duplicates of the specific ones; one new capability `soma_settings` (text size, motion, settings). Manifest: 60 → 54 capabilities, 326 → 691 phrases.
+Measured top-1 on held-out sets (node level, shipped int8 model, offline script `tests/experiments/embeddings/compare_models.py`, `HELDOUT=<file>`):
+- `fresh2_paraphrases.tsv` (71 new phrases, written after the enrichment, different styles): **63.4% → 83.1%** (confident half 74% → 94%).
+- `fresh_paraphrases.tsv` (73; now "seen", not a fair test): 65.8% → 84.9%.
+Caveat: one author wrote both the examples and the held-out set, so real tester phrases are the true test. **Open:** the 0.60 / 0.15 fallback thresholds were calibrated on the small manifest; more examples can raise scores of wrong matches — re-check them with the next shadow round.

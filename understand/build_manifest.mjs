@@ -37,6 +37,17 @@ const UNSUPPORTED = [
 ];
 for (const [id, label, reason, ex] of UNSUPPORTED) entries.push({ id: 'x_' + id, kind: 'unsupported', node: null, label, reason, examples: ex });
 
+// Hand-written extra phrasings (understand/examples.en.json): more ways of saying the same thing per capability.
+const extra = JSON.parse(fs.readFileSync(path.join(root, 'understand', 'examples.en.json'), 'utf8'));
+for (const ne of extra.new || []) entries.push({ ...ne, examples: [ne.label] });
+const drop = new Set(extra.drop || []);
+for (let i = entries.length - 1; i >= 0; i--) if (drop.has(entries[i].id)) entries.splice(i, 1);   // broad "group" cards duplicated the specific ones and mixed nodes
+for (const [id, list] of Object.entries(extra.add || {})) {
+  const e = entries.find(x => x.id === id);
+  if (!e) { console.warn('examples.en.json: unknown capability', id); continue; }
+  e.examples = [...new Set([...e.examples, ...list])];
+}
+
 const out = { schema: 'boss-capabilities/1', generated: new Date().toISOString().slice(0, 10), locale: 'en', entries };
 fs.writeFileSync(path.join(root, 'understand', 'manifest.json'), JSON.stringify(out, null, 1));
 const n = (k) => entries.filter(e => e.kind === k).length;

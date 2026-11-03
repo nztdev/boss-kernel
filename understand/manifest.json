@@ -1,6 +1,6 @@
 {
  "schema": "boss-capabilities/1",
- "generated": "2026-10-27",
+ "generated": "2026-11-03",
  "locale": "en",
  "entries": [
   {
@@ -13,7 +13,20 @@
     "weather",
     "forecast",
     "rain",
-    "temperature"
+    "temperature",
+    "will I need a jacket later",
+    "how hot is it going to get",
+    "is it raining where I am",
+    "what's the forecast for tomorrow",
+    "weather in Madrid this weekend",
+    "should I take an umbrella",
+    "is it cold outside",
+    "how's the weather looking",
+    "any chance of snow this week",
+    "what's it like out there right now",
+    "give me the five day forecast",
+    "is it windy today",
+    "how warm will it be on Saturday"
    ]
   },
   {
@@ -24,7 +37,20 @@
    "examples": [
     "Timer",
     "set a timer",
-    "timer"
+    "timer",
+    "timer for 20 minutes",
+    "count down from five minutes",
+    "remind me in 10 minutes",
+    "let me know when 15 minutes are up",
+    "I need a timer for my pasta",
+    "start a 45 second timer",
+    "egg timer please",
+    "give me a three minute countdown",
+    "buzz me after half an hour",
+    "ring me in an hour",
+    "10 minute timer",
+    "tell me when two minutes have passed",
+    "pomodoro twenty five minutes"
    ]
   },
   {
@@ -34,7 +60,15 @@
    "label": "Stopwatch",
    "examples": [
     "Stopwatch",
-    "stopwatch"
+    "stopwatch",
+    "start the stopwatch",
+    "time how long this takes",
+    "stop the clock",
+    "lap",
+    "reset the stopwatch",
+    "begin timing me",
+    "how long has the stopwatch been running",
+    "pause the stopwatch"
    ]
   },
   {
@@ -45,7 +79,20 @@
    "examples": [
     "Alarms",
     "alarms",
-    "alarm"
+    "alarm",
+    "alarm for seven thirty",
+    "wake me at half past six",
+    "set my alarm to 6 am",
+    "get me up at 5:45",
+    "cancel my alarm",
+    "turn off the alarm",
+    "I need an alarm tomorrow morning at 8",
+    "alarm every weekday at seven",
+    "snooze the alarm",
+    "remind me at 5 pm to pick up the kids",
+    "remind me tomorrow at nine about the dentist",
+    "what alarms do I have",
+    "delete the morning alarm"
    ]
   },
   {
@@ -57,7 +104,26 @@
     "Music",
     "play music",
     "audio",
-    "music"
+    "music",
+    "put some music on",
+    "play something relaxing",
+    "play my favourite song",
+    "play jazz",
+    "music please",
+    "turn the volume up",
+    "turn it down a little",
+    "make it louder",
+    "volume to 50 percent",
+    "mute the sound",
+    "unmute",
+    "pause the music",
+    "skip this track",
+    "next song please",
+    "stop the music",
+    "resume playing",
+    "play that again",
+    "a bit quieter please",
+    "shuffle my songs"
    ]
   },
   {
@@ -68,7 +134,16 @@
    "examples": [
     "Video",
     "play video",
-    "video"
+    "video",
+    "play a video",
+    "watch this clip",
+    "open this youtube link",
+    "play the video I copied",
+    "put on a video of cats",
+    "play this movie link",
+    "show me a tutorial video",
+    "pause the video",
+    "full screen the video"
    ]
   },
   {
@@ -80,7 +155,15 @@
     "Photo",
     "show image",
     "image",
-    "photo"
+    "photo",
+    "show me a picture",
+    "display this image",
+    "open the photo from my clipboard",
+    "show the picture I just copied",
+    "view this photo",
+    "put that image on screen",
+    "let me see the screenshot",
+    "open the image link"
    ]
   },
   {
@@ -92,7 +175,16 @@
     "Who are you",
     "who are you",
     "identity",
-    "self"
+    "self",
+    "what's your name",
+    "tell me about yourself",
+    "what are you",
+    "introduce yourself",
+    "who made you",
+    "are you a robot",
+    "what is boss",
+    "what do you stand for",
+    "what should I call you"
    ]
   },
   {
@@ -104,7 +196,15 @@
     "How are you",
     "how are you",
     "personality",
-    "mood"
+    "mood",
+    "how are you doing",
+    "how do you feel today",
+    "you okay",
+    "what's up",
+    "how's it going",
+    "are you feeling alright",
+    "are you having a good day",
+    "how have you been"
    ]
   },
   {
@@ -116,7 +216,19 @@
     "Themes",
     "list themes",
     "theme",
-    "appearance"
+    "appearance",
+    "change the theme",
+    "make it blue",
+    "switch the colours to green",
+    "use a different colour scheme",
+    "go dark mode",
+    "make the screen darker",
+    "lighter background please",
+    "switch the look",
+    "change how you look",
+    "new colours please",
+    "red theme",
+    "I want a purple look"
    ]
   },
   {
@@ -128,7 +240,14 @@
     "Profile",
     "profile",
     "preferences",
-    "identity"
+    "identity",
+    "change my name",
+    "call me Alex",
+    "set my name to Sam",
+    "update my profile",
+    "what name do you have for me",
+    "I'd like to be called Jo",
+    "edit my details"
    ]
   },
   {
@@ -142,7 +261,21 @@
     "voice",
     "speech",
     "dictation",
-    "speak"
+    "speak",
+    "turn your voice on",
+    "stop talking",
+    "be quiet",
+    "speak to me",
+    "talk out loud",
+    "read the answers aloud",
+    "switch off the voice",
+    "use a different voice",
+    "speak slower",
+    "speak a bit faster",
+    "don't speak",
+    "voice off",
+    "say it out loud",
+    "change the way you sound"
    ]
   },
   {
@@ -154,7 +287,17 @@
     "System status",
     "check system status",
     "system",
-    "status"
+    "status",
+    "how are you running",
+    "is everything working",
+    "system check",
+    "give me a health report",
+    "how's the system doing",
+    "is everything okay with BOSS",
+    "run a diagnostic",
+    "are all parts running",
+    "show me your vitals",
+    "status report please"
    ]
   },
   {
@@ -166,7 +309,16 @@
     "Battery level",
     "check battery level",
     "battery",
-    "power"
+    "power",
+    "how much battery is left",
+    "what's my charge",
+    "how much juice does my phone have",
+    "is my battery low",
+    "battery percentage",
+    "am I charging",
+    "how long will my battery last",
+    "check the battery",
+    "how full is my battery"
    ]
   },
   {
@@ -177,7 +329,16 @@
    "examples": [
     "Network",
     "network",
-    "connectivity"
+    "connectivity",
+    "am I online",
+    "is the internet working",
+    "do I have wifi",
+    "am I connected",
+    "check my connection",
+    "is my network up",
+    "am I offline",
+    "are we connected to the internet",
+    "is there signal"
    ]
   },
   {
@@ -189,7 +350,13 @@
     "Gaps",
     "gaps",
     "backlog",
-    "capabilities"
+    "capabilities",
+    "what couldn't you do",
+    "show me what you failed at",
+    "list the things you didn't understand",
+    "what requests did you miss",
+    "show the gap log",
+    "what did you not know how to do"
    ]
   },
   {
@@ -204,7 +371,16 @@
     "restore",
     "export",
     "import",
-    "migrate"
+    "migrate",
+    "back up my data",
+    "export everything",
+    "save a copy of my stuff",
+    "make a backup file",
+    "restore from backup",
+    "import my backup",
+    "download all my data",
+    "keep a copy of my notes and settings",
+    "load my saved backup"
    ]
   },
   {
@@ -217,7 +393,15 @@
     "where am i",
     "location",
     "position",
-    "coordinates"
+    "coordinates",
+    "where am I",
+    "what's my location",
+    "show my position",
+    "where are we right now",
+    "what city is this",
+    "locate me",
+    "give me my coordinates",
+    "which town am I in"
    ]
   },
   {
@@ -229,7 +413,14 @@
     "Vault",
     "vault",
     "memory",
-    "recall"
+    "recall",
+    "open my vault",
+    "show the vault",
+    "what's in my vault",
+    "unlock the vault",
+    "look inside my private notes",
+    "show what I've stored securely",
+    "my secret notes"
    ]
   },
   {
@@ -241,7 +432,26 @@
     "Notes",
     "notes",
     "memory",
-    "lists"
+    "lists",
+    "remember that my locker code is 4821",
+    "note this down",
+    "jot down my idea",
+    "write this in my notes",
+    "save this for later",
+    "show my notes",
+    "what notes do I have",
+    "read my notes back to me",
+    "add to my list buy milk",
+    "what did I ask you to remember",
+    "delete that note",
+    "forget the note about the meeting",
+    "don't let me forget the passport",
+    "keep track of this for me",
+    "add a note about the recipe",
+    "write down the plumber's number",
+    "list everything I've saved",
+    "pull up my saved notes",
+    "what have I told you to keep"
    ]
   },
   {
@@ -256,7 +466,15 @@
     "encrypt",
     "lock",
     "passphrase",
-    "biometric"
+    "biometric",
+    "lock the vault",
+    "encrypt my notes",
+    "set a passphrase",
+    "protect my notes with a password",
+    "change my vault passcode",
+    "make my notes private",
+    "lock everything",
+    "secure my data"
    ]
   },
   {
@@ -271,7 +489,17 @@
     "translate",
     "rewrite",
     "analyse",
-    "explain"
+    "explain",
+    "summarise this text",
+    "shorten this paragraph",
+    "make this sound more polite",
+    "fix the grammar in this",
+    "rewrite this more formally",
+    "translate this to French",
+    "count the words in this",
+    "tidy up my text",
+    "paraphrase this sentence",
+    "clean up what I pasted"
    ]
   },
   {
@@ -284,7 +512,17 @@
     "calculate",
     "calculation",
     "convert",
-    "math"
+    "math",
+    "what's 15 percent of 80",
+    "how much is 12 times 7",
+    "add 245 and 389",
+    "what's 20% off 60 pounds",
+    "convert 50 euros to dollars",
+    "tip on a 40 dollar bill",
+    "square root of 144",
+    "how many days until Christmas",
+    "what is 1000 divided by 8",
+    "split the bill 4 ways of 86"
    ]
   },
   {
@@ -299,7 +537,16 @@
     "photo",
     "vision",
     "scan",
-    "describe"
+    "describe",
+    "describe this photo",
+    "what's in this picture",
+    "take a photo and tell me what it is",
+    "read the text in this image",
+    "what am I looking at",
+    "identify this object",
+    "look at this and describe it",
+    "scan this document",
+    "what does this sign say"
    ]
   },
   {
@@ -311,7 +558,13 @@
     "Engine status",
     "engine status",
     "engine",
-    "status"
+    "status",
+    "is the AI engine connected",
+    "which AI model are you using",
+    "do you have an engine",
+    "check the engine",
+    "is the smart model on",
+    "what engine keys do I have"
    ]
   },
   {
@@ -323,7 +576,15 @@
     "Call",
     "call",
     "phone",
-    "comms"
+    "comms",
+    "call mum",
+    "ring John",
+    "phone 600 123 456",
+    "dial the number 911",
+    "I want to call my brother",
+    "give Anna a call",
+    "make a phone call",
+    "call the office"
    ]
   },
   {
@@ -336,7 +597,16 @@
     "send a text",
     "phone",
     "comms",
-    "text"
+    "text",
+    "text Paul that I'm late",
+    "send a message to Sam",
+    "write an SMS to mum",
+    "message my manager that I'm running late",
+    "tell Anna I'll be there at six by text",
+    "draft a text to my friend",
+    "send a quick text saying thanks",
+    "let him know by message that I'm on my way",
+    "text dad happy birthday"
    ]
   },
   {
@@ -349,7 +619,15 @@
     "send an email",
     "phone",
     "comms",
-    "email"
+    "email",
+    "email my landlord about the heater",
+    "send an email to Sara",
+    "write an email to my boss",
+    "compose a message to the team",
+    "draft an email asking for a refund",
+    "mail John the report",
+    "write to the bank by email",
+    "send an email saying the meeting moved"
    ]
   },
   {
@@ -361,7 +639,14 @@
     "Recent files",
     "recent files",
     "files",
-    "recent"
+    "recent",
+    "show my recent files",
+    "what did I open lately",
+    "my latest downloads",
+    "recent documents",
+    "what files did I use yesterday",
+    "list my last opened files",
+    "show what I downloaded recently"
    ]
   },
   {
@@ -374,7 +659,17 @@
     "open file",
     "files",
     "open",
-    "pick"
+    "pick",
+    "open a file",
+    "let me choose a document",
+    "pick a file from my phone",
+    "browse my files",
+    "I want to open a pdf",
+    "select a file from my device",
+    "find a document on my phone",
+    "upload a file",
+    "attach a file from my device",
+    "show me what's on my device"
    ]
   },
   {
@@ -386,7 +681,13 @@
     "Open URL",
     "open url",
     "files",
-    "link"
+    "link",
+    "open this link",
+    "go to this website",
+    "open the url I copied",
+    "load this web address",
+    "visit example dot com",
+    "take me to this page"
    ]
   },
   {
@@ -635,7 +936,10 @@
     "wake my laptop",
     "wake on lan",
     "wake-on-lan",
-    "sleep mode"
+    "sleep mode",
+    "wake my work computer remotely",
+    "turn on my PC from here",
+    "power on my laptop at home"
    ]
   },
   {
@@ -678,63 +982,6 @@
    ]
   },
   {
-   "id": "group_time_weather",
-   "kind": "supported",
-   "node": "CHRONOS",
-   "label": "Time & weather",
-   "examples": [
-    "Set a timer for 15 minutes",
-    "Alarm at 7:30",
-    "What time is it in Tokyo?",
-    "Will it rain tomorrow?"
-   ]
-  },
-  {
-   "id": "group_memory",
-   "kind": "supported",
-   "node": "MEMORY",
-   "label": "Memory",
-   "examples": [
-    "Remember my locker code is 4821",
-    "Show my notes",
-    "What do you remember?",
-    "Lock the vault"
-   ]
-  },
-  {
-   "id": "group_media",
-   "kind": "supported",
-   "node": "MEDIA",
-   "label": "Media",
-   "examples": [
-    "Play music",
-    "Volume down",
-    "Play the video from my clipboard",
-    "Stop"
-   ]
-  },
-  {
-   "id": "group_files",
-   "kind": "supported",
-   "node": "FILES",
-   "label": "Files",
-   "examples": [
-    "Open a file",
-    "Show my recent downloads"
-   ]
-  },
-  {
-   "id": "group_phone",
-   "kind": "supported",
-   "node": "COMMS",
-   "label": "Phone",
-   "examples": [
-    "Call +34 600 123 456",
-    "Text +34 600 123 456 saying hi",
-    "Send an email"
-   ]
-  },
-  {
    "id": "group_open_apps",
    "kind": "supported",
    "node": "CORTEX",
@@ -743,19 +990,17 @@
     "Open Spotify",
     "Open calendar",
     "List apps",
-    "Run shortcut Good morning"
-   ]
-  },
-  {
-   "id": "group_look_text_tools",
-   "kind": "supported",
-   "node": "CORTEX",
-   "label": "Look & text tools",
-   "examples": [
-    "Describe this photo",
-    "Summarise my clipboard",
-    "Open text tools",
-    "Take a photo"
+    "Run shortcut Good morning",
+    "open Spotify",
+    "launch the camera",
+    "start the calculator app",
+    "open my calendar app",
+    "run my morning shortcut",
+    "what apps can you open",
+    "open maps",
+    "launch WhatsApp",
+    "open the notes app",
+    "start YouTube"
    ]
   },
   {
@@ -766,20 +1011,31 @@
    "examples": [
     "Why is the sky blue?",
     "Write me a short poem",
-    "Give me an idea for dinner"
-   ]
-  },
-  {
-   "id": "group_device_settings",
-   "kind": "supported",
-   "node": "CORE",
-   "label": "Device & settings",
-   "examples": [
-    "Battery",
-    "Back up my data",
-    "Voice on",
-    "Change theme",
-    "Open settings"
+    "Give me an idea for dinner",
+    "why is the sky blue",
+    "how do I boil an egg",
+    "what's the capital of Australia",
+    "explain how vaccines work",
+    "write me a poem about autumn",
+    "give me a dinner idea",
+    "tell me a joke",
+    "help me write a thank you note",
+    "suggest a name for my dog",
+    "what's the difference between a crocodile and an alligator",
+    "how does a refrigerator work",
+    "give me a recipe for pancakes",
+    "write a short story about a robot",
+    "why do cats purr",
+    "what should I cook tonight",
+    "teach me something interesting",
+    "explain quantum physics simply",
+    "recommend a good book",
+    "how do I fix a flat bike tyre",
+    "what causes rain",
+    "can you help me plan my week",
+    "tell me a fun fact about space",
+    "draft a cover letter for me",
+    "brainstorm ideas for a birthday party"
    ]
   },
   {
@@ -792,7 +1048,16 @@
     "what is on my calendar today",
     "am I free on Friday afternoon",
     "schedule a meeting with Anna next week",
-    "reply based on my calendar availability"
+    "reply based on my calendar availability",
+    "what do I have on tomorrow",
+    "am I free at three",
+    "put a meeting in my calendar",
+    "move my appointment to Friday",
+    "when is my next meeting",
+    "add a dentist appointment next Tuesday",
+    "show my agenda for the week",
+    "what's scheduled for today",
+    "do I have anything on Monday"
    ]
   },
   {
@@ -804,7 +1069,14 @@
    "examples": [
     "read my latest emails",
     "summarise my inbox",
-    "do I have any new messages from my boss"
+    "do I have any new messages from my boss",
+    "do I have any new emails",
+    "read me my messages",
+    "what did Sara send me",
+    "check my inbox",
+    "any unread texts",
+    "who emailed me today",
+    "show me my latest emails"
    ]
   },
   {
@@ -817,7 +1089,15 @@
     "book me a table for two tonight",
     "order a pizza",
     "buy tickets for the concert",
-    "book a flight to Madrid"
+    "book a flight to Madrid",
+    "order me a taxi",
+    "book a hotel for the weekend",
+    "reserve a table for four",
+    "get me a cab to the airport",
+    "buy a train ticket",
+    "order sushi for dinner",
+    "book an appointment with the doctor",
+    "order groceries online"
    ]
   },
   {
@@ -829,7 +1109,15 @@
    "examples": [
     "send 20 euros to Sam",
     "what is my bank balance",
-    "pay my electricity bill"
+    "pay my electricity bill",
+    "pay my rent",
+    "transfer money to my savings",
+    "how much money is in my account",
+    "send fifty euros to my brother",
+    "check my bank balance",
+    "top up my phone credit",
+    "pay this invoice",
+    "move money between my accounts"
    ]
   },
   {
@@ -841,7 +1129,36 @@
    "examples": [
     "post this on instagram",
     "tweet that I am home",
-    "check my facebook notifications"
+    "check my facebook notifications",
+    "post this to facebook",
+    "tweet this",
+    "share it on instagram",
+    "check my likes",
+    "reply to that comment on twitter",
+    "upload this to tiktok",
+    "what's trending on social media",
+    "message him on linkedin"
+   ]
+  },
+  {
+   "id": "soma_settings",
+   "kind": "supported",
+   "node": "SOMA",
+   "label": "Settings & appearance",
+   "examples": [
+    "Settings & appearance",
+    "open settings",
+    "make the text bigger",
+    "bigger letters please",
+    "smaller text",
+    "increase the font size",
+    "reduce the motion",
+    "turn off animations",
+    "show me the settings",
+    "where are the settings",
+    "change the text size",
+    "make everything larger",
+    "I can't read this, it's too small"
    ]
   }
  ]

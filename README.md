@@ -594,3 +594,5 @@ Inspired by the theoretical concepts of the resonance-web (by __Dosage2AG__). It
 ---
 
 MIT License · github.com/nztdev/boss-kernel
+
+**Build 0.17.1 — Understanding Layer: richer capability list (data only).** Same model; new `understand/examples.en.json` (hand-written phrasings per capability, merged by `build_manifest.mjs`), manifest rebuilt (54 capabilities, 691 phrases; broad `group_*` cards dropped, `soma_settings` added). Held-out top-1 63% → 83%. No routing code changed; the routing corpora are unaffected. Vector cache rebuilds itself on first use (new manifest size).
